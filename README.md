@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Haji Cafe Management API
+=======
+# Haji Café Management API
+>>>>>>> 17c338789a22be634704be55786fcb57de85099a
 
 A multi-tenant backend system for a café franchise management platform.
 
