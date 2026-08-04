@@ -36,7 +36,17 @@ async def get_orders_by_branch(branch_id: int):
 async def get_order_by_id(order_id: int):
     return await db.order.find_unique(
         where={"id": order_id},
-        include={"orderItems": True},
+        include={
+            "orderItems": {
+                "include": {
+                    "branchMenuItem": {
+                        "include": {
+                            "masterItem": True
+                        }
+                    }
+                }
+            }
+        },
     )
 
 

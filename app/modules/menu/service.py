@@ -38,22 +38,30 @@ async def set_branch_menu_item(branch_id: int, master_item_id: int, price_overri
 
 async def get_branch_menu(branch_id: int):
     """
-    Returns the branch menu with effective_price resolved.
-    Effective price = price_override if set, else master item's base_price.
+    Returns the branch menu with effectivePrice resolved.
+    Effective price = priceOverride if set, else master item's basePrice.
+    Returns camelCase dicts matching Prisma attribute names.
     """
     items = await repository.get_branch_menu(branch_id)
     result = []
     for item in items:
-        item_dict = {
+        master = item.masterItem
+        effective = item.priceOverride if item.priceOverride is not None else master.basePrice
+        result.append({
             "id": item.id,
-            "branch_id": item.branchId,
-            "master_item_id": item.masterItemId,
-            "price_override": item.priceOverride,
-            "is_in_stock": item.isInStock,
-            "is_active": item.isActive,
-            "effective_price": item.priceOverride if item.priceOverride is not None else item.masterItem.basePrice,
-        }
-        result.append(item_dict)
+            "branchId": item.branchId,
+            "masterItemId": item.masterItemId,
+            "priceOverride": float(item.priceOverride) if item.priceOverride is not None else None,
+            "isInStock": item.isInStock,
+            "isActive": item.isActive,
+            "effectivePrice": float(effective),
+            "masterItem": {
+                "id": master.id,
+                "name": master.name,
+                "basePrice": float(master.basePrice),
+                "description": master.description,
+            },
+        })
     return result
 
 

@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # --- Cafe Schemas ---
@@ -16,9 +17,10 @@ class CafeUpdate(BaseModel):
 class CafeResponse(BaseModel):
     id: int
     name: str
-    owner_id: Optional[int]
+    owner_id: Optional[int] = Field(None, alias="ownerId")
+    created_at: Optional[datetime] = Field(None, alias="createdAt")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 # --- Branch Schemas ---
@@ -35,8 +37,9 @@ class BranchUpdate(BaseModel):
 
 class BranchResponse(BaseModel):
     id: int
-    cafe_id: int
+    cafe_id: int = Field(alias="cafeId")
     name: str
-    location: Optional[str]
+    location: Optional[str] = None
+    created_at: Optional[datetime] = Field(None, alias="createdAt")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
