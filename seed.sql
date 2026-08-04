@@ -1,5 +1,5 @@
 -- ==============================================================
--- Brewly Multi-Branch Café - Seed Data
+-- Haji Cafe Multi-Branch Management - Seed Data
 -- ==============================================================
 
 -- 1. Users
@@ -7,7 +7,7 @@
 -- $2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6
 INSERT INTO users (role_id, email, password_hash)
 VALUES
-    ((SELECT id FROM roles WHERE name = 'SUPER_ADMIN'), 'admin@brewly.com', '$2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6'),
+    ((SELECT id FROM roles WHERE name = 'SUPER_ADMIN'), 'admin@hajicafe.com', '$2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6'),
     ((SELECT id FROM roles WHERE name = 'CAFE_OWNER'), 'owner@sunrise.com', '$2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6'),
     ((SELECT id FROM roles WHERE name = 'BRANCH_MANAGER'), 'manager@sunrise-downtown.com', '$2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6'),
     ((SELECT id FROM roles WHERE name = 'STAFF'), 'staff@sunrise-downtown.com', '$2b$12$R.32U./j2P9JqjH9Z6K.P.U/eO/q.T5lD2k6Vv2FzP5pS.hB584n6');

@@ -1,4 +1,4 @@
-# Brewly Café Management API
+# Haji Cafe Management API
 
 A multi-tenant backend system for a café franchise management platform.
 

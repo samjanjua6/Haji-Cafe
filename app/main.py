@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Brewly Café Management API",
+    title="Haji Cafe Management API",
     description="Multi-tenant backend for a café franchise management platform.",
     version="1.0.0",
     lifespan=lifespan,
@@ -46,4 +46,4 @@ app.include_router(orders_router, tags=["Orders"])
 
 @app.get("/", tags=["Health"])
 async def health_check():
-    return {"status": "ok", "app": "Brewly Café Management API", "version": "1.0.0"}
+    return {"status": "ok", "app": "Haji Cafe Management API", "version": "1.0.0"}
