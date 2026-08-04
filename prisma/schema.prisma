@@ -1,0 +1,183 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider                    = "prisma-client-py"
+  interface                   = "asyncio"
+  recursive_type_depth        = 5
+  enable_experimental_decimal = true
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  roleId         Int      @map("role_id")
+  email          String   @unique
+  passwordHash   String?  @map("password_hash")
+  authProvider   String   @default("LOCAL") @map("auth_provider")
+  authProviderId String?  @map("auth_provider_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  role          Role           @relation(fields: [roleId], references: [id])
+  userScopes    UserScope[]
+  ownedCafes    Cafe[]
+  orders        Order[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model UserScope {
+  id       Int  @id @default(autoincrement())
+  userId   Int  @map("user_id")
+  cafeId   Int? @map("cafe_id")
+  branchId Int? @map("branch_id")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cafe   Cafe?   @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("user_scopes")
+}
+
+model Cafe {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ownerId   Int?     @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner          User?            @relation(fields: [ownerId], references: [id])
+  branches       Branch[]
+  categories     Category[]
+  masterMenuItems MasterMenuItem[]
+  userScopes     UserScope[]
+
+  @@map("cafes")
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  cafeId    Int      @map("cafe_id")
+  name      String
+  location  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cafe            Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  branchMenuItems BranchMenuItem[]
+  orders          Order[]
+  userScopes      UserScope[]
+
+  @@map("branches")
+}
+
+model Category {
+  id          Int    @id @default(autoincrement())
+  cafeId      Int    @map("cafe_id")
+  name        String
+  description String?
+
+  cafe            Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  masterMenuItems MasterMenuItem[]
+
+  @@map("categories")
+}
+
+model MasterMenuItem {
+  id          Int      @id @default(autoincrement())
+  cafeId      Int      @map("cafe_id")
+  categoryId  Int?     @map("category_id")
+  name        String
+  description String?
+  basePrice   Decimal  @map("base_price") @db.Decimal(10, 2)
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cafe            Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  branchMenuItems BranchMenuItem[]
+
+  @@map("master_menu_items")
+}
+
+model BranchMenuItem {
+  id            Int      @id @default(autoincrement())
+  branchId      Int      @map("branch_id")
+  masterItemId  Int      @map("master_item_id")
+  priceOverride Decimal? @map("price_override") @db.Decimal(10, 2)
+  isInStock     Boolean  @default(true) @map("is_in_stock")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  branch     Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  masterItem MasterMenuItem @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@unique([branchId, masterItemId])
+  @@map("branch_menu_items")
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PREPARATION
+  COMPLETED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+model Order {
+  id                Int         @id @default(autoincrement())
+  branchId          Int         @map("branch_id")
+  createdByUserId   Int?        @map("created_by_user_id")
+  status            OrderStatus @default(PENDING)
+  totalAmount       Decimal     @map("total_amount") @db.Decimal(10, 2)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  createdBy   User?       @relation(fields: [createdByUserId], references: [id])
+  orderItems  OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                Int     @id @default(autoincrement())
+  orderId           Int     @map("order_id")
+  branchMenuItemId  Int     @map("branch_menu_item_id")
+  quantity          Int
+  priceAtPurchase   Decimal @map("price_at_purchase") @db.Decimal(10, 2)
+  notes             String?
+
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  branchMenuItem BranchMenuItem @relation(fields: [branchMenuItemId], references: [id])
+
+  @@map("order_items")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
