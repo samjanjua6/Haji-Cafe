@@ -6,7 +6,13 @@ import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 
-interface UserProfile { id: number; email: string; role: { name: string }; createdAt: string; }
+interface UserProfile {
+  id: number;
+  email: string;
+  role: string;
+  createdAt: string;
+  scopes: { cafeId: number | null; branchId: number | null; cafeName: string | null; branchName: string | null }[];
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -32,6 +38,54 @@ export default function DashboardPage() {
   };
 
   if (loading) return <div style={{ color: "var(--text-muted)", marginTop: 80, textAlign: "center" }}>Loading...</div>;
+
+  const renderQuickLinks = () => {
+    if (user?.role === "SUPER_ADMIN" || user?.role === "CAFE_OWNER") {
+      return (
+        <a
+          href="/cafes"
+          className="card"
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            gap: 12, textDecoration: "none", cursor: "pointer",
+            transition: "transform 0.2s, border-color 0.2s",
+            textAlign: "center",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
+        >
+          <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}>
+            <Coffee size={24} color="#f59e0b" />
+          </div>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Manage Cafés</span>
+        </a>
+      );
+    }
+
+    if (user?.role === "BRANCH_MANAGER") {
+      return user.scopes.map((scope, idx) => (
+        <a
+          key={idx}
+          href={`/branches/${scope.branchId}/orders`}
+          className="card"
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            gap: 12, textDecoration: "none", cursor: "pointer",
+            transition: "transform 0.2s, border-color 0.2s",
+            textAlign: "center",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
+        >
+          <div style={{ background: "#3b82f622", borderRadius: 12, padding: 14 }}>
+            <ShoppingCart size={24} color="#3b82f6" />
+          </div>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{scope.branchName || `Branch #${scope.branchId}`} Orders</span>
+        </a>
+      ));
+    }
+    return null;
+  };
 
   return (
     <div>
@@ -63,7 +117,7 @@ export default function DashboardPage() {
                   borderRadius: 999, fontSize: 12, fontWeight: 700,
                 }}>
                   <Shield size={10} style={{ marginRight: 4, display: "inline" }} />
-                  {user.role.name}
+                  {user.role.replace("_", " ")}
                 </span>
                 <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
                   <Mail size={12} style={{ marginRight: 4, display: "inline" }} />
@@ -78,28 +132,7 @@ export default function DashboardPage() {
 
           {/* Quick links */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
-            {[
-              { icon: Coffee, label: "Manage Cafés", href: "/cafes", color: "#f59e0b" },
-            ].map(({ icon: Icon, label, href, color }) => (
-              <a
-                key={href}
-                href={href}
-                className="card"
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center",
-                  gap: 12, textDecoration: "none", cursor: "pointer",
-                  transition: "transform 0.2s, border-color 0.2s",
-                  textAlign: "center",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
-                onMouseLeave={e => (e.currentTarget.style.transform = "none")}
-              >
-                <div style={{ background: color + "22", borderRadius: 12, padding: 14 }}>
-                  <Icon size={24} color={color} />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{label}</span>
-              </a>
-            ))}
+            {renderQuickLinks()}
           </div>
 
           {/* API Info */}

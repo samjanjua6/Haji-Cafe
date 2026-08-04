@@ -32,7 +32,7 @@ def require_cafe_access():
         if current_user.role.name == "SUPER_ADMIN":
             return current_user
 
-        has_access = any(scope.cafe_id == cafe_id for scope in current_user.userScopes)
+        has_access = any(scope.cafeId == cafe_id for scope in current_user.userScopes)
         if not has_access:
             raise ForbiddenException("You do not have access to this café.")
         return current_user
@@ -43,13 +43,23 @@ def require_cafe_access():
 def require_branch_access():
     """
     Dependency factory that ensures BRANCH_MANAGER/STAFF can only access their own branch.
-    SUPER_ADMIN and CAFE_OWNER bypass this check.
+    SUPER_ADMIN bypasses this check.
+    CAFE_OWNER must have a scope for the cafe that owns the branch.
     """
     async def branch_access_checker(branch_id: int, current_user=Depends(get_current_user)):
-        if current_user.role.name in ("SUPER_ADMIN", "CAFE_OWNER"):
+        if current_user.role.name == "SUPER_ADMIN":
             return current_user
 
-        has_access = any(scope.branch_id == branch_id for scope in current_user.userScopes)
+        from app.modules.cafes.repository import get_branch_by_id
+        branch = await get_branch_by_id(branch_id)
+        if not branch:
+            raise ForbiddenException("Branch not found or access denied.")
+
+        if current_user.role.name == "CAFE_OWNER":
+            has_access = any(scope.cafeId == branch.cafeId for scope in current_user.userScopes)
+        else:
+            has_access = any(scope.branchId == branch_id for scope in current_user.userScopes)
+            
         if not has_access:
             raise ForbiddenException("You do not have access to this branch.")
         return current_user

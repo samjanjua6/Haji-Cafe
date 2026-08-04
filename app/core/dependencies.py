@@ -27,7 +27,15 @@ async def get_current_user(
 
     user = await db.user.find_unique(
         where={"id": int(user_id)},
-        include={"role": True, "userScopes": True},
+        include={
+            "role": True, 
+            "userScopes": {
+                "include": {
+                    "cafe": True,
+                    "branch": True
+                }
+            }
+        },
     )
 
     if user is None:

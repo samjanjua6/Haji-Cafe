@@ -23,7 +23,8 @@ export default function AuthPage() {
       toast.success(tab === "login" ? "Welcome back!" : "Account created!");
       router.push("/dashboard");
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Auth Error:", err);
+      toast.error(err.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -60,6 +61,7 @@ export default function AuthPage() {
             {(["login", "register"] as const).map((t) => (
               <button
                 key={t}
+                type="button"
                 onClick={() => setTab(t)}
                 style={{
                   flex: 1, padding: "8px 0", border: "none", cursor: "pointer",

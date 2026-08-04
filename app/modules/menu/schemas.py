@@ -7,16 +7,16 @@ from pydantic import BaseModel, Field
 # --- Master Menu Schemas ---
 
 class MasterMenuItemCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     description: Optional[str] = None
-    base_price: Decimal
+    base_price: Decimal = Field(..., gt=0)
     category_id: Optional[int] = None
 
 
 class MasterMenuItemUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = None
-    base_price: Optional[Decimal] = None
+    base_price: Optional[Decimal] = Field(None, gt=0)
     category_id: Optional[int] = None
 
 
@@ -36,7 +36,7 @@ class MasterMenuItemResponse(BaseModel):
 
 class BranchMenuItemCreate(BaseModel):
     master_item_id: int
-    price_override: Optional[Decimal] = None
+    price_override: Optional[Decimal] = Field(None, gt=0)
     is_in_stock: bool = True
     is_active: bool = True
 
@@ -50,7 +50,7 @@ class MasterItemSubset(BaseModel):
 
 
 class BranchMenuItemPatch(BaseModel):
-    price_override: Optional[Decimal] = None
+    price_override: Optional[Decimal] = Field(None, gt=0)
     is_in_stock: Optional[bool] = None
     is_active: Optional[bool] = None
 

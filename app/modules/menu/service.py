@@ -19,7 +19,11 @@ async def update_master_item(cafe_id: int, item_id: int, data: dict):
     item = await repository.get_master_item_by_id(item_id)
     if not item or item.cafeId != cafe_id or item.isDeleted:
         raise NotFoundException("Menu item not found.")
-    clean = {k: v for k, v in data.items() if v is not None}
+    mapping = {
+        "base_price": "basePrice",
+        "category_id": "categoryId",
+    }
+    clean = {mapping.get(k, k): v for k, v in data.items() if v is not None}
     return await repository.update_master_item(item_id, clean)
 
 
@@ -33,6 +37,13 @@ async def soft_delete_master_item(cafe_id: int, item_id: int):
 # --- Branch Menu Service ---
 
 async def set_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool):
+    from app.modules.cafes.repository import get_branch_by_id
+    from app.modules.menu.repository import get_master_item_by_id
+    from app.core.exceptions import BadRequestException
+    branch = await get_branch_by_id(branch_id)
+    master_item = await get_master_item_by_id(master_item_id)
+    if not branch or not master_item or branch.cafeId != master_item.cafeId:
+        raise BadRequestException("Master menu item does not belong to this café.")
     return await repository.upsert_branch_menu_item(branch_id, master_item_id, price_override, is_in_stock)
 
 
@@ -69,5 +80,10 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict):
     item = await repository.get_branch_menu_item_by_id(item_id)
     if not item or item.branchId != branch_id:
         raise NotFoundException("Branch menu item not found.")
-    clean = {k: v for k, v in data.items() if v is not None}
+    mapping = {
+        "price_override": "priceOverride",
+        "is_in_stock": "isInStock",
+        "is_active": "isActive"
+    }
+    clean = {mapping.get(k, k): v for k, v in data.items() if v is not None}
     return await repository.patch_branch_menu_item(item_id, clean)

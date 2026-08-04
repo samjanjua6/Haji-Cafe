@@ -26,12 +26,12 @@ VALID_TRANSITIONS = {
 
 class OrderItemCreate(BaseModel):
     branch_menu_item_id: int
-    quantity: int
+    quantity: int = Field(..., gt=0)
     notes: Optional[str] = None
 
 
 class OrderCreate(BaseModel):
-    items: List[OrderItemCreate]
+    items: List[OrderItemCreate] = Field(..., min_length=1)
 
 
 class OrderStatusUpdate(BaseModel):

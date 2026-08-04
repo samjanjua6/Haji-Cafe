@@ -5,7 +5,10 @@ from app.database import db
 # --- Cafe Repository ---
 
 async def create_cafe(name: str, owner_id: Optional[int]):
-    return await db.cafe.create(data={"name": name, "ownerId": owner_id})
+    data = {"name": name, "ownerId": owner_id}
+    if owner_id:
+        data["userScopes"] = {"create": [{"userId": owner_id}]}
+    return await db.cafe.create(data=data)
 
 
 async def get_all_cafes():

@@ -89,7 +89,7 @@ async def update_branch(
     _=Depends(require_cafe_access()),
 ):
     """[SUPER_ADMIN, CAFE_OWNER, BRANCH_MANAGER] Update branch details."""
-    return prisma_to_dict(await service.update_branch(branch_id, body.model_dump()))
+    return prisma_to_dict(await service.update_branch(cafe_id, branch_id, body.model_dump()))
 
 
 @router.delete("/{cafe_id}/branches/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -99,4 +99,4 @@ async def delete_branch(
     _=Depends(require_cafe_access()),
 ):
     """[SUPER_ADMIN, CAFE_OWNER] Delete a branch."""
-    await service.delete_branch(branch_id)
+    await service.delete_branch(cafe_id, branch_id)

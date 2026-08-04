@@ -5,20 +5,33 @@ import {
   Coffee, LayoutDashboard, Store, GitBranch,
   ShoppingCart, LogOut, Menu, X
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/cafes", label: "Cafés", icon: Store },
 ];
+
+interface UserProfile {
+  id: number;
+  email: string;
+  role: string;
+  scopes: { cafeId: number | null; branchId: number | null; cafeName: string | null; branchName: string | null }[];
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (auth.isLoggedIn()) {
+      api.get<UserProfile>("/auth/me").then(setUser).catch(() => {});
+    }
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -31,6 +44,11 @@ export default function Sidebar() {
     toast.success("Logged out");
     router.push("/");
   };
+
+  const dynamicLinks = [...navItems];
+  if (user?.role === "SUPER_ADMIN" || user?.role === "CAFE_OWNER") {
+    dynamicLinks.push({ href: "/cafes", label: "Cafés", icon: Store });
+  }
 
   return (
     <>
@@ -67,15 +85,15 @@ export default function Sidebar() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>Haji Cafe</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>Admin Dashboard</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{user?.role ? user.role.replace("_", " ") : "Dashboard"}</div>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
+          {dynamicLinks.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href;
             return (
               <Link
                 key={href}
@@ -100,6 +118,39 @@ export default function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Scoped Branch Links for Branch Managers */}
+          {user?.role === "BRANCH_MANAGER" && user.scopes.map((scope, idx) => (
+            <div key={idx} style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, padding: "0 14px", marginBottom: 8 }}>
+                {scope.branchName || `Branch #${scope.branchId}`}
+              </div>
+              <Link
+                href={`/branches/${scope.branchId}/orders`}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
+                  fontWeight: pathname.includes(`/branches/${scope.branchId}/orders`) ? 600 : 400,
+                  fontSize: 14, textDecoration: "none",
+                  color: pathname.includes(`/branches/${scope.branchId}/orders`) ? "#0f172a" : "var(--text-muted)",
+                  background: pathname.includes(`/branches/${scope.branchId}/orders`) ? "var(--accent)" : "transparent",
+                }}
+              >
+                <ShoppingCart size={18} /> Orders
+              </Link>
+              <Link
+                href={`/branches/${scope.branchId}/menu`}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
+                  fontWeight: pathname.includes(`/branches/${scope.branchId}/menu`) ? 600 : 400,
+                  fontSize: 14, textDecoration: "none",
+                  color: pathname.includes(`/branches/${scope.branchId}/menu`) ? "#0f172a" : "var(--text-muted)",
+                  background: pathname.includes(`/branches/${scope.branchId}/menu`) ? "var(--accent)" : "transparent",
+                }}
+              >
+                <Store size={18} /> Branch Menu
+              </Link>
+            </div>
+          ))}
         </nav>
 
         {/* Logout */}

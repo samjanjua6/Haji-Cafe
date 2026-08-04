@@ -58,4 +58,12 @@ async def me(current_user=Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role.name,
         "auth_provider": current_user.authProvider,
+        "scopes": [
+            {
+                "cafeId": s.cafeId,
+                "branchId": s.branchId,
+                "cafeName": s.cafe.name if s.cafe else None,
+                "branchName": s.branch.name if s.branch else None,
+            } for s in current_user.userScopes
+        ]
     }

@@ -1,5 +1,6 @@
 from typing import Optional
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, BadRequestException
+from prisma.errors import ForeignKeyViolationError
 from app.modules.cafes import repository
 
 
@@ -20,14 +21,19 @@ async def get_cafe(cafe_id: int):
     return cafe
 
 
-async def update_cafe(cafe_id: int, name: str):
+async def update_cafe(cafe_id: int, name: Optional[str]):
     await get_cafe(cafe_id)  # Ensure it exists
-    return await repository.update_cafe(cafe_id, name)
+    if name is not None:
+        return await repository.update_cafe(cafe_id, name)
+    return await repository.get_cafe_by_id(cafe_id)
 
 
 async def delete_cafe(cafe_id: int):
     await get_cafe(cafe_id)
-    return await repository.delete_cafe(cafe_id)
+    try:
+        return await repository.delete_cafe(cafe_id)
+    except ForeignKeyViolationError:
+        raise BadRequestException("Cannot delete café because it has existing branches or orders.")
 
 
 # --- Branch Service ---
@@ -42,16 +48,19 @@ async def get_branches(cafe_id: int):
     return await repository.get_branches_by_cafe(cafe_id)
 
 
-async def update_branch(branch_id: int, data: dict):
+async def update_branch(cafe_id: int, branch_id: int, data: dict):
     branch = await repository.get_branch_by_id(branch_id)
-    if not branch:
-        raise NotFoundException("Branch not found.")
+    if not branch or branch.cafeId != cafe_id:
+        raise NotFoundException("Branch not found in this café.")
     clean_data = {k: v for k, v in data.items() if v is not None}
     return await repository.update_branch(branch_id, clean_data)
 
 
-async def delete_branch(branch_id: int):
+async def delete_branch(cafe_id: int, branch_id: int):
     branch = await repository.get_branch_by_id(branch_id)
-    if not branch:
-        raise NotFoundException("Branch not found.")
-    return await repository.delete_branch(branch_id)
+    if not branch or branch.cafeId != cafe_id:
+        raise NotFoundException("Branch not found in this café.")
+    try:
+        return await repository.delete_branch(branch_id)
+    except ForeignKeyViolationError:
+        raise BadRequestException("Cannot delete branch because it has existing orders.")

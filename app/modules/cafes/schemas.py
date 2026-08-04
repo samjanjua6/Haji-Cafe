@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field
 # --- Cafe Schemas ---
 
 class CafeCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     owner_id: Optional[int] = None
 
 
 class CafeUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1)
 
 
 class CafeResponse(BaseModel):
@@ -26,12 +26,12 @@ class CafeResponse(BaseModel):
 # --- Branch Schemas ---
 
 class BranchCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     location: Optional[str] = None
 
 
 class BranchUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1)
     location: Optional[str] = None
 
 
