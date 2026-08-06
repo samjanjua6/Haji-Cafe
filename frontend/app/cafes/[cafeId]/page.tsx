@@ -206,9 +206,9 @@ export default function CafeDetailPage() {
         <form onSubmit={handleScheduleMeeting} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div><label>Meeting Subject</label><input value={meetingSummary} onChange={e => setMeetingSummary(e.target.value)} required placeholder="e.g. Weekly Branch Manager Sync" /></div>
           <div><label>Description (optional)</label><textarea value={meetingDesc} onChange={e => setMeetingDesc(e.target.value)} style={{ width: "100%", padding: 10, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-main)", resize: "vertical" }} /></div>
-          <div style={{ display: "flex", gap: 16 }}>
-            <div style={{ flex: 1 }}><label>Start Time</label><input type="datetime-local" value={meetingStart} onChange={e => setMeetingStart(e.target.value)} required /></div>
-            <div style={{ flex: 1 }}><label>End Time</label><input type="datetime-local" value={meetingEnd} onChange={e => setMeetingEnd(e.target.value)} required /></div>
+          <div style={{ display: "flex", gap: 16, width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 200px" }}><label>Start Time</label><input type="datetime-local" value={meetingStart} onChange={e => setMeetingStart(e.target.value)} required style={{ width: "100%", boxSizing: "border-box" }} /></div>
+            <div style={{ flex: "1 1 200px" }}><label>End Time</label><input type="datetime-local" value={meetingEnd} onChange={e => setMeetingEnd(e.target.value)} required style={{ width: "100%", boxSizing: "border-box" }} /></div>
           </div>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}><Users size={14}/> Invite Staff Members</label>
