@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Shield, Mail, Coffee, GitBranch, ShoppingCart, RefreshCw } from "lucide-react";
+import { User, Shield, Mail, Coffee, ShoppingCart, RefreshCw, Calendar, CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
@@ -11,6 +11,7 @@ interface UserProfile {
   email: string;
   role: string;
   createdAt: string;
+  has_google_calendar: boolean;
   scopes: { cafeId: number | null; branchId: number | null; cafeName: string | null; branchName: string | null }[];
 }
 
@@ -35,6 +36,15 @@ export default function DashboardPage() {
       auth.setTokens(data.access_token, data.refresh_token);
       toast.success("Tokens refreshed!");
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleConnectCalendar = async () => {
+    try {
+      const data: any = await api.get("/auth/google/connect");
+      window.location.href = data.connect_url;
+    } catch (e: any) {
+      toast.error("Could not get Google connect URL.");
+    }
   };
 
   if (loading) return <div style={{ color: "var(--text-muted)", marginTop: 80, textAlign: "center" }}>Loading...</div>;
@@ -157,6 +167,57 @@ export default function DashboardPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
             {renderQuickLinks()}
           </div>
+
+          {/* Google Calendar Connect Banner — only for CAFE_OWNER */}
+          {user.role === "CAFE_OWNER" && (
+            <div
+              className="card"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                borderColor: user.has_google_calendar ? "#22c55e44" : "#f59e0b44",
+                background: user.has_google_calendar ? "#22c55e08" : "#f59e0b08",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div
+                  style={{
+                    background: user.has_google_calendar ? "#22c55e22" : "#f59e0b22",
+                    borderRadius: 12,
+                    padding: 12,
+                    flexShrink: 0,
+                  }}
+                >
+                  {user.has_google_calendar
+                    ? <CheckCircle size={24} color="#22c55e" />
+                    : <Calendar size={24} color="#f59e0b" />}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>
+                    {user.has_google_calendar ? "Google Calendar Connected" : "Connect Google Calendar"}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>
+                    {user.has_google_calendar
+                      ? "You can schedule staff meetings directly from the café management page."
+                      : "Required to schedule meetings with your staff. Click to grant access."}
+                  </div>
+                </div>
+              </div>
+              {!user.has_google_calendar && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleConnectCalendar}
+                  style={{ flexShrink: 0 }}
+                >
+                  <Calendar size={14} style={{ marginRight: 6 }} />
+                  Connect Now
+                </button>
+              )}
+            </div>
+          )}
 
           {/* API Info */}
           <div className="card">

@@ -58,6 +58,7 @@ async def me(current_user=Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role.name,
         "auth_provider": current_user.authProvider,
+        "has_google_calendar": bool(current_user.googleAccessToken),
         "scopes": [
             {
                 "cafeId": s.cafeId,
@@ -67,3 +68,14 @@ async def me(current_user=Depends(get_current_user)):
             } for s in current_user.userScopes
         ]
     }
+
+
+@router.get("/google/connect")
+async def google_connect(current_user=Depends(get_current_user)):
+    """
+    For users who are already logged in with email/password.
+    Returns the Google OAuth URL they need to visit to grant Calendar permissions.
+    The callback will save their Google tokens without changing their account.
+    """
+    url = await service.get_google_auth_url()
+    return {"connect_url": url}
