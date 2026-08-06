@@ -40,7 +40,7 @@ export default function DashboardPage() {
   if (loading) return <div style={{ color: "var(--text-muted)", marginTop: 80, textAlign: "center" }}>Loading...</div>;
 
   const renderQuickLinks = () => {
-    if (user?.role === "SUPER_ADMIN" || user?.role === "CAFE_OWNER") {
+    if (user?.role === "SUPER_ADMIN") {
       return (
         <a
           href="/cafes"
@@ -57,9 +57,32 @@ export default function DashboardPage() {
           <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}>
             <Coffee size={24} color="#f59e0b" />
           </div>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Manage Cafés</span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
         </a>
       );
+    }
+
+    if (user?.role === "CAFE_OWNER") {
+      return user.scopes.map((scope, idx) => (
+        <a
+          key={`cafe-${idx}`}
+          href={`/cafes/${scope.cafeId}`}
+          className="card"
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            gap: 12, textDecoration: "none", cursor: "pointer",
+            transition: "transform 0.2s, border-color 0.2s",
+            textAlign: "center",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
+        >
+          <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}>
+            <Coffee size={24} color="#f59e0b" />
+          </div>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Manage {scope.cafeName || `Café #${scope.cafeId}`}</span>
+        </a>
+      ));
     }
 
     if (user?.role === "BRANCH_MANAGER") {

@@ -50,3 +50,38 @@ async def update_branch(branch_id: int, data: dict):
 
 async def delete_branch(branch_id: int):
     return await db.branch.delete(where={"id": branch_id})
+
+
+# --- Staff Repository ---
+
+async def get_staff_by_cafe(cafe_id: int):
+    """
+    Returns all users who have a UserScope connected to this cafe (directly or via a branch).
+    Excludes the cafe owner themselves.
+    """
+    cafe_branches = await db.branch.find_many(where={"cafeId": cafe_id})
+    branch_ids = [b.id for b in cafe_branches]
+
+    # Find all user_scope records for this cafe or any of its branches
+    scopes = await db.userscope.find_many(
+        where={
+            "OR": [
+                {"cafeId": cafe_id},
+                {"branchId": {"in": branch_ids}} if branch_ids else {},
+            ]
+        },
+        include={"user": {"include": {"role": True}}},
+    )
+
+    # Deduplicate by user id (a user may have multiple scopes)
+    seen = set()
+    staff = []
+    for scope in scopes:
+        if scope.user and scope.userId not in seen:
+            seen.add(scope.userId)
+            staff.append(scope.user)
+    return staff
+
+
+async def get_users_by_ids(user_ids: list):
+    return await db.user.find_many(where={"id": {"in": user_ids}})

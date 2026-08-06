@@ -62,8 +62,9 @@ async def get_google_auth_url() -> str:
         f"client_id={settings.GOOGLE_CLIENT_ID}"
         f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
         f"&response_type=code"
-        f"&scope=openid email profile"
+        f"&scope=openid email profile https://www.googleapis.com/auth/calendar.events"
         f"&access_type=offline"
+        f"&prompt=consent"
     )
     return f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
 
@@ -95,10 +96,16 @@ async def handle_google_callback(code: str):
     if not google_id or not email:
         raise BadRequestException("Could not retrieve user info from Google.")
 
+    google_access_token = token_data.get("access_token")
+    google_refresh_token = token_data.get("refresh_token")
+
     # Upsert: find by google_id, or create new
     user = await repository.find_user_by_provider_id(google_id, "GOOGLE")
     if not user:
         user = await repository.create_user(email, None, "GOOGLE", google_id)
+
+    # Save Google tokens to user record for Calendar API use
+    await repository.update_google_tokens(user.id, google_access_token, google_refresh_token)
 
     return await _issue_tokens(user)
 

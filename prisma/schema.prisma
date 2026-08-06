@@ -19,14 +19,16 @@ model Role {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
-  roleId         Int      @map("role_id")
-  email          String   @unique
-  passwordHash   String?  @map("password_hash")
-  authProvider   String   @default("LOCAL") @map("auth_provider")
-  authProviderId String?  @map("auth_provider_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                  Int      @id @default(autoincrement())
+  roleId              Int      @map("role_id")
+  email               String   @unique
+  passwordHash        String?  @map("password_hash")
+  authProvider        String   @default("LOCAL") @map("auth_provider")
+  authProviderId      String?  @map("auth_provider_id")
+  googleAccessToken   String?  @map("google_access_token")
+  googleRefreshToken  String?  @map("google_refresh_token")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   role          Role           @relation(fields: [roleId], references: [id])
   userScopes    UserScope[]

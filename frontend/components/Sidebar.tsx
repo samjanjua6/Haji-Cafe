@@ -46,8 +46,12 @@ export default function Sidebar() {
   };
 
   const dynamicLinks = [...navItems];
-  if (user?.role === "SUPER_ADMIN" || user?.role === "CAFE_OWNER") {
-    dynamicLinks.push({ href: "/cafes", label: "Cafés", icon: Store });
+  if (user?.role === "SUPER_ADMIN") {
+    dynamicLinks.push({ href: "/cafes", label: "All Cafés", icon: Store });
+  } else if (user?.role === "CAFE_OWNER") {
+    user.scopes.forEach((scope) => {
+      dynamicLinks.push({ href: `/cafes/${scope.cafeId}`, label: scope.cafeName || `Café #${scope.cafeId}`, icon: Store });
+    });
   }
 
   return (

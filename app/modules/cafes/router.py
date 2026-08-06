@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
+from app.core.dependencies import get_current_user
 from app.middleware.rbac import require_cafe_access, require_role
 from app.modules.cafes import service
 from app.modules.cafes.schemas import (
@@ -7,6 +8,7 @@ from app.modules.cafes.schemas import (
     BranchUpdate,
     CafeCreate,
     CafeUpdate,
+    MeetingCreate,
 )
 from app.utils.serializer import prisma_to_dict
 
@@ -100,3 +102,39 @@ async def delete_branch(
 ):
     """[SUPER_ADMIN, CAFE_OWNER] Delete a branch."""
     await service.delete_branch(cafe_id, branch_id)
+
+
+# ── Staff Endpoints ─────────────────────────────────────────────────
+
+@router.get("/{cafe_id}/staff")
+async def list_staff(
+    cafe_id: int,
+    _=Depends(require_cafe_access()),
+):
+    """[SUPER_ADMIN, CAFE_OWNER] List all staff members (Branch Managers and Staff) for a café."""
+    staff = await service.get_cafe_staff(cafe_id)
+    return [
+        {"id": u.id, "email": u.email, "role": u.role.name if u.role else None}
+        for u in staff
+    ]
+
+
+# ── Meeting Endpoints ────────────────────────────────────────────────
+
+@router.post("/{cafe_id}/meetings", status_code=status.HTTP_201_CREATED)
+async def schedule_meeting(
+    cafe_id: int,
+    body: MeetingCreate,
+    current_user=Depends(get_current_user),
+    _=Depends(require_cafe_access()),
+):
+    """[CAFE_OWNER] Schedule a Google Calendar meeting and send invites to selected staff members."""
+    return await service.schedule_staff_meeting(
+        cafe_id=cafe_id,
+        owner_user_id=current_user.id,
+        summary=body.summary,
+        description=body.description,
+        start_time=body.start_time,
+        end_time=body.end_time,
+        attendee_user_ids=body.attendee_user_ids,
+    )

@@ -67,3 +67,13 @@ async def revoke_all_user_refresh_tokens(user_id: int):
         where={"userId": user_id, "isRevoked": False},
         data={"isRevoked": True},
     )
+
+
+async def update_google_tokens(user_id: int, access_token: Optional[str], refresh_token: Optional[str]):
+    data = {}
+    if access_token is not None:
+        data["googleAccessToken"] = access_token
+    if refresh_token is not None:
+        data["googleRefreshToken"] = refresh_token
+    if data:
+        return await db.user.update(where={"id": user_id}, data=data)
