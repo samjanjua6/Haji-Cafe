@@ -44,10 +44,15 @@ async def google_login():
     return RedirectResponse(url=url)
 
 
-@router.get("/google/callback", response_model=TokenResponse)
+@router.get("/google/callback")
 async def google_callback(code: str):
-    """Handle Google OAuth callback. Exchanges code for tokens and upserts user."""
-    return await service.handle_google_callback(code)
+    """Handle Google OAuth callback. Exchanges code for tokens, upserts user, and redirects to frontend."""
+    tokens = await service.handle_google_callback(code)
+    
+    # Redirect back to the frontend with tokens in the URL
+    frontend_url = "https://haji-cafe.mychatbot.codes"
+    redirect_url = f"{frontend_url}/?access_token={tokens['access_token']}&refresh_token={tokens['refresh_token']}"
+    return RedirectResponse(url=redirect_url)
 
 
 @router.get("/me")
