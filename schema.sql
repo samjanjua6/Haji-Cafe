@@ -172,3 +172,19 @@ CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
 -- $$ LANGUAGE plpgsql;
 --
 -- Then attach it to tables that have updated_at columns.
+
+-- =========================
+-- 7. Audit Logs
+-- =========================
+CREATE TABLE audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(100) NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    cafe_id INTEGER REFERENCES cafes(id) ON DELETE CASCADE,
+    branch_id INTEGER REFERENCES branches(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_audit_logs_cafe_id ON audit_logs(cafe_id);
+CREATE INDEX idx_audit_logs_branch_id ON audit_logs(branch_id);

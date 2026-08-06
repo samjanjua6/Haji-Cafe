@@ -35,6 +35,7 @@ model User {
   ownedCafes    Cafe[]
   orders        Order[]
   refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
 
   @@map("users")
 }
@@ -64,6 +65,7 @@ model Cafe {
   categories     Category[]
   masterMenuItems MasterMenuItem[]
   userScopes     UserScope[]
+  auditLogs      AuditLog[]
 
   @@map("cafes")
 }
@@ -80,6 +82,7 @@ model Branch {
   branchMenuItems BranchMenuItem[]
   orders          Order[]
   userScopes      UserScope[]
+  auditLogs       AuditLog[]
 
   @@map("branches")
 }
@@ -182,4 +185,20 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  cafeId    Int?     @map("cafe_id")
+  branchId  Int?     @map("branch_id")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cafe   Cafe?   @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
 }

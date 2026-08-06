@@ -5,6 +5,7 @@ import { User, Shield, Mail, Coffee, ShoppingCart, RefreshCw, Calendar, CheckCir
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
+import { AuditLogTable } from "@/components/AuditLogTable";
 
 interface UserProfile {
   id: number;
@@ -237,6 +238,11 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+
+          {/* Audit Logs for Cafe Owners */}
+          {user.role === "CAFE_OWNER" && user.scopes.map((scope, idx) => (
+            scope.cafeId ? <AuditLogTable key={`audit-${idx}`} cafeId={scope.cafeId} cafeName={scope.cafeName || ""} /> : null
+          ))}
 
           {/* API Info */}
           <div className="card">

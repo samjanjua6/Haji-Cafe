@@ -21,10 +21,10 @@ router = APIRouter()
 async def create_master_item(
     cafe_id: int,
     body: MasterMenuItemCreate,
-    _=Depends(require_cafe_access()),
+    current_user=Depends(require_cafe_access()),
 ):
     """[CAFE_OWNER, SUPER_ADMIN] Create a master menu item for a café."""
-    result = await service.create_master_item(cafe_id, body.name, body.description, body.base_price, body.category_id)
+    result = await service.create_master_item(cafe_id, body.name, body.description, body.base_price, body.category_id, current_user.id)
     return prisma_to_dict(result)
 
 
@@ -43,10 +43,10 @@ async def update_master_item(
     cafe_id: int,
     item_id: int,
     body: MasterMenuItemUpdate,
-    _=Depends(require_cafe_access()),
+    current_user=Depends(require_cafe_access()),
 ):
     """[CAFE_OWNER, SUPER_ADMIN] Update a master menu item."""
-    result = await service.update_master_item(cafe_id, item_id, body.model_dump())
+    result = await service.update_master_item(cafe_id, item_id, body.model_dump(), current_user.id)
     return prisma_to_dict(result)
 
 
@@ -54,10 +54,10 @@ async def update_master_item(
 async def delete_master_item(
     cafe_id: int,
     item_id: int,
-    _=Depends(require_cafe_access()),
+    current_user=Depends(require_cafe_access()),
 ):
     """[CAFE_OWNER, SUPER_ADMIN] Soft-delete a master menu item."""
-    await service.soft_delete_master_item(cafe_id, item_id)
+    await service.soft_delete_master_item(cafe_id, item_id, current_user.id)
 
 
 # ── Branch Menu Endpoints ────────────────────────────────────────────
@@ -66,10 +66,10 @@ async def delete_master_item(
 async def set_branch_menu_item(
     branch_id: int,
     body: BranchMenuItemCreate,
-    _=Depends(require_branch_access()),
+    current_user=Depends(require_branch_access()),
 ):
     """[BRANCH_MANAGER, SUPER_ADMIN] Set price override and stock status for a branch menu item."""
-    result = await service.set_branch_menu_item(branch_id, body.master_item_id, body.price_override, body.is_in_stock)
+    result = await service.set_branch_menu_item(branch_id, body.master_item_id, body.price_override, body.is_in_stock, current_user.id)
     return prisma_to_dict(result)
 
 
@@ -87,8 +87,8 @@ async def patch_branch_menu_item(
     branch_id: int,
     item_id: int,
     body: BranchMenuItemPatch,
-    _=Depends(require_branch_access()),
+    current_user=Depends(require_branch_access()),
 ):
     """[BRANCH_MANAGER, SUPER_ADMIN] Toggle in-stock status or update price override."""
-    result = await service.patch_branch_menu_item(branch_id, item_id, body.model_dump())
+    result = await service.patch_branch_menu_item(branch_id, item_id, body.model_dump(), current_user.id)
     return prisma_to_dict(result)

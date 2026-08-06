@@ -3,19 +3,23 @@ from typing import Optional
 
 from app.core.exceptions import NotFoundException
 from app.modules.menu import repository
+from app.modules.audit.service import log_action
 
 
 # --- Master Menu Service ---
 
-async def create_master_item(cafe_id: int, name: str, description: Optional[str], base_price: Decimal, category_id: Optional[int]):
-    return await repository.create_master_item(cafe_id, name, description, base_price, category_id)
+async def create_master_item(cafe_id: int, name: str, description: Optional[str], base_price: Decimal, category_id: Optional[int], user_id: int):
+    result = await repository.create_master_item(cafe_id, name, description, base_price, category_id)
+    details = f"Created Master Item: {name}. Base Price: {base_price}."
+    await log_action(user_id, "CREATE_MASTER_ITEM", details, cafe_id, None)
+    return result
 
 
 async def get_master_items(cafe_id: int):
     return await repository.get_master_items_by_cafe(cafe_id)
 
 
-async def update_master_item(cafe_id: int, item_id: int, data: dict):
+async def update_master_item(cafe_id: int, item_id: int, data: dict, user_id: int):
     item = await repository.get_master_item_by_id(item_id)
     if not item or item.cafeId != cafe_id or item.isDeleted:
         raise NotFoundException("Menu item not found.")
@@ -24,19 +28,33 @@ async def update_master_item(cafe_id: int, item_id: int, data: dict):
         "category_id": "categoryId",
     }
     clean = {mapping.get(k, k): v for k, v in data.items() if v is not None}
-    return await repository.update_master_item(item_id, clean)
+    
+    changes = []
+    if "basePrice" in clean:
+        changes.append(f"Price: {clean['basePrice']}")
+    if "categoryId" in clean:
+        changes.append(f"Category: {clean['categoryId']}")
+        
+    details = f"Updated Master Item: {item.name}. Changes: {', '.join(changes) if changes else 'None'}"
+    result = await repository.update_master_item(item_id, clean)
+    await log_action(user_id, "UPDATE_MASTER_ITEM", details, cafe_id, None)
+    return result
 
 
-async def soft_delete_master_item(cafe_id: int, item_id: int):
+async def soft_delete_master_item(cafe_id: int, item_id: int, user_id: int):
     item = await repository.get_master_item_by_id(item_id)
     if not item or item.cafeId != cafe_id:
         raise NotFoundException("Menu item not found.")
-    return await repository.soft_delete_master_item(item_id)
+        
+    details = f"Deleted Master Item: {item.name}."
+    result = await repository.soft_delete_master_item(item_id)
+    await log_action(user_id, "DELETE_MASTER_ITEM", details, cafe_id, None)
+    return result
 
 
 # --- Branch Menu Service ---
 
-async def set_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool):
+async def set_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool, user_id: int):
     from app.modules.cafes.repository import get_branch_by_id
     from app.modules.menu.repository import get_master_item_by_id
     from app.core.exceptions import BadRequestException
@@ -44,7 +62,13 @@ async def set_branch_menu_item(branch_id: int, master_item_id: int, price_overri
     master_item = await get_master_item_by_id(master_item_id)
     if not branch or not master_item or branch.cafeId != master_item.cafeId:
         raise BadRequestException("Master menu item does not belong to this café.")
-    return await repository.upsert_branch_menu_item(branch_id, master_item_id, price_override, is_in_stock)
+    
+    result = await repository.upsert_branch_menu_item(branch_id, master_item_id, price_override, is_in_stock)
+    
+    details = f"Item: {master_item.name}. Price Override: {price_override}. In Stock: {is_in_stock}."
+    await log_action(user_id, "SET_MENU_ITEM", details, branch.cafeId, branch_id)
+    
+    return result
 
 
 async def get_branch_menu(branch_id: int):
@@ -76,7 +100,7 @@ async def get_branch_menu(branch_id: int):
     return result
 
 
-async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict):
+async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_id: int):
     item = await repository.get_branch_menu_item_by_id(item_id)
     if not item or item.branchId != branch_id:
         raise NotFoundException("Branch menu item not found.")
@@ -86,4 +110,21 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict):
         "is_active": "isActive"
     }
     clean = {mapping.get(k, k): v for k, v in data.items() if v is not None}
-    return await repository.patch_branch_menu_item(item_id, clean)
+    
+    # Audit log details
+    master_name = item.masterItem.name if item.masterItem else f"ID {item.masterItemId}"
+    changes = []
+    if "priceOverride" in clean:
+        changes.append(f"Price: {clean['priceOverride']}")
+    if "isInStock" in clean:
+        changes.append(f"Stock: {clean['isInStock']}")
+    if "isActive" in clean:
+        changes.append(f"Active: {clean['isActive']}")
+    
+    details = f"Item: {master_name}. Changes: {', '.join(changes)}"
+    
+    result = await repository.patch_branch_menu_item(item_id, clean)
+    
+    await log_action(user_id, "UPDATE_MENU_ITEM", details, item.branch.cafeId, branch_id)
+    
+    return result
