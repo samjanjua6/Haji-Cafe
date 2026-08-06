@@ -211,7 +211,25 @@ export default function CafeDetailPage() {
             <div style={{ flex: "1 1 200px" }}><label>End Time</label><input type="datetime-local" value={meetingEnd} onChange={e => setMeetingEnd(e.target.value)} required style={{ width: "100%", boxSizing: "border-box" }} /></div>
           </div>
           <div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}><Users size={14}/> Invite Staff Members</label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}><Users size={14}/> Invite Staff Members</label>
+              {staffList.length > 0 && (
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: "var(--accent)" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedStaff.length === staffList.length} 
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStaff(staffList.map(s => s.id));
+                      } else {
+                        setSelectedStaff([]);
+                      }
+                    }} 
+                  />
+                  Select All
+                </label>
+              )}
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 150, overflowY: "auto", overflowX: "hidden", padding: 10, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6 }}>
               {staffList.length === 0 ? <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No staff found for this café. Use Super Admin to assign staff.</div> : null}
               {staffList.map(s => (
