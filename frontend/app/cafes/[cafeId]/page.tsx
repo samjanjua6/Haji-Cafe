@@ -215,10 +215,10 @@ export default function CafeDetailPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 150, overflowY: "auto", padding: 10, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6 }}>
               {staffList.length === 0 ? <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No staff found for this café. Use Super Admin to assign staff.</div> : null}
               {staffList.map(s => (
-                <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14 }}>
-                  <input type="checkbox" checked={selectedStaff.includes(s.id)} onChange={() => toggleStaff(s.id)} />
-                  <span style={{ fontWeight: 600 }}>{s.email}</span>
-                  <span style={{ fontSize: 11, background: "var(--bg-surface)", padding: "2px 6px", borderRadius: 4 }}>{s.role.replace("_", " ")}</span>
+                <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, width: "100%", justifyContent: "flex-start" }}>
+                  <input type="checkbox" checked={selectedStaff.includes(s.id)} onChange={() => toggleStaff(s.id)} style={{ width: "auto", margin: 0 }} />
+                  <span style={{ flex: 1, fontWeight: 600, textAlign: "left" }}>{s.email}</span>
+                  <span style={{ fontSize: 11, background: "var(--bg-surface)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>{s.role.replace("_", " ")}</span>
                 </label>
               ))}
             </div>
