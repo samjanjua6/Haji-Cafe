@@ -105,7 +105,10 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
 
     # 2. Load the cafe owner's Google tokens
     owner = await db.user.find_unique(where={"id": owner_user_id})
-    if not owner or not owner.googleAccessToken:
+    google_access_token = getattr(owner, "googleAccessToken", None)
+    google_refresh_token = getattr(owner, "googleRefreshToken", None)
+
+    if not owner or not google_access_token:
         raise BadRequestException(
             "You have not connected your Google account with Calendar permissions. "
             "Please sign in via Google OAuth to grant calendar access."
@@ -128,7 +131,7 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
     }
 
     # 5. Attempt to create the event using the stored access token
-    access_token = owner.googleAccessToken
+    access_token = google_access_token
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             GOOGLE_CALENDAR_URL,
@@ -137,8 +140,8 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
         )
 
         # 6. If the token is expired (401), refresh it and retry once
-        if resp.status_code == 401 and owner.googleRefreshToken:
-            access_token = await _refresh_google_access_token(owner.googleRefreshToken)
+        if resp.status_code == 401 and google_refresh_token:
+            access_token = await _refresh_google_access_token(google_refresh_token)
             # Persist the new access token
             from app.modules.auth.repository import update_google_tokens
             await update_google_tokens(owner_user_id, access_token, None)

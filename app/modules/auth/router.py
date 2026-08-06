@@ -58,7 +58,7 @@ async def me(current_user=Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role.name,
         "auth_provider": current_user.authProvider,
-        "has_google_calendar": bool(current_user.googleAccessToken),
+        "has_google_calendar": bool(getattr(current_user, "googleAccessToken", None)),
         "scopes": [
             {
                 "cafeId": s.cafeId,
