@@ -102,7 +102,11 @@ async def handle_google_callback(code: str):
     # Upsert: find by google_id, or create new
     user = await repository.find_user_by_provider_id(google_id, "GOOGLE")
     if not user:
-        user = await repository.create_user(email, None, "GOOGLE", google_id)
+        existing_email_user = await repository.find_user_by_email(email)
+        if existing_email_user:
+            user = await repository.link_google_account(existing_email_user.id, google_id)
+        else:
+            user = await repository.create_user(email, None, "GOOGLE", google_id)
 
     # Save Google tokens to user record for Calendar API use
     await repository.update_google_tokens(user.id, google_access_token, google_refresh_token)

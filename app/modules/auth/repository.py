@@ -77,3 +77,11 @@ async def update_google_tokens(user_id: int, access_token: Optional[str], refres
         data["googleRefreshToken"] = refresh_token
     if data:
         return await db.user.update(where={"id": user_id}, data=data)
+
+
+async def link_google_account(user_id: int, google_id: str):
+    return await db.user.update(
+        where={"id": user_id},
+        data={"authProvider": "GOOGLE", "authProviderId": google_id},
+        include={"role": True},
+    )
