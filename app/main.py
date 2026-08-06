@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import connect_db, disconnect_db
+from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
 from app.modules.cafes.router import router as cafes_router
 from app.modules.menu.router import router as menu_router
@@ -42,6 +43,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(cafes_router, prefix="/cafes", tags=["Cafes & Branches"])
 app.include_router(menu_router, tags=["Menu"])

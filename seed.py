@@ -38,7 +38,7 @@ async def main():
     })
     owner = await db.user.create(data={
         "roleId": roles["CAFE_OWNER"].id,
-        "email": "owner@sunrise.com",
+        "email": "samjanjua6@gmail.com",
         "passwordHash": password,
     })
     manager = await db.user.create(data={
