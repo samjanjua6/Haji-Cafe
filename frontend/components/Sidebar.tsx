@@ -84,8 +84,8 @@ export default function Sidebar() {
         {/* Logo */}
         <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: "var(--accent)", borderRadius: 10, padding: 8 }}>
-              <Coffee size={20} color="#0f172a" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40 }}>
+              <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>Haji Cafe</div>

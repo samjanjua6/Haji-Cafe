@@ -54,11 +54,8 @@ function AuthContent() {
       <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            background: "var(--accent)", borderRadius: 20, padding: 16,
-            display: "inline-flex", marginBottom: 16,
-          }}>
-            <Coffee size={36} color="#0f172a" />
+          <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+            <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: 80, height: 80, objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Haji Cafe</h1>
           <p style={{ color: "var(--text-muted)", marginTop: 4, fontSize: 14 }}>Admin Dashboard</p>
