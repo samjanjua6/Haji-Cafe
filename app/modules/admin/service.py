@@ -1,4 +1,4 @@
-from app.exceptions.custom_exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException
 from app.modules.admin import repository
 
 async def get_all_users():
