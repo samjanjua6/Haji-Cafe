@@ -13,6 +13,8 @@ async def update_user_role(user_id: int, role_name: str):
 async def add_user_scope(user_id: int, cafe_id: int = None, branch_id: int = None):
     if not cafe_id and not branch_id:
         raise BadRequestException("Must provide either cafe_id or branch_id")
+    if cafe_id and branch_id:
+        raise BadRequestException("Cannot provide BOTH Cafe ID and Branch ID. A user scope must be for EITHER an entire Cafe OR a specific Branch, not both.")
         
     try:
         if branch_id:
