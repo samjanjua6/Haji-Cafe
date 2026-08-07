@@ -77,7 +77,7 @@ async def transition_status(branch_id: int, order_id: int, new_status: OrderStat
       COMPLETED and CANCELLED are terminal states.
     """
     order = await get_order_detail(branch_id, order_id)
-    current_status = OrderStatusEnum(order.status.value)
+    current_status = OrderStatusEnum(getattr(order.status, "value", order.status))
     allowed_transitions = VALID_TRANSITIONS.get(current_status, [])
 
     if new_status not in allowed_transitions:
