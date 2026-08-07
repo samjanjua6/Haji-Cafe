@@ -69,7 +69,7 @@ async def set_branch_menu_item(
     current_user=Depends(require_branch_access()),
 ):
     """[BRANCH_MANAGER, SUPER_ADMIN] Set price override and stock status for a branch menu item."""
-    result = await service.set_branch_menu_item(branch_id, body.master_item_id, body.price_override, body.is_in_stock, current_user.id)
+    result = await service.set_branch_menu_item(branch_id, body.master_item_id, body.price_override, body.is_in_stock, body.available_quantity, current_user.id)
     return prisma_to_dict(result)
 
 

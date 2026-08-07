@@ -12,18 +12,43 @@ async def get_branch_menu_items_by_ids(branch_id: int, item_ids: List[int]):
 
 
 async def create_order(branch_id: int, user_id: Optional[int], total_amount, items_data: list):
-    """Create an order and all its line items in a single transaction."""
-    return await db.order.create(
-        data={
-            "branchId": branch_id,
-            "createdByUserId": user_id,
-            "totalAmount": total_amount,
-            "orderItems": {
-                "create": items_data,
+    """Create an order and deduct inventory in a single atomic transaction."""
+    async with db.tx() as transaction:
+        # Create order
+        order = await transaction.order.create(
+            data={
+                "branchId": branch_id,
+                "createdByUserId": user_id,
+                "totalAmount": total_amount,
+                "orderItems": {
+                    "create": items_data,
+                },
             },
-        },
-        include={"orderItems": True},
-    )
+            include={"orderItems": True},
+        )
+        
+        # Deduct inventory
+        for data in items_data:
+            item_id = data["branchMenuItemId"]
+            qty = data["quantity"]
+            
+            branch_item = await transaction.branchmenuitem.find_unique(where={"id": item_id})
+            if branch_item.availableQuantity is not None:
+                new_qty = branch_item.availableQuantity - qty
+                if new_qty < 0:
+                    # Should be caught by validation in service, but this is a DB-level safeguard
+                    raise ValueError(f"Insufficient stock for item ID {item_id}")
+                    
+                update_data = {"availableQuantity": new_qty}
+                if new_qty == 0:
+                    update_data["isInStock"] = False
+                    
+                await transaction.branchmenuitem.update(
+                    where={"id": item_id},
+                    data=update_data
+                )
+                
+        return order
 
 
 async def get_orders_by_branch(branch_id: int):

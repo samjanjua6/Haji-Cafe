@@ -37,6 +37,7 @@ class MasterMenuItemResponse(BaseModel):
 class BranchMenuItemCreate(BaseModel):
     master_item_id: int
     price_override: Optional[Decimal] = Field(None, gt=0)
+    available_quantity: Optional[int] = Field(None, ge=0)
     is_in_stock: bool = True
     is_active: bool = True
 
@@ -51,6 +52,7 @@ class MasterItemSubset(BaseModel):
 
 class BranchMenuItemPatch(BaseModel):
     price_override: Optional[Decimal] = Field(None, gt=0)
+    available_quantity: Optional[int] = Field(None, ge=0)
     is_in_stock: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -60,6 +62,7 @@ class BranchMenuItemResponse(BaseModel):
     branch_id: int = Field(alias="branchId")
     master_item_id: int = Field(alias="masterItemId")
     price_override: Optional[Decimal] = Field(None, alias="priceOverride")
+    available_quantity: Optional[int] = Field(None, alias="availableQuantity")
     is_in_stock: bool = Field(alias="isInStock")
     is_active: bool = Field(alias="isActive")
     effective_price: Optional[Decimal] = None  # Computed: override ?? base_price

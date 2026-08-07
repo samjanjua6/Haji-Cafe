@@ -120,10 +120,11 @@ model MasterMenuItem {
 model BranchMenuItem {
   id            Int      @id @default(autoincrement())
   branchId      Int      @map("branch_id")
-  masterItemId  Int      @map("master_item_id")
-  priceOverride Decimal? @map("price_override") @db.Decimal(10, 2)
-  isInStock     Boolean  @default(true) @map("is_in_stock")
-  isActive      Boolean  @default(true) @map("is_active")
+  masterItemId      Int      @map("master_item_id")
+  priceOverride     Decimal? @map("price_override") @db.Decimal(10, 2)
+  availableQuantity Int?     @map("available_quantity")
+  isInStock         Boolean  @default(true) @map("is_in_stock")
+  isActive          Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

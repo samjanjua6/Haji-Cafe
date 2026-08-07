@@ -33,6 +33,11 @@ async def place_order(branch_id: int, user_id: Optional[int], items: List[OrderI
             )
         if item.quantity <= 0:
             raise BadRequestException("Quantity must be at least 1.")
+            
+        if branch_item.availableQuantity is not None and branch_item.availableQuantity < item.quantity:
+            raise BadRequestException(
+                f"Item '{branch_item.masterItem.name}' has insufficient stock (Only {branch_item.availableQuantity} left)."
+            )
 
     # Build line item data with price snapshot
     items_data = []

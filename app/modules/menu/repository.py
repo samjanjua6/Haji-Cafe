@@ -37,7 +37,7 @@ async def soft_delete_master_item(item_id: int):
 
 # --- Branch Menu Repository ---
 
-async def upsert_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool):
+async def upsert_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool, available_quantity: Optional[int]):
     return await db.branchmenuitem.upsert(
         where={"branchId_masterItemId": {"branchId": branch_id, "masterItemId": master_item_id}},
         data={
@@ -45,10 +45,12 @@ async def upsert_branch_menu_item(branch_id: int, master_item_id: int, price_ove
                 "branchId": branch_id,
                 "masterItemId": master_item_id,
                 "priceOverride": price_override,
+                "availableQuantity": available_quantity,
                 "isInStock": is_in_stock,
             },
             "update": {
                 "priceOverride": price_override,
+                "availableQuantity": available_quantity,
                 "isInStock": is_in_stock,
             },
         },

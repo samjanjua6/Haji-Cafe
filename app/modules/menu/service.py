@@ -54,7 +54,7 @@ async def soft_delete_master_item(cafe_id: int, item_id: int, user_id: int):
 
 # --- Branch Menu Service ---
 
-async def set_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool, user_id: int):
+async def set_branch_menu_item(branch_id: int, master_item_id: int, price_override: Optional[Decimal], is_in_stock: bool, available_quantity: Optional[int], user_id: int):
     from app.modules.cafes.repository import get_branch_by_id
     from app.modules.menu.repository import get_master_item_by_id
     from app.core.exceptions import BadRequestException
@@ -63,9 +63,9 @@ async def set_branch_menu_item(branch_id: int, master_item_id: int, price_overri
     if not branch or not master_item or branch.cafeId != master_item.cafeId:
         raise BadRequestException("Master menu item does not belong to this café.")
     
-    result = await repository.upsert_branch_menu_item(branch_id, master_item_id, price_override, is_in_stock)
+    result = await repository.upsert_branch_menu_item(branch_id, master_item_id, price_override, is_in_stock, available_quantity)
     
-    details = f"Item: {master_item.name}. Price Override: {price_override}. In Stock: {is_in_stock}."
+    details = f"Item: {master_item.name}. Price Override: {price_override}. In Stock: {is_in_stock}. Qty: {available_quantity}."
     await log_action(user_id, "SET_MENU_ITEM", details, branch.cafeId, branch_id)
     
     return result
@@ -87,6 +87,7 @@ async def get_branch_menu(branch_id: int):
             "branchId": item.branchId,
             "masterItemId": item.masterItemId,
             "priceOverride": float(item.priceOverride) if item.priceOverride is not None else None,
+            "availableQuantity": item.availableQuantity,
             "isInStock": item.isInStock,
             "isActive": item.isActive,
             "effectivePrice": float(effective),
@@ -106,6 +107,7 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_
         raise NotFoundException("Branch menu item not found.")
     mapping = {
         "price_override": "priceOverride",
+        "available_quantity": "availableQuantity",
         "is_in_stock": "isInStock",
         "is_active": "isActive"
     }
@@ -118,6 +120,8 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_
         changes.append(f"Price: {clean['priceOverride']}")
     if "isInStock" in clean:
         changes.append(f"Stock: {clean['isInStock']}")
+    if "availableQuantity" in clean:
+        changes.append(f"Qty: {clean['availableQuantity']}")
     if "isActive" in clean:
         changes.append(f"Active: {clean['isActive']}")
     
