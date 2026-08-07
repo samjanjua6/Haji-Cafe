@@ -58,3 +58,48 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     new_messages.append(ChatMessage(role="model", content=response.text))
     
     return ChatResponse(messages=new_messages)
+
+from fastapi import WebSocket
+
+async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
+    tools = build_tools(current_user)
+    
+    system_prompt = (
+        f"You are a helpful assistant for Haji Cafe Platform.\n"
+        f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
+        "You have been provided with specific tools to fetch data and perform actions on their behalf.\n"
+        "Always use the tools available to you to answer questions. If a tool returns an error or Access Denied, "
+        "explain to the user that they don't have permission for that action.\n"
+        "Format your responses cleanly in Markdown."
+    )
+    
+    if not body.messages:
+        await websocket.send_json({"done": True})
+        return
+        
+    history_msgs = body.messages[:-1]
+    latest_msg = body.messages[-1]
+    
+    history_contents = []
+    for msg in history_msgs:
+        role = "user" if msg.role == "user" else "model"
+        part = types.Part.from_text(text=msg.content)
+        history_contents.append(types.Content(role=role, parts=[part]))
+        
+    chat = client.aio.chats.create(
+        model="gemini-3.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=tools,
+            temperature=0.7,
+        ),
+        history=history_contents
+    )
+    
+    response_stream = await chat.send_message_stream(latest_msg.content)
+    
+    async for chunk in response_stream:
+        if chunk.text:
+            await websocket.send_json({"chunk": chunk.text})
+            
+    await websocket.send_json({"done": True})

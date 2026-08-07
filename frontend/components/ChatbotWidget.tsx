@@ -26,6 +26,67 @@ export default function ChatbotWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const ws = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      return;
+    }
+
+    const token = auth.getAccess();
+    if (!token) return;
+
+    // Use location.origin if running in browser to handle correct schema
+    let base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    base = base.replace("http://", "ws://").replace("https://", "wss://");
+    
+    const wsUrl = `${base}/chatbot/ws?token=${token}`;
+    const websocket = new WebSocket(wsUrl);
+
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.chunk) {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg && lastMsg.role === "model" && lastMsg.content !== undefined) {
+              lastMsg.content += data.chunk;
+            } else {
+              newMessages.push({ role: "model", content: data.chunk });
+            }
+            return newMessages;
+          });
+        }
+        if (data.done) {
+          setIsLoading(false);
+        }
+      } catch (e) {
+        console.error("Error parsing websocket message", e);
+      }
+    };
+
+    websocket.onerror = () => {
+      setIsLoading(false);
+    };
+
+    websocket.onclose = () => {
+      setIsLoading(false);
+    };
+
+    ws.current = websocket;
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+    };
+  }, [isOpen]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -43,19 +104,15 @@ export default function ChatbotWidget() {
     setInput("");
     setIsLoading(true);
 
-    try {
-      const response = await api.post<{ messages: Message[] }>("/chatbot/chat", { messages: currentMsgs });
-      // The backend returns the updated full message list
-      if (response && response.messages) {
-        setMessages(response.messages);
-      }
-    } catch (error: any) {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ messages: currentMsgs }));
+      setMessages((prev) => [...prev, { role: "model", content: "" }]);
+    } else {
+      setIsLoading(false);
       setMessages([
         ...currentMsgs,
-        { role: "model", content: `**Error:** ${error.message || "Could not connect to the assistant."}` }
+        { role: "model", content: `**Error:** Connection closed or not established. Please try again.` }
       ]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
