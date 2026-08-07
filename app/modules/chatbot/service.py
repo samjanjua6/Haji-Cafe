@@ -38,7 +38,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
         history_contents.append(types.Content(role=role, parts=[part]))
         
     chat = client.aio.chats.create(
-        model="gemini-2.0-flash",
+        model="gemini-flash-latest",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             tools=tools,
@@ -87,7 +87,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         history_contents.append(types.Content(role=role, parts=[part]))
         
     chat = client.aio.chats.create(
-        model="gemini-2.0-flash",
+        model="gemini-flash-latest",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             tools=tools,
