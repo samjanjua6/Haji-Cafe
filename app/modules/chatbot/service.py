@@ -6,8 +6,7 @@ from .tools import build_tools
 from app.config import settings
 
 client = genai.Client(
-    api_key=settings.GEMINI_API_KEY,
-    http_options={'base_url': settings.GEMINI_BASE_URL} if settings.GEMINI_BASE_URL else None
+    api_key=settings.GEMINI_API_KEY
 )
 
 async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
