@@ -36,16 +36,18 @@ export default function CafeDetailPage() {
   const [meetingStart, setMeetingStart] = useState("");
   const [meetingEnd, setMeetingEnd] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<number[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const load = async () => {
     try {
-      const [c, b, o, s] = await Promise.all([
+      const [c, b, o, s, user] = await Promise.all([
         api.get<Cafe>(`/cafes/${cafeId}`),
         api.get<Branch[]>(`/cafes/${cafeId}/branches`),
         api.get<Order[]>(`/cafes/${cafeId}/orders`),
         api.get<Staff[]>(`/cafes/${cafeId}/staff`),
+        api.get<any>("/auth/me"),
       ]);
-      setCafe(c); setBranches(b); setOrders(o); setStaffList(s);
+      setCafe(c); setBranches(b); setOrders(o); setStaffList(s); setCurrentUser(user);
     } catch (e: any) { toast.error(e.message); } finally { setLoading(false); }
   };
 
@@ -119,9 +121,11 @@ export default function CafeDetailPage() {
           <div className="page-subtitle">Café ID: #{cafeId}</div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button className="btn btn-ghost" onClick={() => setScheduleMeeting(true)} style={{ color: "#22c55e", background: "#22c55e11" }}>
-            <CalendarPlus size={15} /> Schedule Meeting
-          </button>
+          {currentUser?.role === "CAFE_OWNER" && (
+            <button className="btn btn-ghost" onClick={() => setScheduleMeeting(true)} style={{ color: "#22c55e", background: "#22c55e11" }}>
+              <CalendarPlus size={15} /> Schedule Meeting
+            </button>
+          )}
           <Link href={`/cafes/${cafeId}/menu`} className="btn btn-ghost">
             <UtensilsCrossed size={15} /> Master Menu
           </Link>
