@@ -47,6 +47,9 @@ async def get_ws_current_user(token: str):
 
     return user
 
+import logging
+logger = logging.getLogger(__name__)
+
 @router.websocket("/ws")
 async def websocket_chat(websocket: WebSocket, token: str):
     await websocket.accept()
@@ -59,11 +62,20 @@ async def websocket_chat(websocket: WebSocket, token: str):
             messages = [ChatMessage(**msg) for msg in messages_data]
             request = ChatRequest(messages=messages)
             
-            await service.stream_chat(websocket, request, current_user)
+            try:
+                await service.stream_chat(websocket, request, current_user)
+            except Exception as stream_e:
+                logger.error(f"Stream Error: {stream_e}", exc_info=True)
+                await websocket.send_json({"chunk": f"\n\n**Error:** {str(stream_e)}"})
+                await websocket.send_json({"done": True})
             
     except WebSocketException as e:
         await websocket.close(code=e.code)
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        logger.error(f"WebSocket Loop Error: {e}", exc_info=True)
+        try:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        except:
+            pass
