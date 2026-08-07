@@ -90,5 +90,5 @@ async def patch_branch_menu_item(
     current_user=Depends(require_branch_access()),
 ):
     """[BRANCH_MANAGER, SUPER_ADMIN] Toggle in-stock status or update price override."""
-    result = await service.patch_branch_menu_item(branch_id, item_id, body.model_dump(), current_user.id)
+    result = await service.patch_branch_menu_item(branch_id, item_id, body.model_dump(exclude_unset=True), current_user.id)
     return prisma_to_dict(result)

@@ -111,7 +111,7 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_
         "is_in_stock": "isInStock",
         "is_active": "isActive"
     }
-    clean = {mapping.get(k, k): v for k, v in data.items() if v is not None}
+    clean = {mapping.get(k, k): v for k, v in data.items() if k in mapping}
     
     # Audit log details
     master_name = item.masterItem.name if item.masterItem else f"ID {item.masterItemId}"

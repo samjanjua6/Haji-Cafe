@@ -23,7 +23,7 @@ export default function BranchMenuPage() {
   const [loading, setLoading] = useState(true);
   const [upsertModal, setUpsertModal] = useState(false);
   const [editItem, setEditItem] = useState<BranchMenuItem | null>(null);
-  const [form, setForm] = useState({ masterItemId: "", priceOverride: "", availableQuantity: "", isInStock: true, isActive: true });
+  const [form, setForm] = useState({ masterItemId: "", priceOverride: "", availableQuantity: "", isInfinite: true, isInStock: true, isActive: true });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -41,7 +41,7 @@ export default function BranchMenuPage() {
       await api.post(`/branches/${branchId}/menu`, {
         master_item_id: parseInt(form.masterItemId),
         price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
-        available_quantity: form.availableQuantity ? parseInt(form.availableQuantity, 10) : null,
+        available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
         is_in_stock: form.isInStock,
         is_active: form.isActive,
       });
@@ -61,7 +61,7 @@ export default function BranchMenuPage() {
     try {
       await api.patch(`/branches/${branchId}/menu/${editItem.id}`, {
         price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
-        available_quantity: form.availableQuantity ? parseInt(form.availableQuantity, 10) : null,
+        available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
         is_in_stock: form.isInStock,
         is_active: form.isActive,
       });
@@ -81,7 +81,7 @@ export default function BranchMenuPage() {
           <div className="page-title">Branch Menu</div>
           <div className="page-subtitle">Overrides for branch #{branchId}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => { setForm({ masterItemId: "", priceOverride: "", availableQuantity: "", isInStock: true, isActive: true }); setUpsertModal(true); }}>
+        <button className="btn btn-primary" onClick={() => { setForm({ masterItemId: "", priceOverride: "", availableQuantity: "0", isInfinite: true, isInStock: true, isActive: true }); setUpsertModal(true); }}>
           <Plus size={16} /> Upsert Item
         </button>
       </div>
@@ -119,7 +119,7 @@ export default function BranchMenuPage() {
                     </button>
                   </td>
                   <td>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditItem(item); setForm({ masterItemId: String(item.masterItem.id), priceOverride: item.priceOverride ? String(item.priceOverride) : "", availableQuantity: item.availableQuantity !== null ? String(item.availableQuantity) : "", isInStock: item.isInStock, isActive: item.isActive }); }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditItem(item); setForm({ masterItemId: String(item.masterItem.id), priceOverride: item.priceOverride ? String(item.priceOverride) : "", availableQuantity: item.availableQuantity !== null ? String(item.availableQuantity) : "0", isInfinite: item.availableQuantity === null, isInStock: item.isInStock, isActive: item.isActive }); }}>
                       <Pencil size={13} /> Edit
                     </button>
                   </td>
@@ -134,7 +134,15 @@ export default function BranchMenuPage() {
         <form onSubmit={handleUpsert} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div><label>Master Item ID</label><input type="number" value={form.masterItemId} onChange={e => setForm({ ...form, masterItemId: e.target.value })} placeholder="e.g. 1" required /></div>
           <div><label>Price Override ($) — leave blank to use base price</label><input type="number" step="0.01" value={form.priceOverride} onChange={e => setForm({ ...form, priceOverride: e.target.value })} placeholder="e.g. 5.00" /></div>
-          <div><label>Available Quantity — leave blank for infinite</label><input type="number" value={form.availableQuantity} onChange={e => setForm({ ...form, availableQuantity: e.target.value })} placeholder="e.g. 50" /></div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.isInfinite} onChange={e => setForm({ ...form, isInfinite: e.target.checked })} style={{ width: "auto" }} />
+              Infinite Stock
+            </label>
+            {!form.isInfinite && (
+              <div style={{ flex: 1 }}><label>Available Quantity</label><input type="number" min="0" value={form.availableQuantity} onChange={e => setForm({ ...form, availableQuantity: e.target.value })} placeholder="e.g. 50" required /></div>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 16 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input type="checkbox" checked={form.isInStock} onChange={e => setForm({ ...form, isInStock: e.target.checked })} style={{ width: "auto" }} />
@@ -152,7 +160,15 @@ export default function BranchMenuPage() {
       <Modal open={!!editItem} onClose={() => setEditItem(null)} title={`Edit: ${editItem?.masterItem.name}`}>
         <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div><label>Price Override ($) — leave blank to use base price</label><input type="number" step="0.01" value={form.priceOverride} onChange={e => setForm({ ...form, priceOverride: e.target.value })} /></div>
-          <div><label>Available Quantity — leave blank for infinite</label><input type="number" value={form.availableQuantity} onChange={e => setForm({ ...form, availableQuantity: e.target.value })} placeholder="e.g. 50" /></div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.isInfinite} onChange={e => setForm({ ...form, isInfinite: e.target.checked })} style={{ width: "auto" }} />
+              Infinite Stock
+            </label>
+            {!form.isInfinite && (
+              <div style={{ flex: 1 }}><label>Available Quantity</label><input type="number" min="0" value={form.availableQuantity} onChange={e => setForm({ ...form, availableQuantity: e.target.value })} placeholder="e.g. 50" required /></div>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 16 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input type="checkbox" checked={form.isInStock} onChange={e => setForm({ ...form, isInStock: e.target.checked })} style={{ width: "auto" }} />
