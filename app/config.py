@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # AI
     GEMINI_API_KEY: str = ""
+    GEMINI_BASE_URL: str | None = None
 
 
 settings = Settings()
