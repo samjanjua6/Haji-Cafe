@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "Multi-Branch Café Management System",
 };
 
+import ChatbotWidget from "@/components/ChatbotWidget";
+
 export default function RootLayout({
   children,
 }: {
@@ -29,6 +31,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <ChatbotWidget />
       </body>
     </html>
   );

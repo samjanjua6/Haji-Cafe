@@ -13,6 +13,7 @@ from app.modules.cafes.router import router as cafes_router
 from app.modules.menu.router import router as menu_router
 from app.modules.orders.router import router as orders_router
 from app.modules.audit.router import router as audit_router
+from app.modules.chatbot.router import router as chatbot_router
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ app.include_router(cafes_router, prefix="/cafes", tags=["Cafes & Branches"])
 app.include_router(menu_router, tags=["Menu"])
 app.include_router(orders_router, tags=["Orders"])
 app.include_router(audit_router, tags=["Audit"])
+app.include_router(chatbot_router)
 
 
 @app.get("/", tags=["Health"])
