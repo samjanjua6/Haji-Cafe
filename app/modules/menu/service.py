@@ -129,6 +129,6 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_
     
     result = await repository.patch_branch_menu_item(item_id, clean)
     
-    await log_action(user_id, "UPDATE_MENU_ITEM", details, item.branch.cafeId, branch_id)
+    await log_action(user_id, "UPDATE_MENU_ITEM", details, item.masterItem.cafeId, branch_id)
     
     return result
