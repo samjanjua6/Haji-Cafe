@@ -23,5 +23,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
 
+    # AI
+    GEMINI_API_KEY: str = ""
+
 
 settings = Settings()
