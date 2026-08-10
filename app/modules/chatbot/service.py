@@ -40,6 +40,13 @@ async def route_to_order_specialist() -> str:
 
 def _build_system_prompt(current_user, agent_type: str = "supervisor", body: ChatRequest = None) -> str:
     base = f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
+    
+    authorized_cafes = list({scope.cafeId for scope in current_user.userScopes if scope.cafeId is not None})
+    if len(authorized_cafes) == 1:
+        base += f"The user manages a single Cafe (ID: {authorized_cafes[0]}). Use this cafe ID automatically when scheduling meetings, viewing staff, or searching menus.\n"
+    elif len(authorized_cafes) > 1:
+        base += f"The user manages multiple cafes (IDs: {authorized_cafes}). Always ask which cafe they want to interact with if they don't specify.\n"
+        
     if body and body.client_time:
         base += f"The user's current local device time is {body.client_time} (Timezone: {body.timezone}). Use this exact time to accurately calculate relative dates/times like 'tomorrow', 'next week', '10 AM', etc.\n"
     
@@ -48,15 +55,15 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
         "2. If you don't have a tool to answer the user's request, politely inform them.\n"
         "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Just seamlessly present the results.\n"
-        "4. If a tool requires arguments that the user has not provided (like cafe IDs, dates, times, names, or attendee IDs), explicitly ask the user for that missing information before calling the tool. DO NOT make up data and DO NOT pretend a tool succeeded if you haven't run it.\n"
-        "5. For scheduling meetings: You MUST know the exact cafe_id, the meeting time/date, and the exact User IDs of the attendees. If you don't know the cafe_id, call get_my_cafes to find it. If you don't know the attendee User IDs, ALWAYS call get_staff_list first. Do not try to guess IDs.\n"
-        "6. Format your responses cleanly in Markdown."
+        "4. If a tool requires arguments that the user has not provided (like dates, times, names, or attendee IDs), explicitly ask the user for that missing information before calling the tool. DO NOT make up data and DO NOT pretend a tool succeeded if you haven't run it.\n"
+        "5. Format your responses cleanly in Markdown."
     )
     
     if agent_type == "supervisor":
         return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}"
     elif agent_type == "cafe":
-        return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}"
+        cafe_rules = "\n6. For scheduling meetings: You MUST know the exact cafe_id, the meeting time/date, and the exact User IDs of the attendees. If you don't know the attendee User IDs, ALWAYS call get_staff_list first. Do not try to guess IDs."
+        return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}{cafe_rules}"
     elif agent_type == "inventory":
         return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}"
     elif agent_type == "order":
