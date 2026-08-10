@@ -25,6 +25,7 @@ export default function ChatbotWidget() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
 
@@ -50,7 +51,11 @@ export default function ChatbotWidget() {
     websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        if (data.progress) {
+          setProgressMsg(data.progress);
+        }
         if (data.chunk) {
+          setProgressMsg(null); // Clear progress indicator when real content starts
           setMessages((prev) => {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
@@ -63,6 +68,7 @@ export default function ChatbotWidget() {
           });
         }
         if (data.done) {
+          setProgressMsg(null);
           setIsLoading(false);
         }
       } catch (e) {
@@ -249,8 +255,9 @@ export default function ChatbotWidget() {
               </div>
             ))}
             {isLoading && (
-              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px" }}>
-                Assistant is thinking<span className="dot-typing">...</span>
+              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px", border: "1px solid var(--border)", maxWidth: "85%" }}>
+                <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite" }} />
+                {progressMsg || "Assistant is thinking..."}
               </div>
             )}
             <div ref={messagesEndRef} />

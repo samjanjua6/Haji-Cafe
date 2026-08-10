@@ -78,6 +78,9 @@ async def get_cafe_staff(cafe_id: int):
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
 
+# In-memory OAuth token cache: { user_id: (access_token, expires_at) }
+import time as _time
+_google_token_cache: dict = {}
 
 async def _refresh_google_access_token(refresh_token: str) -> str:
     """Use the refresh token to get a new Google access token."""
@@ -93,7 +96,7 @@ async def _refresh_google_access_token(refresh_token: str) -> str:
         data = resp.json()
         if "error" in data:
             raise BadRequestException("Google token refresh failed. Please re-authenticate with Google.")
-        return data["access_token"]
+        return data["access_token"], data.get("expires_in", 3600)
 
 
 async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str, description: Optional[str], start_time, end_time, attendee_user_ids: list, timezone: str = "UTC"):
@@ -129,8 +132,13 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
         "sendUpdates": "all",  # Sends email invites to all attendees
     }
 
-    # 5. Attempt to create the event using the stored access token
-    access_token = google_access_token
+    # 5. Resolve a valid access token (use cache if possible)
+    cached = _google_token_cache.get(owner_user_id)
+    if cached and cached[1] > _time.time() + 60:  # 60s buffer before expiry
+        access_token = cached[0]
+    else:
+        access_token = google_access_token
+
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             GOOGLE_CALENDAR_URL,
@@ -138,9 +146,10 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
             headers={"Authorization": f"Bearer {access_token}"},
         )
 
-        # 6. If the token is expired (401), refresh it and retry once
+        # 6. If the token is expired (401), refresh it, cache it and retry once
         if resp.status_code == 401 and google_refresh_token:
-            access_token = await _refresh_google_access_token(google_refresh_token)
+            access_token, expires_in = await _refresh_google_access_token(google_refresh_token)
+            _google_token_cache[owner_user_id] = (access_token, _time.time() + expires_in)
             # Persist the new access token
             from app.modules.auth.repository import update_google_tokens
             await update_google_tokens(owner_user_id, access_token, None)

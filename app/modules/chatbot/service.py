@@ -135,13 +135,38 @@ def _build_messages(system_prompt: str, history: list[ChatMessage], latest_conte
     return msgs
 
 
-async def _execute_tool_calls(tool_calls, tool_fn_map: dict) -> list[dict]:
+# Friendly progress messages shown in the UI while a tool is running
+_TOOL_PROGRESS_MESSAGES = {
+    "route_to_cafe_specialist":      "🔀 Routing to Cafe Specialist...",
+    "route_to_inventory_specialist": "🔀 Routing to Inventory Specialist...",
+    "route_to_order_specialist":     "🔀 Routing to Order Specialist...",
+    "get_my_cafes":                  "🏪 Fetching your cafes...",
+    "get_cafe":                      "🏪 Looking up cafe details...",
+    "get_branches_for_cafe":         "🌿 Fetching branches...",
+    "search_cafes":                  "🔍 Searching cafes...",
+    "get_staff_list":                "👥 Fetching staff list...",
+    "schedule_meeting":              "📅 Scheduling meeting on Google Calendar...",
+    "get_menu":                      "🍽️ Fetching menu...",
+    "search_menu":                   "🔍 Searching menu...",
+    "get_branch_inventory":          "📦 Fetching inventory...",
+    "upsert_inventory_quantity":     "✏️ Updating stock...",
+    "get_recent_orders":             "🧾 Fetching recent orders...",
+    "update_order_status":           "✅ Updating order status...",
+}
+
+async def _execute_tool_calls(tool_calls, tool_fn_map: dict, websocket=None) -> list[dict]:
     """Executes all tool calls returned by the model and returns result messages."""
     result_messages = []
     for tc in tool_calls:
         fn_name = tc.function.name
         fn_args = json.loads(tc.function.arguments or "{}")
         fn = tool_fn_map.get(fn_name)
+
+        # Stream a friendly progress message to the UI before executing the tool
+        if websocket:
+            progress_msg = _TOOL_PROGRESS_MESSAGES.get(fn_name, f"⚙️ Running {fn_name}...")
+            await websocket.send_json({"progress": progress_msg})
+
         if fn is None:
             result = f"Error: Tool '{fn_name}' not found."
         else:
@@ -284,7 +309,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
                 for tc in msg.tool_calls
             ]
         })
-        tool_results = await _execute_tool_calls(msg.tool_calls, tool_fn_map)
+        tool_results = await _execute_tool_calls(msg.tool_calls, tool_fn_map, websocket)
         messages.extend(tool_results)
         
         routed = False
