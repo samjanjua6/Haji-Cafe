@@ -80,70 +80,66 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (loading) return <div style={{ color: "var(--text-muted)", marginTop: 80, textAlign: "center" }}>Loading users...</div>;
+  if (loading) return <div style={{ padding: 20 }}>Loading users...</div>;
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <div className="page-title">User Management</div>
-          <div className="page-subtitle">Manage system access and roles</div>
-        </div>
+    <div style={{ padding: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2>User Management</h2>
+        <button className="btn btn-ghost" onClick={() => router.push("/dashboard")}>Back to Dashboard</button>
       </div>
 
-      <div className="card table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Assignments</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id}>
-                <td style={{ color: "var(--text-muted)", width: 60 }}>#{u.id}</td>
-                <td style={{ fontWeight: 600 }}>{u.email}</td>
-                <td>
-                  <select 
-                    value={u.role.name} 
-                    onChange={e => handleRoleChange(u.id, e.target.value)}
-                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", width: "auto" }}
-                  >
+      <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--bg-surface)", borderRadius: 8, overflow: "hidden" }}>
+        <thead>
+          <tr style={{ background: "rgba(255,255,255,0.05)", textAlign: "left" }}>
+            <th style={{ padding: 12 }}>ID</th>
+            <th style={{ padding: 12 }}>Email</th>
+            <th style={{ padding: 12 }}>Role</th>
+            <th style={{ padding: 12 }}>Assignments</th>
+            <th style={{ padding: 12 }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map(u => (
+            <tr key={u.id} style={{ borderTop: "1px solid var(--border)" }}>
+              <td style={{ padding: 12 }}>{u.id}</td>
+              <td style={{ padding: 12 }}>{u.email}</td>
+              <td style={{ padding: 12 }}>
+                <select 
+                  value={u.role.name} 
+                  onChange={e => handleRoleChange(u.id, e.target.value)}
+                  style={{ background: "transparent", color: "inherit", border: "1px solid var(--border)", borderRadius: 4, padding: "4px 8px" }}
+                >
                   <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                   <option value="CAFE_OWNER">CAFE_OWNER</option>
                   <option value="BRANCH_MANAGER">BRANCH_MANAGER</option>
                   <option value="STAFF">STAFF</option>
                 </select>
-                </td>
-                <td>
-                  {u.userScopes.length === 0 ? <span style={{ color: "var(--text-muted)", fontSize: 13 }}>None</span> : null}
-                  {u.userScopes.map(s => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 999 }}>
-                        {s.cafe ? `Café: ${s.cafe.name}` : ""}
-                        {s.branch ? `Branch: ${s.branch.name}` : ""}
-                      </span>
-                      <button 
-                        onClick={() => removeScope(u.id, s.id)}
-                        style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 14 }}
-                      >×</button>
-                    </div>
-                  ))}
-                </td>
-                <td>
-                  <button className="btn btn-ghost btn-sm" onClick={() => assignScope(u.id)}>
-                    Assign Scope
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </td>
+              <td style={{ padding: 12 }}>
+                {u.userScopes.length === 0 ? <span style={{ color: "var(--text-muted)", fontSize: 12 }}>None</span> : null}
+                {u.userScopes.map(s => (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4 }}>
+                      {s.cafe ? `Cafe: ${s.cafe.name}` : ""}
+                      {s.branch ? `Branch: ${s.branch.name}` : ""}
+                    </span>
+                    <button 
+                      onClick={() => removeScope(u.id, s.id)}
+                      style={{ background: "transparent", border: "none", color: "red", cursor: "pointer", fontSize: 12 }}
+                    >×</button>
+                  </div>
+                ))}
+              </td>
+              <td style={{ padding: 12 }}>
+                <button className="btn btn-sm" style={{ background: "var(--bg-base)" }} onClick={() => assignScope(u.id)}>
+                  Assign
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

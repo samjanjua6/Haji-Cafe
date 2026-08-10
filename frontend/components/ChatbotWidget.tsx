@@ -131,25 +131,19 @@ export default function ChatbotWidget() {
             width: "56px",
             height: "56px",
             borderRadius: "50%",
-            backgroundColor: "var(--primary)",
+            backgroundColor: "#2563eb",
             color: "white",
             border: "none",
-            boxShadow: "0 4px 12px rgba(111, 78, 55, 0.25)",
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 9999,
-            transition: "transform 0.2s, background-color 0.2s",
+            transition: "transform 0.2s",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.05)";
-            e.currentTarget.style.backgroundColor = "var(--primary-hover)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.backgroundColor = "var(--primary)";
-          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
           <MessageCircle size={28} />
         </button>
@@ -162,35 +156,32 @@ export default function ChatbotWidget() {
             position: "fixed",
             bottom: "24px",
             right: "24px",
-            width: "420px",
-            maxWidth: "calc(100vw - 48px)",
-            height: "600px",
-            maxHeight: "calc(100vh - 48px)",
-            backgroundColor: "var(--bg-card)",
-            borderRadius: "16px",
-            boxShadow: "0 8px 30px rgba(41, 35, 31, 0.12)",
+            width: "350px",
+            height: "500px",
+            backgroundColor: "white",
+            borderRadius: "12px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
             display: "flex",
             flexDirection: "column",
             zIndex: 9999,
             overflow: "hidden",
-            border: "1px solid var(--border)",
-            animation: "slideUp 0.2s ease",
+            border: "1px solid #e5e7eb",
           }}
         >
           {/* Header */}
           <div
             style={{
               padding: "16px",
-              backgroundColor: "var(--sidebar)",
+              backgroundColor: "#2563eb",
               color: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Bot size={20} color="var(--accent)" />
-              <strong className="font-heading" style={{ fontSize: "16px", fontWeight: 700 }}>☕ Café Assistant</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Bot size={20} />
+              <strong style={{ fontSize: "16px" }}>Assistant</strong>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -216,7 +207,7 @@ export default function ChatbotWidget() {
               display: "flex",
               flexDirection: "column",
               gap: "12px",
-              backgroundColor: "var(--bg-surface)",
+              backgroundColor: "#f9fafb",
             }}
           >
             {messages.map((msg, i) => (
@@ -225,14 +216,14 @@ export default function ChatbotWidget() {
                 style={{
                   alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                   maxWidth: "85%",
-                  backgroundColor: msg.role === "user" ? "var(--primary)" : "var(--bg-card)",
-                  color: msg.role === "user" ? "white" : "var(--text-primary)",
+                  backgroundColor: msg.role === "user" ? "#2563eb" : "#ffffff",
+                  color: msg.role === "user" ? "white" : "#1f2937",
                   padding: "10px 14px",
                   borderRadius: "12px",
                   borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
                   borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
-                  boxShadow: "0 1px 2px rgba(41, 35, 31, 0.05)",
-                  border: msg.role === "model" ? "1px solid var(--border)" : "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                  border: msg.role === "model" ? "1px solid #e5e7eb" : "none",
                   fontSize: "14px",
                   lineHeight: "1.5",
                 }}
@@ -253,7 +244,7 @@ export default function ChatbotWidget() {
               </div>
             ))}
             {isLoading && (
-              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px" }}>
+              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "#6b7280", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px" }}>
                 Assistant is thinking<span className="dot-typing">...</span>
               </div>
             )}
@@ -265,10 +256,10 @@ export default function ChatbotWidget() {
             onSubmit={handleSend}
             style={{
               padding: "12px",
-              borderTop: "1px solid var(--border)",
+              borderTop: "1px solid #e5e7eb",
               display: "flex",
               gap: "8px",
-              backgroundColor: "var(--bg-card)",
+              backgroundColor: "white",
             }}
           >
             <input
@@ -279,38 +270,34 @@ export default function ChatbotWidget() {
               disabled={isLoading}
               style={{
                 flex: 1,
-                padding: "10px 14px",
+                padding: "8px 12px",
                 borderRadius: "20px",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--bg-surface)",
+                border: "1px solid #d1d5db",
                 outline: "none",
                 fontSize: "14px",
-                boxShadow: "none",
               }}
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
               style={{
-                backgroundColor: input.trim() && !isLoading ? "var(--primary)" : "var(--border)",
-                color: input.trim() && !isLoading ? "white" : "var(--text-muted)",
+                backgroundColor: input.trim() && !isLoading ? "#2563eb" : "#9ca3af",
+                color: "white",
                 border: "none",
                 borderRadius: "50%",
-                width: "40px",
-                height: "40px",
+                width: "36px",
+                height: "36px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-                transition: "background-color 0.2s",
               }}
             >
-              <Send size={18} style={{ marginLeft: "2px", marginTop: "2px" }} />
+              <Send size={16} style={{ marginLeft: "2px" }} />
             </button>
           </form>
         </div>
       )}
-      <style>{`@keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }`}</style>
     </>
   );
 }

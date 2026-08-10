@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
-import { formatDate } from "@/lib/format";
 
 interface Cafe { id: number; name: string; createdAt: string; }
 
@@ -72,14 +71,8 @@ export default function CafesPage() {
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading...</div>
         ) : cafes.length === 0 ? (
           <div style={{ padding: 60, textAlign: "center" }}>
-            <div style={{ background: "var(--bg-surface)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <Store size={36} color="var(--primary)" />
-            </div>
-            <h3 className="font-heading" style={{ fontSize: 18, marginBottom: 8, color: "var(--text-primary)" }}>No cafés yet</h3>
-            <div style={{ color: "var(--text-secondary)", marginBottom: 24, fontSize: 14 }}>Create your first café to get started.</div>
-            <button className="btn btn-primary" onClick={() => { setName(""); setCreateOpen(true); }}>
-              <Plus size={16} /> Create Café
-            </button>
+            <Store size={40} style={{ color: "var(--text-muted)", margin: "0 auto 12px" }} />
+            <div style={{ color: "var(--text-muted)" }}>No cafés yet. Create your first one.</div>
           </div>
         ) : (
           <table>
@@ -96,17 +89,17 @@ export default function CafesPage() {
                 <tr key={cafe.id}>
                   <td style={{ color: "var(--text-muted)", width: 60 }}>#{cafe.id}</td>
                   <td style={{ fontWeight: 600 }}>{cafe.name}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(cafe.createdAt)}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{new Date(cafe.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button className="btn btn-primary btn-sm" onClick={() => router.push(`/cafes/${cafe.id}`)}>
-                        <ChevronRight size={14} /> Manage
+                      <button className="btn btn-ghost btn-sm" onClick={() => router.push(`/cafes/${cafe.id}`)}>
+                        <ChevronRight size={14} /> View
                       </button>
                       <button className="btn btn-ghost btn-sm" onClick={() => { setEditCafe(cafe); setName(cafe.name); }}>
-                        <Pencil size={14} />
+                        <Pencil size={14} /> Edit
                       </button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleDelete(cafe)}>
-                        <Trash2 size={14} />
+                        <Trash2 size={14} /> Delete
                       </button>
                     </div>
                   </td>

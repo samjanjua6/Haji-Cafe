@@ -55,12 +55,10 @@ function AuthContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
-            <div style={{ background: "#FFFFFF", padding: 12, borderRadius: 20, boxShadow: "0 4px 12px rgba(41, 35, 31, 0.05)" }}>
-              <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: 72, height: 72, objectFit: "contain" }} />
-            </div>
+            <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: 80, height: 80, objectFit: "contain" }} />
           </div>
-          <h1 className="font-heading" style={{ fontSize: 32, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>Haji Café</h1>
-          <p style={{ color: "var(--text-secondary)", marginTop: 8, fontSize: 15, fontWeight: 500 }}>Management Dashboard</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Haji Cafe</h1>
+          <p style={{ color: "var(--text-muted)", marginTop: 4, fontSize: 14 }}>Admin Dashboard</p>
         </div>
 
         <div className="card">
@@ -75,10 +73,10 @@ function AuthContent() {
                 type="button"
                 onClick={() => setTab(t)}
                 style={{
-                  flex: 1, padding: "10px 0", border: "none", cursor: "pointer",
+                  flex: 1, padding: "8px 0", border: "none", cursor: "pointer",
                   borderRadius: 8, fontWeight: 600, fontSize: 14,
-                  background: tab === t ? "var(--primary)" : "transparent",
-                  color: tab === t ? "#FFFFFF" : "var(--text-secondary)",
+                  background: tab === t ? "var(--accent)" : "transparent",
+                  color: tab === t ? "#0f172a" : "var(--text-muted)",
                   transition: "all 0.2s",
                 }}
               >

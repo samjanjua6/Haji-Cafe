@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import Modal from "@/components/Modal";
 import StatusBadge from "@/components/StatusBadge";
 import toast from "react-hot-toast";
-import { formatCurrency, formatDate } from "@/lib/format";
 
 interface OrderItem { id: number; quantity: number; priceAtPurchase: number; notes: string | null; branchMenuItem: { masterItem: { name: string } }; }
 interface Order { id: number; status: string; totalAmount: number; createdAt: string; orderItems?: OrderItem[]; }
@@ -91,7 +90,7 @@ export default function BranchOrdersPage() {
     <div>
       <div className="page-header">
         <div>
-          <button onClick={() => router.back()} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+          <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>
             <ArrowLeft size={14} /> Back
           </button>
           <div className="page-title">Branch Orders</div>
@@ -111,10 +110,10 @@ export default function BranchOrdersPage() {
             <tbody>
               {orders.map(order => (
                 <tr key={order.id}>
-                  <td style={{ color: "var(--text-muted)", width: 60 }}>#{order.id}</td>
+                  <td style={{ color: "var(--text-muted)" }}>#{order.id}</td>
                   <td><StatusBadge status={order.status} /></td>
-                  <td style={{ fontWeight: 700, color: "var(--primary)" }}>{formatCurrency(order.totalAmount)}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(order.createdAt)}</td>
+                  <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(order.totalAmount).toFixed(2)}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{new Date(order.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => openDetail(order)}>
@@ -141,22 +140,23 @@ export default function BranchOrdersPage() {
         )}
       </div>
 
+      {/* Order Detail Modal */}
       <Modal open={!!detailOrder} onClose={() => setDetailOrder(null)} title={`Order #${detailOrder?.id}`} width={560}>
         {detailOrder && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <StatusBadge status={detailOrder.status} />
-              <span style={{ fontWeight: 700, color: "var(--primary)", fontSize: 18 }}>{formatCurrency(detailOrder.totalAmount)}</span>
+              <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18 }}>${Number(detailOrder.totalAmount).toFixed(2)}</span>
             </div>
             {detailOrder.orderItems?.map(oi => (
-              <div key={oi.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>
+              <div key={oi.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{oi.branchMenuItem?.masterItem?.name}</div>
                   {oi.notes && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Note: {oi.notes}</div>}
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>x{oi.quantity} × {formatCurrency(oi.priceAtPurchase)}</div>
-                  <div style={{ fontWeight: 700 }}>{formatCurrency(Number(oi.priceAtPurchase) * oi.quantity)}</div>
+                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>x{oi.quantity} × ${Number(oi.priceAtPurchase).toFixed(2)}</div>
+                  <div style={{ fontWeight: 700 }}>${(Number(oi.priceAtPurchase) * oi.quantity).toFixed(2)}</div>
                 </div>
               </div>
             ))}
@@ -209,9 +209,9 @@ export default function BranchOrdersPage() {
             <Plus size={14} /> Add Another Item
           </button>
           {calcOrderTotal() > 0 && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: "12px 16px", borderRadius: 10, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-secondary)" }}>Estimated Total</span>
-              <span style={{ fontWeight: 700, color: "var(--primary)", fontSize: 18 }}>{formatCurrency(calcOrderTotal())}</span>
+            <div style={{ background: "var(--bg-surface)", padding: "12px 16px", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-muted)" }}>Estimated Total</span>
+              <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18 }}>${calcOrderTotal().toFixed(2)}</span>
             </div>
           )}
           <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>

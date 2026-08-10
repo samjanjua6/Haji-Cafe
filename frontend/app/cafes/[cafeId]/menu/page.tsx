@@ -5,7 +5,6 @@ import { Plus, Pencil, Trash2, ArrowLeft, Tag } from "lucide-react";
 import { api } from "@/lib/api";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
-import { formatCurrency } from "@/lib/format";
 
 interface MenuItem { id: number; name: string; description: string | null; basePrice: number; isDeleted: boolean; category: { name: string } | null; }
 interface Category { id: number; name: string; }
@@ -71,7 +70,7 @@ export default function MasterMenuPage() {
     <div>
       <div className="page-header">
         <div>
-          <button onClick={() => router.back()} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+          <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>
             <ArrowLeft size={14} /> Back
           </button>
           <div className="page-title">Master Menu</div>
@@ -98,14 +97,14 @@ export default function MasterMenuPage() {
                   </td>
                   <td>
                     {item.category ? (
-                      <span style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 999, fontSize: 12, display: "flex", alignItems: "center", gap: 4, width: "fit-content" }}>
-                        <Tag size={12} color="var(--primary)" /> {item.category.name}
+                      <span style={{ background: "var(--bg-surface)", padding: "3px 10px", borderRadius: 999, fontSize: 12, display: "flex", alignItems: "center", gap: 4, width: "fit-content" }}>
+                        <Tag size={10} /> {item.category.name}
                       </span>
                     ) : <span style={{ color: "var(--text-muted)", fontSize: 12 }}>Uncategorized</span>}
                   </td>
-                  <td style={{ fontWeight: 700, color: "var(--primary)" }}>{formatCurrency(item.basePrice)}</td>
+                  <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(item.basePrice).toFixed(2)}</td>
                   <td>
-                    <span style={{ background: item.isDeleted ? "var(--danger-bg)" : "var(--success-bg)", color: item.isDeleted ? "var(--danger)" : "var(--success)", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                    <span style={{ background: item.isDeleted ? "#fee2e2" : "#dcfce7", color: item.isDeleted ? "#991b1b" : "#166534", padding: "3px 10px", borderRadius: 999, fontSize: 12 }}>
                       {item.isDeleted ? "Deleted" : "Active"}
                     </span>
                   </td>
@@ -113,10 +112,10 @@ export default function MasterMenuPage() {
                     {!item.isDeleted && (
                       <div style={{ display: "flex", gap: 8 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => { setSelected(item); setForm({ name: item.name, description: item.description || "", basePrice: String(item.basePrice), categoryId: "" }); setModal("edit"); }}>
-                          <Pencil size={14} />
+                          <Pencil size={13} /> Edit
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item)}>
-                          <Trash2 size={14} />
+                          <Trash2 size={13} /> Delete
                         </button>
                       </div>
                     )}

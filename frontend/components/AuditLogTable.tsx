@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Clock, User as UserIcon, AlertCircle } from "lucide-react";
-import { formatDateTime } from "@/lib/format";
 
 interface AuditLog {
   id: number;
@@ -38,8 +37,8 @@ export function AuditLogTable({ cafeId, cafeName }: { cafeId: number, cafeName: 
 
   return (
     <div className="card" style={{ marginTop: 24, overflowX: "auto" }}>
-      <h3 className="font-heading" style={{ margin: "0 0 16px", fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-        <Clock size={18} color="var(--primary)" />
+      <h3 style={{ margin: "0 0 16px", fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <Clock size={18} color="var(--accent)" />
         Recent Activity - {cafeName || `Café #${cafeId}`}
       </h3>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -57,9 +56,8 @@ export function AuditLogTable({ cafeId, cafeName }: { cafeId: number, cafeName: 
             <tr key={log.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
               <td style={{ padding: "12px 8px" }}>
                 <span style={{
-                  background: "var(--surface)",
-                  color: "var(--primary)",
-                  border: "1px solid var(--border)",
+                  background: "var(--accent-light, #f0fdf4)",
+                  color: "var(--accent-dark, #166534)",
                   padding: "4px 8px",
                   borderRadius: 6,
                   fontSize: 12,
@@ -79,7 +77,7 @@ export function AuditLogTable({ cafeId, cafeName }: { cafeId: number, cafeName: 
                 {log.details || "-"}
               </td>
               <td style={{ padding: "12px 8px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                {formatDateTime(log.created_at)}
+                {new Date(log.created_at).toLocaleString()}
               </td>
             </tr>
           ))}

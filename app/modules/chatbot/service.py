@@ -145,7 +145,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
 
     messages = _build_messages(system_prompt, body.messages[:-1], body.messages[-1].content)
 
-    # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
+    # Agentic loop: if model calls tools, execute them silently, then stream final reply
     for _ in range(5):
         response = await client.chat.completions.create(
             model=GROQ_MODEL,
@@ -156,11 +156,21 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         )
         msg = response.choices[0].message
 
-        # No tool calls → model is ready to give final answer, break loop
+        # If no tool calls, stream the final text response
         if not msg.tool_calls:
+            stream = await client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=messages,
+                stream=True,
+                temperature=0.7,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    await websocket.send_json({"chunk": delta})
             break
 
-        # Tool calls requested → execute them and add results to history
+        # Execute tool calls and add results to message history
         messages.append({
             "role": "assistant",
             "content": msg.content or "",
@@ -175,17 +185,5 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         })
         tool_results = await _execute_tool_calls(msg.tool_calls, tool_fn_map)
         messages.extend(tool_results)
-
-    # Stream the final answer — add the tool results to context and stream fresh
-    stream = await client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        stream=True,
-        temperature=0.7,
-    )
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            await websocket.send_json({"chunk": delta})
 
     await websocket.send_json({"done": True})

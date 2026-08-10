@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import { AuditLogTable } from "@/components/AuditLogTable";
-import { formatDate, formatRole } from "@/lib/format";
 
 interface UserProfile {
   id: number;
@@ -61,11 +60,14 @@ export default function DashboardPage() {
             style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               gap: 12, textDecoration: "none", cursor: "pointer",
+              transition: "transform 0.2s, border-color 0.2s",
               textAlign: "center",
             }}
+            onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+            onMouseLeave={e => (e.currentTarget.style.transform = "none")}
           >
-            <div style={{ background: "var(--accent-bg, #FFF8E1)", borderRadius: 12, padding: 14 }}>
-              <Coffee size={24} color="var(--accent)" />
+            <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}>
+              <Coffee size={24} color="#f59e0b" />
             </div>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
           </a>
@@ -75,11 +77,14 @@ export default function DashboardPage() {
             style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               gap: 12, textDecoration: "none", cursor: "pointer",
+              transition: "transform 0.2s, border-color 0.2s",
               textAlign: "center",
             }}
+            onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+            onMouseLeave={e => (e.currentTarget.style.transform = "none")}
           >
-            <div style={{ background: "var(--info-bg, #E3F2FD)", borderRadius: 12, padding: 14 }}>
-              <User size={24} color="var(--info)" />
+            <div style={{ background: "#3b82f622", borderRadius: 12, padding: 14 }}>
+              <User size={24} color="#3b82f6" />
             </div>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Users</span>
           </a>
@@ -96,11 +101,14 @@ export default function DashboardPage() {
           style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             gap: 12, textDecoration: "none", cursor: "pointer",
+            transition: "transform 0.2s, border-color 0.2s",
             textAlign: "center",
           }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
         >
-          <div style={{ background: "var(--accent-bg, #FFF8E1)", borderRadius: 12, padding: 14 }}>
-            <Coffee size={24} color="var(--accent)" />
+          <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}>
+            <Coffee size={24} color="#f59e0b" />
           </div>
           <span style={{ fontWeight: 600, fontSize: 14 }}>Manage {scope.cafeName || `Café #${scope.cafeId}`}</span>
         </a>
@@ -116,11 +124,14 @@ export default function DashboardPage() {
           style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             gap: 12, textDecoration: "none", cursor: "pointer",
+            transition: "transform 0.2s, border-color 0.2s",
             textAlign: "center",
           }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
         >
-          <div style={{ background: "var(--info-bg, #E3F2FD)", borderRadius: 12, padding: 14 }}>
-            <ShoppingCart size={24} color="var(--info)" />
+          <div style={{ background: "#3b82f622", borderRadius: 12, padding: 14 }}>
+            <ShoppingCart size={24} color="#3b82f6" />
           </div>
           <span style={{ fontWeight: 600, fontSize: 14 }}>{scope.branchName || `Branch #${scope.branchId}`} Orders</span>
         </a>
@@ -133,8 +144,8 @@ export default function DashboardPage() {
     <div>
       <div className="page-header">
         <div>
-          <div className="page-title">Good morning, {user?.email?.split('@')[0] || 'User'} 👋</div>
-          <div className="page-subtitle">Welcome back to Haji Café Management</div>
+          <div className="page-title">Dashboard</div>
+          <div className="page-subtitle">Welcome back to Haji Cafe Management</div>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={handleRefresh}>
           <RefreshCw size={14} /> Refresh Token
@@ -147,27 +158,27 @@ export default function DashboardPage() {
           <div className="card" style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <div style={{
               width: 64, height: 64, borderRadius: "50%",
-              background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center",
+              background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <User size={28} color="var(--primary)" />
+              <User size={28} color="#0f172a" />
             </div>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)" }}>{user.email}</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{user.email}</div>
               <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
                 <span style={{
-                  background: "var(--primary)", color: "#FFFFFF", padding: "4px 12px",
-                  borderRadius: 999, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center"
+                  background: "var(--accent)", color: "#0f172a", padding: "3px 10px",
+                  borderRadius: 999, fontSize: 12, fontWeight: 700,
                 }}>
-                  <Shield size={12} style={{ marginRight: 6 }} />
-                  {formatRole(user.role)}
+                  <Shield size={10} style={{ marginRight: 4, display: "inline" }} />
+                  {user.role.replace("_", " ")}
                 </span>
-                <span style={{ color: "var(--text-secondary)", fontSize: 13, display: "flex", alignItems: "center" }}>
-                  <Mail size={14} style={{ marginRight: 6 }} />
+                <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                  <Mail size={12} style={{ marginRight: 4, display: "inline" }} />
                   {user.email}
                 </span>
               </div>
-              <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 8 }}>
-                Member since {formatDate(user.createdAt)}
+              <div style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 4 }}>
+                Member since {new Date(user.createdAt).toLocaleDateString()}
               </div>
             </div>
           </div>
@@ -194,21 +205,21 @@ export default function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <div
                   style={{
-                    background: user.has_google_calendar ? "var(--success-bg)" : "var(--accent-bg, #FFF8E1)",
+                    background: user.has_google_calendar ? "#22c55e22" : "#f59e0b22",
                     borderRadius: 12,
                     padding: 12,
                     flexShrink: 0,
                   }}
                 >
                   {user.has_google_calendar
-                    ? <CheckCircle size={24} color="var(--success)" />
-                    : <Calendar size={24} color="var(--accent)" />}
+                    ? <CheckCircle size={24} color="#22c55e" />
+                    : <Calendar size={24} color="#f59e0b" />}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>
                     {user.has_google_calendar ? "Google Calendar Connected" : "Connect Google Calendar"}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 3 }}>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>
                     {user.has_google_calendar
                       ? "You can schedule staff meetings directly from the café management page."
                       : "Required to schedule meetings with your staff. Click to grant access."}
@@ -235,15 +246,15 @@ export default function DashboardPage() {
 
           {/* API Info */}
           <div className="card">
-            <h3 className="font-heading" style={{ margin: "0 0 16px", fontSize: 16 }}>API Connection</h3>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16 }}>API Connection</h3>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)" }} />
-              <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+              <span style={{ fontSize: 14, color: "var(--text-muted)" }}>
                 Connected to {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}
               </span>
             </div>
-            <div style={{ marginTop: 12, fontSize: 13, color: "var(--text-secondary)" }}>
-              Swagger Docs: <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>Open API Docs ↗</a>
+            <div style={{ marginTop: 12, fontSize: 13, color: "var(--text-muted)" }}>
+              Swagger Docs: <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" style={{ color: "var(--accent)" }}>Open API Docs ↗</a>
             </div>
           </div>
         </div>
