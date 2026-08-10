@@ -61,7 +61,10 @@ def build_tools(current_user, agent_type: str = "all"):
         if not branches:
             return f"No branches found for cafe {cafe_id}."
             
-        return f"Branches for Cafe {cafe_id}:\n" + "\n".join([f"- Branch ID: {b.id}, Name: {b.name}, Address: {b.address}" for b in branches])
+        return f"Branches for Cafe {cafe_id}:\n" + "\n".join([
+            f"- Branch ID: {b.id}, Name: {b.name}, Location: {b.location or 'Not set'}"
+            for b in branches
+        ])
 
     async def get_cafe(cafe_id: int) -> str:
         """
