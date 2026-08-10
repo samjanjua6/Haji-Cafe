@@ -160,13 +160,36 @@ async def _execute_tool_calls(tool_calls, tool_fn_map: dict) -> list[dict]:
         })
     return result_messages
 
-def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None):
+def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, messages: list = None):
     sys_prompt = _build_system_prompt(current_user, agent_name, body)
     if agent_name == "supervisor":
         tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
     else:
         tool_fns = build_tools(current_user, agent_name)
+        tool_fns.extend([route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist])
     
+    # We must also ensure any tool called in 'messages' history is included in groq_tools
+    # to satisfy API validation (Groq/OpenAI error 400).
+    history_tool_names = set()
+    if messages:
+        for m in messages:
+            if m.get("role") == "assistant" and m.get("tool_calls"):
+                for tc in m["tool_calls"]:
+                    if "function" in tc and "name" in tc["function"]:
+                        history_tool_names.add(tc["function"]["name"])
+                        
+    # Get all possible tools so we can lookup the history ones
+    all_possible_tools = build_tools(current_user, "all")
+    all_possible_tools.extend([route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist])
+    all_tool_fn_map = {fn.__name__: fn for fn in all_possible_tools}
+
+    # Add history tools if they are missing
+    current_tool_names = {fn.__name__ for fn in tool_fns}
+    for t_name in history_tool_names:
+        if t_name not in current_tool_names and t_name in all_tool_fn_map:
+            tool_fns.append(all_tool_fn_map[t_name])
+            current_tool_names.add(t_name)
+            
     tool_fn_map = {fn.__name__: fn for fn in tool_fns}
     groq_tools = [_fn_to_groq_tool(fn) for fn in tool_fns]
     return sys_prompt, tool_fn_map, groq_tools
@@ -214,7 +237,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
                 routed = True
                 
         if routed:
-            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
 
     final_text = msg.content or ""
@@ -277,7 +300,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
                 routed = True
                 
         if routed:
-            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
 
     # Stream the final answer — add the tool results to context and stream fresh
