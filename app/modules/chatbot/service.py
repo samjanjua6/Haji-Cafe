@@ -68,7 +68,8 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
         "5. *** ABSOLUTE RULE — NO HALLUCINATION ***: You MUST NEVER answer questions about cafe names, counts, staff, menus, orders, inventory, or ANY business data from memory or assumptions. You MUST ALWAYS call the appropriate tool and use ONLY the data returned by that tool. If you answer without calling a tool, you are FABRICATING data. This is a critical violation.\n"
         "6. Format your responses cleanly in Markdown.\n"
         "7. If a tool returns an error, report the error to the user honestly. Do NOT retry with made-up arguments.\n"
-        "8. *** NEVER NEST TOOL CALLS ***: You MUST call tools one at a time, sequentially. NEVER put a function call inside another function's arguments. If you need a cafe_id before calling get_branches_for_cafe, call get_my_cafes FIRST as a separate step, extract the integer ID from the result, then call get_branches_for_cafe with that integer. ALWAYS include cafe IDs and branch IDs in your responses so they are available for follow-up questions."
+        "8. *** NEVER NEST TOOL CALLS ***: You MUST call tools one at a time, sequentially. NEVER put a function call inside another function's arguments. If you need a cafe_id before calling get_branches_for_cafe, call get_my_cafes FIRST as a separate step, extract the integer ID from the result, then call get_branches_for_cafe with that integer. ALWAYS include cafe IDs and branch IDs in your responses so they are available for follow-up questions.\n"
+        "9. *** FINAL RESPONSE PHASE ***: Once all required tools have been executed and their results are in the conversation history, you MUST provide a natural language response to the user. DO NOT attempt to call tools again or output raw XML function call text."
     )
     
     if agent_type == "supervisor":
@@ -356,12 +357,11 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
 
-    # Stream the final answer — tools must be passed to avoid the model regenerating raw function call text
+    # Stream the final answer — do NOT pass tools here. All tool work is done above.
+    # Passing tools with tool_choice="none" causes Llama to hallucinate raw XML function call text.
     stream = await _chat_completions_create_with_fallback(
         model=GROQ_MODEL,
         messages=messages,
-        tools=groq_tools if groq_tools else None,
-        tool_choice="none",   # Force text-only response, no more tool calls
         stream=True,
         temperature=0.4,
     )
