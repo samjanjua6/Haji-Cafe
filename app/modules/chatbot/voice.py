@@ -59,7 +59,7 @@ async def text_to_speech(text: str) -> bytes:
     Send text to ElevenLabs streaming endpoint and return audio bytes (mp3).
     """
     if not settings.ELEVENLABS_API_KEY:
-        raise ValueError("ELEVENLABS_API_KEY is not configured.")
+        raise ValueError("ELEVENLABS_API_KEY is not configured in .env")
 
     clean_text = _strip_markdown(text)
     if not clean_text:
@@ -85,5 +85,8 @@ async def text_to_speech(text: str) -> bytes:
                 "Content-Type": "application/json",
             },
         )
-        resp.raise_for_status()
+        if not resp.is_success:
+            error_detail = resp.text
+            print(f"[ElevenLabs TTS Error] status={resp.status_code} body={error_detail}")
+            raise ValueError(f"ElevenLabs API error {resp.status_code}: {error_detail}")
         return resp.content

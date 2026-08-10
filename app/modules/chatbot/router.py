@@ -37,6 +37,30 @@ async def text_to_speech_endpoint(
     return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
+@router.get("/tts/test")
+async def test_tts(current_user=Depends(get_current_user)):
+    """Test ElevenLabs connectivity and return diagnostic info."""
+    from app.config import settings
+    import httpx
+    voice_id = settings.ELEVENLABS_VOICE_ID
+    api_key = settings.ELEVENLABS_API_KEY
+    if not api_key:
+        return {"status": "error", "message": "ELEVENLABS_API_KEY is missing from .env"}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream",
+                json={"text": "Hello!", "model_id": "eleven_turbo_v2_5"},
+                headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+            )
+        if resp.is_success:
+            return {"status": "ok", "message": "ElevenLabs is working!", "voice_id": voice_id, "audio_bytes": len(resp.content)}
+        else:
+            return {"status": "error", "http_status": resp.status_code, "detail": resp.text, "voice_id": voice_id}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_assistant(
     body: ChatRequest,
