@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
+import difflib
 from app.database import db
 from app.core.exceptions import UnauthorizedException, UnprocessableException
 
@@ -78,6 +79,31 @@ def build_tools(current_user, agent_type: str = "all"):
         owner_email = cafe.owner.email if cafe.owner else "None"
         return f"Cafe ID: {cafe.id}\nName: {cafe.name}\nOwner: {owner_email}\nCreated: {cafe.createdAt}"
 
+    async def search_cafes(query: str) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Search for a cafe by name. Use this if the user provides a cafe name with possible typos.
+        """
+        if role not in ["SUPER_ADMIN", "CAFE_OWNER"]:
+            return "Error: Your role does not allow searching cafes."
+            
+        where_clause = {}
+        if role != "SUPER_ADMIN":
+            where_clause = {"id": {"in": list(authorized_cafes)}}
+            
+        cafes = await db.cafe.find_many(where=where_clause)
+        if not cafes:
+            return "You don't own any cafes to search."
+            
+        names = {c.name: c for c in cafes}
+        # Fuzzy match
+        matches = difflib.get_close_matches(query, names.keys(), n=3, cutoff=0.3)
+        
+        if not matches:
+            return f"No cafes found matching '{query}'"
+            
+        matched_cafes = [names[m] for m in matches]
+        return f"Search results for '{query}':\n" + "\n".join([f"- ID: {c.id}, Name: {c.name}" for c in matched_cafes])
+
     async def get_menu(cafe_id: int) -> str:
         """
         [SUPER_ADMIN, CAFE_OWNER] Get the master menu items for a specific cafe.
@@ -96,6 +122,35 @@ def build_tools(current_user, agent_type: str = "all"):
             
         res = f"Menu for Cafe {cafe_id}:\n"
         for i in items:
+            cat = i.category.name if i.category else "Uncategorized"
+            res += f"- ID: {i.id} | Name: {i.name} | Category: {cat} | Base Price: ${i.basePrice}\n"
+        return res
+
+    async def search_menu(cafe_id: int, query: str) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Search for a menu item by name in a specific cafe. Handles typos.
+        """
+        try:
+            _check_cafe_access(cafe_id)
+        except UnauthorizedException as e:
+            return str(e)
+            
+        items = await db.mastermenuitem.find_many(
+            where={"cafeId": cafe_id, "isDeleted": False},
+            include={"category": True}
+        )
+        if not items:
+            return f"No menu items found for cafe {cafe_id}."
+            
+        names = {i.name: i for i in items}
+        matches = difflib.get_close_matches(query, names.keys(), n=5, cutoff=0.3)
+        
+        if not matches:
+            return f"No menu items found matching '{query}'"
+            
+        matched_items = [names[m] for m in matches]
+        res = f"Menu search results for '{query}':\n"
+        for i in matched_items:
             cat = i.category.name if i.category else "Uncategorized"
             res += f"- ID: {i.id} | Name: {i.name} | Category: {cat} | Base Price: ${i.basePrice}\n"
         return res
@@ -203,16 +258,20 @@ def build_tools(current_user, agent_type: str = "all"):
         
     # Super Admin gets all tools
     if role == "SUPER_ADMIN":
-        tools = [get_my_cafes, get_cafe, get_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
+        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
+    else:
+        # Re-build for specific roles to include new tools
+        if role == "CAFE_OWNER":
+            tools.extend([search_cafes, search_menu])
         
     # Deduplicate in case of overlaps
     unique_tools = list({f.__name__: f for f in tools}.values())
     
     if agent_type == "cafe":
-        allowed = {"get_my_cafes", "get_cafe", "get_branches_for_cafe"}
+        allowed = {"get_my_cafes", "search_cafes", "get_cafe", "get_branches_for_cafe"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "inventory":
-        allowed = {"get_menu", "get_branch_inventory", "upsert_inventory_quantity"}
+        allowed = {"get_menu", "search_menu", "get_branch_inventory", "upsert_inventory_quantity"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "order":
         allowed = {"get_recent_orders", "update_order_status"}
