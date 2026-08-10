@@ -5,8 +5,10 @@ import { GitBranch, UtensilsCrossed, ShoppingCart, ArrowLeft, MapPin, Plus, Penc
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import Modal from "@/components/Modal";
+import StatusBadge from "@/components/StatusBadge";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { formatDate, formatCurrency } from "@/lib/format";
 
 interface Cafe { id: number; name: string; createdAt: string; }
 interface Branch { id: number; name: string; location: string | null; }
@@ -114,15 +116,15 @@ export default function CafeDetailPage() {
     <div>
       <div className="page-header">
         <div>
-          <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>
-            <ArrowLeft size={14} /> Back to Dashboard
+          <button onClick={() => router.back()} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+            <ArrowLeft size={14} /> Back to Cafés
           </button>
           <div className="page-title">{cafe?.name}</div>
           <div className="page-subtitle">Café ID: #{cafeId}</div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           {currentUser?.role === "CAFE_OWNER" && (
-            <button className="btn btn-ghost" onClick={() => setScheduleMeeting(true)} style={{ color: "#22c55e", background: "#22c55e11" }}>
+            <button className="btn btn-ghost" onClick={() => setScheduleMeeting(true)} style={{ color: "var(--success)", background: "var(--success-bg)" }}>
               <CalendarPlus size={15} /> Schedule Meeting
             </button>
           )}
@@ -136,25 +138,26 @@ export default function CafeDetailPage() {
       </div>
 
       {/* Branches */}
-      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-        <GitBranch size={16} style={{ marginRight: 8, display: "inline" }} />
+      <h3 className="font-heading" style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <GitBranch size={18} color="var(--primary)" />
         Branches ({branches.length})
       </h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 40 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 40 }}>
         {branches.map(b => (
-          <div key={b.id} className="card" style={{ position: "relative" }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{b.name}</div>
-            {b.location && <div style={{ color: "var(--text-muted)", fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-              <MapPin size={12} /> {b.location}
-            </div>}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-              <Link href={`/branches/${b.id}/menu`} className="btn btn-ghost btn-sm"><UtensilsCrossed size={12} /> Branch Menu</Link>
-              <Link href={`/branches/${b.id}/orders`} className="btn btn-ghost btn-sm"><ShoppingCart size={12} /> Orders</Link>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setEditBranch(b); setBranchName(b.name); setBranchLocation(b.location || ""); }}>
-                <Pencil size={12} /> Edit
+          <div key={b.id} className="card" style={{ position: "relative", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text-primary)" }}>{b.name}</div>
+              {b.location && <div style={{ color: "var(--text-secondary)", fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <MapPin size={14} /> {b.location}
+              </div>}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
+              <Link href={`/branches/${b.id}/orders`} className="btn btn-primary" style={{ flex: 1 }}>Manage Branch</Link>
+              <button className="btn btn-ghost" onClick={() => { setEditBranch(b); setBranchName(b.name); setBranchLocation(b.location || ""); }}>
+                <Pencil size={14} />
               </button>
-              <button className="btn btn-danger btn-sm" onClick={() => handleDeleteBranch(b)}>
-                <Trash2 size={12} /> Delete
+              <button className="btn btn-danger" onClick={() => handleDeleteBranch(b)}>
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
@@ -163,8 +166,8 @@ export default function CafeDetailPage() {
       </div>
 
       {/* Café-wide Orders */}
-      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-        <ShoppingCart size={16} style={{ marginRight: 8, display: "inline" }} />
+      <h3 className="font-heading" style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <ShoppingCart size={18} color="var(--primary)" />
         All Orders ({orders.length})
       </h3>
       <div className="card table-wrap">
@@ -177,9 +180,9 @@ export default function CafeDetailPage() {
               {orders.map(o => (
                 <tr key={o.id}>
                   <td style={{ color: "var(--text-muted)" }}>#{o.id}</td>
-                  <td><span style={{ background: "var(--bg-surface)", padding: "3px 10px", borderRadius: 999, fontSize: 12 }}>{o.status}</span></td>
-                  <td style={{ fontWeight: 600, color: "var(--accent)" }}>${Number(o.totalAmount).toFixed(2)}</td>
-                  <td style={{ color: "var(--text-muted)" }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td><StatusBadge status={o.status} /></td>
+                  <td style={{ fontWeight: 700, color: "var(--primary)" }}>{formatCurrency(o.totalAmount)}</td>
+                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(o.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

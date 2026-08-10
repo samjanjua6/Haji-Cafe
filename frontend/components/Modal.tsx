@@ -45,7 +45,7 @@ export default function Modal({ open, onClose, title, children, width = 480 }: M
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "20px 24px", borderBottom: "1px solid var(--border)"
         }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{title}</h2>
+          <h2 className="font-heading" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{title}</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}>
             <X size={20} />
           </button>

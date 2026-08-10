@@ -1,0 +1,9 @@
+haji-cafe.mychatbot.codes {
+    handle_path /api/* {
+        reverse_proxy localhost:8000
+    }
+
+    handle /* {
+        reverse_proxy localhost:3000
+    }
+}

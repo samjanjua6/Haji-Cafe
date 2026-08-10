@@ -3,3 +3,9 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+chabi.pemupdate.sh
+deploy.sh
+list_models.py
+test_models.py
+test_stream.py
+test_async_tool.py

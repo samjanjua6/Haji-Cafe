@@ -5,6 +5,7 @@ import { Plus, ArrowLeft, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
 import { api } from "@/lib/api";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
+import { formatCurrency } from "@/lib/format";
 
 interface BranchMenuItem {
   id: number;
@@ -75,11 +76,11 @@ export default function BranchMenuPage() {
     <div>
       <div className="page-header">
         <div>
-          <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>
+          <button onClick={() => router.back()} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
             <ArrowLeft size={14} /> Back
           </button>
-          <div className="page-title">Branch Menu</div>
-          <div className="page-subtitle">Overrides for branch #{branchId}</div>
+          <div className="page-title">Branch Menu Settings</div>
+          <div className="page-subtitle">Manage prices and availability for Branch #{branchId}</div>
         </div>
         <button className="btn btn-primary" onClick={() => { setForm({ masterItemId: "", priceOverride: "", availableQuantity: "0", isInfinite: true, isInStock: true, isActive: true }); setUpsertModal(true); }}>
           <Plus size={16} /> Upsert Item
@@ -93,34 +94,51 @@ export default function BranchMenuPage() {
           <table>
             <thead>
               <tr>
-                <th>Item</th><th>Base Price</th><th>Override</th><th>Effective Price</th><th>Avail. Qty</th><th>In Stock</th><th>Active</th><th>Actions</th>
+                <th>Item</th><th>Base Price</th><th>Price Configuration</th><th>In Stock</th><th>Active</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.id}>
                   <td style={{ fontWeight: 600 }}>{item.masterItem.name}</td>
-                  <td style={{ color: "var(--text-muted)" }}>${Number(item.masterItem.basePrice).toFixed(2)}</td>
-                  <td style={{ color: item.priceOverride ? "var(--accent)" : "var(--text-muted)" }}>
-                    {item.priceOverride ? `$${Number(item.priceOverride).toFixed(2)}` : "—"}
-                  </td>
-                  <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(item.effectivePrice).toFixed(2)}</td>
-                  <td style={{ color: item.availableQuantity !== null ? "var(--text)" : "var(--text-muted)" }}>
-                    {item.availableQuantity !== null ? item.availableQuantity : "∞"}
+                  <td style={{ color: "var(--text-secondary)" }}>{formatCurrency(item.masterItem.basePrice)}</td>
+                  <td style={{ fontWeight: 700, color: "var(--primary)" }}>
+                    {item.priceOverride ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {formatCurrency(item.priceOverride)}
+                        <span style={{ fontSize: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "2px 6px", borderRadius: 4, color: "var(--primary)" }}>OVERRIDE</span>
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>{formatCurrency(item.masterItem.basePrice)} (Base)</span>
+                    )}
                   </td>
                   <td>
-                    <button onClick={() => handlePatch(item, { is_in_stock: !item.isInStock })} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                      {item.isInStock ? <ToggleRight size={22} color="#22c55e" /> : <ToggleLeft size={22} color="#ef4444" />}
+                    <button
+                      onClick={() => handlePatch(item, { is_in_stock: !item.isInStock })}
+                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: item.isInStock ? "var(--success)" : "var(--text-muted)" }}
+                    >
+                      {item.isInStock ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>{item.isInStock ? "In Stock" : "Sold Out"}</span>
                     </button>
                   </td>
                   <td>
-                    <button onClick={() => handlePatch(item, { is_active: !item.isActive })} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                      {item.isActive ? <ToggleRight size={22} color="#22c55e" /> : <ToggleLeft size={22} color="#ef4444" />}
-                    </button>
+                    <span style={{ background: item.isActive ? "var(--success-bg)" : "var(--danger-bg)", color: item.isActive ? "var(--success)" : "var(--danger)", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                      {item.isActive ? "Active" : "Inactive"}
+                    </span>
                   </td>
                   <td>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditItem(item); setForm({ masterItemId: String(item.masterItem.id), priceOverride: item.priceOverride ? String(item.priceOverride) : "", availableQuantity: item.availableQuantity !== null ? String(item.availableQuantity) : "0", isInfinite: item.availableQuantity === null, isInStock: item.isInStock, isActive: item.isActive }); }}>
-                      <Pencil size={13} /> Edit
+                    <button className="btn btn-ghost btn-sm" onClick={() => {
+                      setEditItem(item);
+                      setForm({
+                        masterItemId: String(item.masterItem.id),
+                        priceOverride: item.priceOverride ? String(item.priceOverride) : "",
+                        availableQuantity: item.availableQuantity ? String(item.availableQuantity) : "",
+                        isInfinite: item.availableQuantity === null,
+                        isInStock: item.isInStock,
+                        isActive: item.isActive,
+                      });
+                    }}>
+                      <Pencil size={14} />
                     </button>
                   </td>
                 </tr>
