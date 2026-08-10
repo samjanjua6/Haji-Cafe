@@ -8,6 +8,8 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
+    client_time: Optional[str] = None
+    timezone: Optional[str] = None
 
 class ChatResponse(BaseModel):
     messages: List[ChatMessage]

@@ -38,8 +38,11 @@ async def route_to_order_specialist() -> str:
     """Use this to answer questions about customer orders and status updates."""
     return "Transferred to Order Specialist."
 
-def _build_system_prompt(current_user, agent_type: str = "supervisor") -> str:
+def _build_system_prompt(current_user, agent_type: str = "supervisor", body: ChatRequest = None) -> str:
     base = f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
+    if body and body.client_time:
+        base += f"The user's current local device time is {body.client_time} (Timezone: {body.timezone}). Use this exact time to accurately calculate relative dates/times like 'tomorrow', 'next week', '10 AM', etc.\n"
+    
     rules = (
         "CRITICAL INSTRUCTIONS:\n"
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
@@ -130,8 +133,8 @@ async def _execute_tool_calls(tool_calls, tool_fn_map: dict) -> list[dict]:
         })
     return result_messages
 
-def _get_agent_context(current_user, agent_name: str):
-    sys_prompt = _build_system_prompt(current_user, agent_name)
+def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None):
+    sys_prompt = _build_system_prompt(current_user, agent_name, body)
     if agent_name == "supervisor":
         tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
     else:
@@ -148,7 +151,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
         return ChatResponse(messages=[])
 
     active_agent = "supervisor"
-    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     for _ in range(7):
@@ -184,7 +187,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
                 routed = True
                 
         if routed:
-            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
             messages[0]["content"] = sys_prompt
 
     final_text = msg.content or ""
@@ -200,7 +203,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         return
 
     active_agent = "supervisor"
-    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
@@ -247,7 +250,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
                 routed = True
                 
         if routed:
-            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
             messages[0]["content"] = sys_prompt
 
     # Stream the final answer — add the tool results to context and stream fresh
