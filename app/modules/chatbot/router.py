@@ -60,7 +60,11 @@ async def websocket_chat(websocket: WebSocket, token: str):
             data = await websocket.receive_json()
             messages_data = data.get("messages", [])
             messages = [ChatMessage(**msg) for msg in messages_data]
-            request = ChatRequest(messages=messages)
+            request = ChatRequest(
+                messages=messages,
+                client_time=data.get("client_time"),
+                timezone=data.get("timezone")
+            )
             
             try:
                 await service.stream_chat(websocket, request, current_user)
