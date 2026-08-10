@@ -70,7 +70,10 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
     )
     
     if agent_type == "supervisor":
-        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}"
+        scheduling_note = ""
+        if current_user.role.name == "SUPER_ADMIN":
+            scheduling_note = "\nIMPORTANT: You are logged in as SUPER_ADMIN. Super Admins oversee the entire platform and are NOT associated with any specific cafe. Therefore, you CANNOT schedule meetings, view staff lists, or perform cafe-specific management tasks. If the user asks to schedule a meeting, politely explain this and suggest they log in as a Cafe Owner instead."
+        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}{scheduling_note}"
     elif agent_type == "cafe":
         cafe_rules = "\n6. For scheduling meetings: You MUST know the exact meeting time/date, and the exact integer User IDs of the attendees. If the user says 'all staff' or you don't know the exact integer IDs, you MUST call get_staff_list FIRST to retrieve them. DO NOT guess IDs and DO NOT pass empty attendee lists."
         return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}{cafe_rules}"

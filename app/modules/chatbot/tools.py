@@ -201,9 +201,11 @@ def build_tools(current_user, agent_type: str = "all"):
 
     async def get_staff_list(cafe_id: int) -> str:
         """
-        [SUPER_ADMIN, CAFE_OWNER] Get a list of all staff members for a specific cafe. 
+        [CAFE_OWNER] Get a list of all staff members for a specific cafe. 
         Returns their User IDs, Emails, and Roles.
         """
+        if cafe_id is None or cafe_id == 0:
+            return "ERROR: A valid integer cafe_id is required. Use get_my_cafes first to find your cafe ID."
         try:
             _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
@@ -334,9 +336,9 @@ def build_tools(current_user, agent_type: str = "all"):
     if role in ["BRANCH_MANAGER", "STAFF"]:
         tools.extend([get_branch_inventory, get_recent_orders, upsert_inventory_quantity, update_order_status])
         
-    # Super Admin gets all tools
+    # Super Admin gets all tools EXCEPT meeting scheduling (they don't manage a specific cafe)
     if role == "SUPER_ADMIN":
-        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status, get_staff_list, schedule_meeting]
+        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
     else:
         # Re-build for specific roles to include new tools
         if role == "CAFE_OWNER":
