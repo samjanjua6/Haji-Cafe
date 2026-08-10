@@ -13,18 +13,38 @@ client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
-def _build_system_prompt(current_user) -> str:
-    return (
-        f"You are a helpful assistant for Haji Cafe Platform.\n"
-        f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
-        "You have been provided with specific tools to fetch data and perform actions.\n"
+async def route_to_cafe_specialist() -> str:
+    """Use this to answer questions about cafes and branches."""
+    return "Transferred to Cafe Specialist."
+
+async def route_to_inventory_specialist() -> str:
+    """Use this to answer questions about menus, items, and stock inventory."""
+    return "Transferred to Inventory Specialist."
+
+async def route_to_order_specialist() -> str:
+    """Use this to answer questions about customer orders and status updates."""
+    return "Transferred to Order Specialist."
+
+def _build_system_prompt(current_user, agent_type: str = "supervisor") -> str:
+    base = f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
+    rules = (
         "CRITICAL INSTRUCTIONS:\n"
-        "1. ONLY use the exact tools provided. DO NOT guess or invent tool names (e.g., do not try to use 'get_cafe', 'get_menu', 'manage_menu' etc. if they are not in your tools list).\n"
-        "2. If you don't have a tool to answer the user's request, politely inform them that you cannot perform that action.\n"
-        "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Never say 'I will use the get_my_cafes tool'. Just say 'Let me check your cafes' and seamlessly present the results.\n"
-        "4. If a tool returns an error or Access Denied, explain to the user that they don't have permission.\n"
-        "5. Format your responses cleanly in Markdown."
+        "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
+        "2. If you don't have a tool to answer the user's request, politely inform them.\n"
+        "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Just seamlessly present the results.\n"
+        "4. Format your responses cleanly in Markdown."
     )
+    
+    if agent_type == "supervisor":
+        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}"
+    elif agent_type == "cafe":
+        return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes and branches.\n{rules}"
+    elif agent_type == "inventory":
+        return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}"
+    elif agent_type == "order":
+        return f"You are the Order Specialist.\n{base}\nUse your tools to view and update customer orders.\n{rules}"
+    
+    return f"You are a helpful assistant.\n{base}\n{rules}"
 
 
 def _fn_to_groq_tool(fn) -> dict:
@@ -95,21 +115,28 @@ async def _execute_tool_calls(tool_calls, tool_fn_map: dict) -> list[dict]:
         })
     return result_messages
 
+def _get_agent_context(current_user, agent_name: str):
+    sys_prompt = _build_system_prompt(current_user, agent_name)
+    if agent_name == "supervisor":
+        tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
+    else:
+        tool_fns = build_tools(current_user, agent_name)
+    
+    tool_fn_map = {fn.__name__: fn for fn in tool_fns}
+    groq_tools = [_fn_to_groq_tool(fn) for fn in tool_fns]
+    return sys_prompt, tool_fn_map, groq_tools
+
 
 async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     """REST endpoint handler (kept for backward compatibility)."""
-    tool_fns = build_tools(current_user)
-    tool_fn_map = {fn.__name__: fn for fn in tool_fns}
-    groq_tools = [_fn_to_groq_tool(fn) for fn in tool_fns]
-    system_prompt = _build_system_prompt(current_user)
-
     if not body.messages:
         return ChatResponse(messages=[])
 
-    messages = _build_messages(system_prompt, body.messages[:-1], body.messages[-1].content)
+    active_agent = "supervisor"
+    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+    messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
-    # Agentic loop: keep calling until model stops using tools
-    for _ in range(5):
+    for _ in range(7):
         response = await client.chat.completions.create(
             model=GROQ_MODEL,
             messages=messages,
@@ -128,6 +155,22 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
 
         tool_results = await _execute_tool_calls(msg.tool_calls, tool_fn_map)
         messages.extend(tool_results)
+        
+        routed = False
+        for tc in msg.tool_calls:
+            if tc.function.name == "route_to_cafe_specialist":
+                active_agent = "cafe"
+                routed = True
+            elif tc.function.name == "route_to_inventory_specialist":
+                active_agent = "inventory"
+                routed = True
+            elif tc.function.name == "route_to_order_specialist":
+                active_agent = "order"
+                routed = True
+                
+        if routed:
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+            messages[0]["content"] = sys_prompt
 
     final_text = msg.content or ""
     new_messages = body.messages.copy()
@@ -137,19 +180,16 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
 
 async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
     """WebSocket handler with real-time streaming."""
-    tool_fns = build_tools(current_user)
-    tool_fn_map = {fn.__name__: fn for fn in tool_fns}
-    groq_tools = [_fn_to_groq_tool(fn) for fn in tool_fns]
-    system_prompt = _build_system_prompt(current_user)
-
     if not body.messages:
         await websocket.send_json({"done": True})
         return
 
-    messages = _build_messages(system_prompt, body.messages[:-1], body.messages[-1].content)
+    active_agent = "supervisor"
+    sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+    messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
-    for _ in range(5):
+    for _ in range(7):
         response = await client.chat.completions.create(
             model=GROQ_MODEL,
             messages=messages,
@@ -178,6 +218,22 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         })
         tool_results = await _execute_tool_calls(msg.tool_calls, tool_fn_map)
         messages.extend(tool_results)
+        
+        routed = False
+        for tc in msg.tool_calls:
+            if tc.function.name == "route_to_cafe_specialist":
+                active_agent = "cafe"
+                routed = True
+            elif tc.function.name == "route_to_inventory_specialist":
+                active_agent = "inventory"
+                routed = True
+            elif tc.function.name == "route_to_order_specialist":
+                active_agent = "order"
+                routed = True
+                
+        if routed:
+            sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent)
+            messages[0]["content"] = sys_prompt
 
     # Stream the final answer — add the tool results to context and stream fresh
     stream = await client.chat.completions.create(

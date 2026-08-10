@@ -6,7 +6,7 @@ from app.core.exceptions import UnauthorizedException, UnprocessableException
 # Enums
 from app.modules.orders.service import OrderStatusEnum
 
-def build_tools(current_user):
+def build_tools(current_user, agent_type: str = "all"):
     """
     Returns a list of tool functions bound to the current_user's context.
     The LLM will only see the function signatures and docstrings.
@@ -206,6 +206,18 @@ def build_tools(current_user):
         tools = [get_my_cafes, get_cafe, get_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
         
     # Deduplicate in case of overlaps
-    unique_tools = {f.__name__: f for f in tools}.values()
+    unique_tools = list({f.__name__: f for f in tools}.values())
     
-    return list(unique_tools)
+    if agent_type == "cafe":
+        allowed = {"get_my_cafes", "get_cafe", "get_branches_for_cafe"}
+        unique_tools = [t for t in unique_tools if t.__name__ in allowed]
+    elif agent_type == "inventory":
+        allowed = {"get_menu", "get_branch_inventory", "upsert_inventory_quantity"}
+        unique_tools = [t for t in unique_tools if t.__name__ in allowed]
+    elif agent_type == "order":
+        allowed = {"get_recent_orders", "update_order_status"}
+        unique_tools = [t for t in unique_tools if t.__name__ in allowed]
+    elif agent_type == "supervisor":
+        unique_tools = []
+        
+    return unique_tools
