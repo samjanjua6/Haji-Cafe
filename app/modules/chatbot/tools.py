@@ -62,6 +62,45 @@ def build_tools(current_user):
             
         return f"Branches for Cafe {cafe_id}:\n" + "\n".join([f"- Branch ID: {b.id}, Name: {b.name}, Address: {b.address}" for b in branches])
 
+    async def get_cafe(cafe_id: int) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Get details of a specific cafe.
+        """
+        try:
+            _check_cafe_access(cafe_id)
+        except UnauthorizedException as e:
+            return str(e)
+            
+        cafe = await db.cafe.find_unique(where={"id": cafe_id}, include={"owner": True})
+        if not cafe:
+            return f"Cafe {cafe_id} not found."
+            
+        owner_email = cafe.owner.email if cafe.owner else "None"
+        return f"Cafe ID: {cafe.id}\nName: {cafe.name}\nOwner: {owner_email}\nCreated: {cafe.createdAt}"
+
+    async def get_menu(cafe_id: int) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Get the master menu items for a specific cafe.
+        """
+        try:
+            _check_cafe_access(cafe_id)
+        except UnauthorizedException as e:
+            return str(e)
+            
+        items = await db.mastermenuitem.find_many(
+            where={"cafeId": cafe_id, "isDeleted": False},
+            include={"category": True}
+        )
+        if not items:
+            return f"No menu items found for cafe {cafe_id}."
+            
+        res = f"Menu for Cafe {cafe_id}:\n"
+        for i in items:
+            cat = i.category.name if i.category else "Uncategorized"
+            res += f"- ID: {i.id} | Name: {i.name} | Category: {cat} | Base Price: ${i.basePrice}\n"
+        return res
+
+
     async def get_branch_inventory(branch_id: int) -> str:
         """
         [ALL ROLES] Get the current inventory and menu items for a specific branch_id.
@@ -157,14 +196,14 @@ def build_tools(current_user):
     tools = []
     
     if role in ["SUPER_ADMIN", "CAFE_OWNER"]:
-        tools.extend([get_my_cafes, get_branches_for_cafe, get_branch_inventory, get_recent_orders])
+        tools.extend([get_my_cafes, get_cafe, get_menu, get_branches_for_cafe, get_branch_inventory, get_recent_orders])
         
     if role in ["BRANCH_MANAGER", "STAFF"]:
         tools.extend([get_branch_inventory, get_recent_orders, upsert_inventory_quantity, update_order_status])
         
     # Super Admin gets all tools
     if role == "SUPER_ADMIN":
-        tools = [get_my_cafes, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
+        tools = [get_my_cafes, get_cafe, get_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
         
     # Deduplicate in case of overlaps
     unique_tools = {f.__name__: f for f in tools}.values()

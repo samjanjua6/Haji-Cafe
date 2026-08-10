@@ -17,10 +17,13 @@ def _build_system_prompt(current_user) -> str:
     return (
         f"You are a helpful assistant for Haji Cafe Platform.\n"
         f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
-        "You have been provided with specific tools to fetch data and perform actions on their behalf.\n"
-        "Always use the tools available to you to answer questions. If a tool returns an error or Access Denied, "
-        "explain to the user that they don't have permission for that action.\n"
-        "Format your responses cleanly in Markdown."
+        "You have been provided with specific tools to fetch data and perform actions.\n"
+        "CRITICAL INSTRUCTIONS:\n"
+        "1. ONLY use the exact tools provided. DO NOT guess or invent tool names (e.g., do not try to use 'get_cafe', 'get_menu', 'manage_menu' etc. if they are not in your tools list).\n"
+        "2. If you don't have a tool to answer the user's request, politely inform them that you cannot perform that action.\n"
+        "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Never say 'I will use the get_my_cafes tool'. Just say 'Let me check your cafes' and seamlessly present the results.\n"
+        "4. If a tool returns an error or Access Denied, explain to the user that they don't have permission.\n"
+        "5. Format your responses cleanly in Markdown."
     )
 
 
@@ -112,7 +115,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
             messages=messages,
             tools=groq_tools if groq_tools else None,
             tool_choice="auto" if groq_tools else None,
-            temperature=0.7,
+            temperature=0.1,
         )
         msg = response.choices[0].message
         messages.append({"role": "assistant", "content": msg.content or "", "tool_calls": [
@@ -152,7 +155,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
             messages=messages,
             tools=groq_tools if groq_tools else None,
             tool_choice="auto" if groq_tools else None,
-            temperature=0.7,
+            temperature=0.1,
         )
         msg = response.choices[0].message
 
@@ -181,7 +184,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         model=GROQ_MODEL,
         messages=messages,
         stream=True,
-        temperature=0.7,
+        temperature=0.4,
     )
     async for chunk in stream:
         delta = chunk.choices[0].delta.content
