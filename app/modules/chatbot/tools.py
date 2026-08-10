@@ -239,8 +239,10 @@ def build_tools(current_user, agent_type: str = "all"):
         if cafe_id == 0:
             return "ERROR: You must provide a valid cafe_id."
             
-        if not attendee_user_ids_comma_separated:
-            return "ERROR: You cannot schedule a meeting without attendees. You MUST ask the user which staff members they want to invite, and then use get_staff_list to find their IDs. Do NOT say the meeting was scheduled."
+        user_ids = [int(x.strip()) for x in attendee_user_ids_comma_separated.split(",") if x.strip().isdigit()]
+        if not user_ids:
+            return "ERROR: You cannot schedule a meeting without valid attendees. You MUST ask the user which staff members they want to invite, and then use get_staff_list to find their integer IDs. Do NOT guess IDs and do NOT say the meeting was scheduled."
+            
         try:
             _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
@@ -248,13 +250,12 @@ def build_tools(current_user, agent_type: str = "all"):
             
         try:
             from datetime import datetime
-            start_time_iso = start_time_iso.replace('Z', '').split('+')[0].split('-0')[0]
-            end_time_iso = end_time_iso.replace('Z', '').split('+')[0].split('-0')[0]
-            start_dt = datetime.fromisoformat(start_time_iso)
-            end_dt = datetime.fromisoformat(end_time_iso)
-            user_ids = [int(x.strip()) for x in attendee_user_ids_comma_separated.split(",") if x.strip().isdigit()]
+            start_time_clean = start_time_iso.replace('Z', '').split('+')[0].split('-0')[0].replace(" ", "T")
+            end_time_clean = end_time_iso.replace('Z', '').split('+')[0].split('-0')[0].replace(" ", "T")
+            start_dt = datetime.fromisoformat(start_time_clean)
+            end_dt = datetime.fromisoformat(end_time_clean)
         except Exception as e:
-            return f"Error parsing arguments: {e}. Please ensure ISO formats and valid integer IDs."
+            return f"ERROR: Invalid date format '{start_time_iso}' or '{end_time_iso}'. You MUST use EXACTLY 'YYYY-MM-DDTHH:MM:SS'. FIX THIS IMMEDIATELY and call the tool again. Do NOT ask the user for confirmation."
             
         try:
             from app.modules.cafes import service as cafe_service
