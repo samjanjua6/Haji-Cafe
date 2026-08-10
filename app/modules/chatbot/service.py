@@ -26,16 +26,16 @@ async def _chat_completions_create_with_fallback(**kwargs):
         raise e
 
 
-async def route_to_cafe_specialist() -> str:
-    """Use this to answer questions about cafes, branches, and scheduling staff meetings."""
+async def route_to_cafe_specialist(request_summary: str = "") -> str:
+    """Use this to answer questions about cafes, branches, and scheduling staff meetings. You may optionally provide a summary of the user's request and any extracted parameters (like times or IDs) in request_summary."""
     return "Transferred to Cafe Specialist."
 
-async def route_to_inventory_specialist() -> str:
-    """Use this to answer questions about menus, items, and stock inventory."""
+async def route_to_inventory_specialist(request_summary: str = "") -> str:
+    """Use this to answer questions about menus, items, and stock inventory. You may optionally provide a summary of the user's request in request_summary."""
     return "Transferred to Inventory Specialist."
 
-async def route_to_order_specialist() -> str:
-    """Use this to answer questions about customer orders and status updates."""
+async def route_to_order_specialist(request_summary: str = "") -> str:
+    """Use this to answer questions about customer orders and status updates. You may optionally provide a summary of the user's request in request_summary."""
     return "Transferred to Order Specialist."
 
 def _build_system_prompt(current_user, agent_type: str = "supervisor", body: ChatRequest = None) -> str:
