@@ -2,7 +2,7 @@ import json
 import inspect
 import asyncio
 from fastapi import WebSocket
-from groq import AsyncGroq
+from groq import AsyncGroq, RateLimitError, APIError
 from .schemas import ChatRequest, ChatResponse, ChatMessage
 from .tools import build_tools
 from app.config import settings
@@ -11,6 +11,19 @@ client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 # Model to use — Groq's fastest, most capable model with tool support
 GROQ_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_MODEL = "mixtral-8x7b-32768"
+
+async def _chat_completions_create_with_fallback(**kwargs):
+    try:
+        return await client.chat.completions.create(**kwargs)
+    except RateLimitError:
+        kwargs["model"] = FALLBACK_MODEL
+        return await client.chat.completions.create(**kwargs)
+    except APIError as e:
+        if e.status_code == 429:
+            kwargs["model"] = FALLBACK_MODEL
+            return await client.chat.completions.create(**kwargs)
+        raise e
 
 
 async def route_to_cafe_specialist() -> str:
@@ -137,7 +150,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     for _ in range(7):
-        response = await client.chat.completions.create(
+        response = await _chat_completions_create_with_fallback(
             model=GROQ_MODEL,
             messages=messages,
             tools=groq_tools if groq_tools else None,
@@ -190,7 +203,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
 
     # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
     for _ in range(7):
-        response = await client.chat.completions.create(
+        response = await _chat_completions_create_with_fallback(
             model=GROQ_MODEL,
             messages=messages,
             tools=groq_tools if groq_tools else None,
@@ -236,7 +249,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
             messages[0]["content"] = sys_prompt
 
     # Stream the final answer — add the tool results to context and stream fresh
-    stream = await client.chat.completions.create(
+    stream = await _chat_completions_create_with_fallback(
         model=GROQ_MODEL,
         messages=messages,
         stream=True,
