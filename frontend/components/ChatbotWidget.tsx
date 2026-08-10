@@ -131,10 +131,10 @@ export default function ChatbotWidget() {
             width: "56px",
             height: "56px",
             borderRadius: "50%",
-            backgroundColor: "#2563eb",
-            color: "white",
+            backgroundColor: "var(--accent)",
+            color: "#0f172a",
             border: "none",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -158,22 +158,23 @@ export default function ChatbotWidget() {
             right: "24px",
             width: "420px",
             height: "600px",
-            backgroundColor: "white",
+            backgroundColor: "var(--bg-card)",
             borderRadius: "12px",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2)",
             display: "flex",
             flexDirection: "column",
             zIndex: 9999,
             overflow: "hidden",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--border)",
           }}
         >
           {/* Header */}
           <div
             style={{
               padding: "16px",
-              backgroundColor: "#2563eb",
-              color: "white",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              borderBottom: "1px solid var(--border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -188,7 +189,7 @@ export default function ChatbotWidget() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "white",
+                color: "var(--text-muted)",
                 cursor: "pointer",
                 padding: "4px",
                 display: "flex",
@@ -207,7 +208,7 @@ export default function ChatbotWidget() {
               display: "flex",
               flexDirection: "column",
               gap: "12px",
-              backgroundColor: "#f9fafb",
+              backgroundColor: "var(--bg-base)",
             }}
           >
             {messages.map((msg, i) => (
@@ -216,14 +217,14 @@ export default function ChatbotWidget() {
                 style={{
                   alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                   maxWidth: "85%",
-                  backgroundColor: msg.role === "user" ? "#2563eb" : "#ffffff",
-                  color: msg.role === "user" ? "white" : "#1f2937",
+                  backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
+                  color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
                   padding: "10px 14px",
                   borderRadius: "12px",
                   borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
                   borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                  border: msg.role === "model" ? "1px solid #e5e7eb" : "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                  border: msg.role === "model" ? "1px solid var(--border)" : "none",
                   fontSize: "14px",
                   lineHeight: "1.5",
                 }}
@@ -244,7 +245,7 @@ export default function ChatbotWidget() {
               </div>
             ))}
             {isLoading && (
-              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "#6b7280", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px" }}>
+              <div style={{ alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px", padding: "8px" }}>
                 Assistant is thinking<span className="dot-typing">...</span>
               </div>
             )}
@@ -256,10 +257,10 @@ export default function ChatbotWidget() {
             onSubmit={handleSend}
             style={{
               padding: "12px",
-              borderTop: "1px solid #e5e7eb",
+              borderTop: "1px solid var(--border)",
               display: "flex",
               gap: "8px",
-              backgroundColor: "white",
+              backgroundColor: "var(--bg-card)",
             }}
           >
             <input
@@ -272,7 +273,9 @@ export default function ChatbotWidget() {
                 flex: 1,
                 padding: "8px 12px",
                 borderRadius: "20px",
-                border: "1px solid #d1d5db",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--text-primary)",
                 outline: "none",
                 fontSize: "14px",
               }}
@@ -281,9 +284,9 @@ export default function ChatbotWidget() {
               type="submit"
               disabled={!input.trim() || isLoading}
               style={{
-                backgroundColor: input.trim() && !isLoading ? "#2563eb" : "#9ca3af",
-                color: "white",
-                border: "none",
+                backgroundColor: input.trim() && !isLoading ? "var(--accent)" : "var(--bg-surface)",
+                color: input.trim() && !isLoading ? "#0f172a" : "var(--text-muted)",
+                border: input.trim() && !isLoading ? "none" : "1px solid var(--border)",
                 borderRadius: "50%",
                 width: "36px",
                 height: "36px",
