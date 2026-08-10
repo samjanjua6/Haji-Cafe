@@ -46,7 +46,10 @@ def build_tools(current_user, agent_type: str = "all"):
         if not cafes:
             return "You don't own any cafes."
             
-        return "Cafes:\n" + "\n".join([f"- ID: {c.id}, Name: {c.name}" for c in cafes])
+        lines = [f"- Cafe ID: {c.id} | Name: {c.name}" for c in cafes]
+        result = f"You manage {len(cafes)} cafe(s):\n" + "\n".join(lines)
+        result += f"\n\n(Use the Cafe ID numbers above for follow-up actions like viewing branches or staff.)"
+        return result
 
     async def get_branches_for_cafe(cafe_id: int) -> str:
         """
