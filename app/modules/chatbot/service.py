@@ -11,7 +11,7 @@ client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 # Model to use — Groq's fastest, most capable model with tool support
 GROQ_MODEL = "llama-3.3-70b-versatile"
-FALLBACK_MODEL = "mixtral-8x7b-32768"
+FALLBACK_MODEL = "llama-3.1-8b-instant"
 
 async def _chat_completions_create_with_fallback(**kwargs):
     try:
