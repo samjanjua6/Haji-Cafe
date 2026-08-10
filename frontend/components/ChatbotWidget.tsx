@@ -43,7 +43,7 @@ export default function ChatbotWidget() {
     // Use location.origin if running in browser to handle correct schema
     let base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     base = base.replace("http://", "ws://").replace("https://", "wss://");
-    
+
     const wsUrl = `${base}/chatbot/ws?token=${token}`;
     const websocket = new WebSocket(wsUrl);
 
@@ -99,7 +99,7 @@ export default function ChatbotWidget() {
 
     const newMsg: Message = { role: "user", content: input };
     const currentMsgs = [...messages, newMsg];
-    
+
     setMessages(currentMsgs);
     setInput("");
     setIsLoading(true);
@@ -156,8 +156,8 @@ export default function ChatbotWidget() {
             position: "fixed",
             bottom: "24px",
             right: "24px",
-            width: "350px",
-            height: "500px",
+            width: "420px",
+            height: "600px",
             backgroundColor: "white",
             borderRadius: "12px",
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
