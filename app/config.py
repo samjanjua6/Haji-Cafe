@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 
     # AI
     GROQ_API_KEY: str = ""
+    DEEPGRAM_API_KEY: str = ""
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = "WTnybLRChAQj0OBHYZg4"
 
 
 settings = Settings()
