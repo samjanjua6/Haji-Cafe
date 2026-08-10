@@ -8,3 +8,4 @@ bcrypt==5.0.0
 python-dotenv==1.0.1
 httpx==0.27.0
 python-multipart==0.0.9
+groq==0.30.0
