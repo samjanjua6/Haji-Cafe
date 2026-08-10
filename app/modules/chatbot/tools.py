@@ -223,6 +223,7 @@ def build_tools(current_user, agent_type: str = "all"):
     async def schedule_meeting(
         start_time_iso: str, 
         end_time_iso: str, 
+        timezone: str,
         cafe_id: int = 0, 
         summary: str = "Staff Meeting", 
         description: str = "", 
@@ -230,7 +231,8 @@ def build_tools(current_user, agent_type: str = "all"):
     ) -> str:
         """
         [SUPER_ADMIN, CAFE_OWNER] Schedule a Google Calendar meeting with staff.
-        - start_time_iso & end_time_iso MUST be valid ISO 8601 strings (e.g. 2026-08-15T10:00:00Z).
+        - start_time_iso & end_time_iso MUST be naive ISO 8601 strings (e.g. 2026-08-15T10:00:00) without 'Z'.
+        - timezone MUST be the exact timezone string provided in your system prompt (e.g. 'Asia/Karachi').
         - attendee_user_ids_comma_separated MUST be a comma-separated list of User IDs (e.g. '2,4,5').
           Use get_staff_list first to find the correct User IDs.
         """
@@ -246,8 +248,10 @@ def build_tools(current_user, agent_type: str = "all"):
             
         try:
             from datetime import datetime
-            start_dt = datetime.fromisoformat(start_time_iso.replace('Z', '+00:00'))
-            end_dt = datetime.fromisoformat(end_time_iso.replace('Z', '+00:00'))
+            start_time_iso = start_time_iso.replace('Z', '').split('+')[0].split('-0')[0]
+            end_time_iso = end_time_iso.replace('Z', '').split('+')[0].split('-0')[0]
+            start_dt = datetime.fromisoformat(start_time_iso)
+            end_dt = datetime.fromisoformat(end_time_iso)
             user_ids = [int(x.strip()) for x in attendee_user_ids_comma_separated.split(",") if x.strip().isdigit()]
         except Exception as e:
             return f"Error parsing arguments: {e}. Please ensure ISO formats and valid integer IDs."
@@ -261,7 +265,8 @@ def build_tools(current_user, agent_type: str = "all"):
                 description=description,
                 start_time=start_dt,
                 end_time=end_dt,
-                attendee_user_ids=user_ids
+                attendee_user_ids=user_ids,
+                timezone=timezone
             )
             return f"Meeting scheduled successfully! Link: {result.get('event_link')}"
         except Exception as e:

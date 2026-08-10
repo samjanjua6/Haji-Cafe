@@ -96,7 +96,7 @@ async def _refresh_google_access_token(refresh_token: str) -> str:
         return data["access_token"]
 
 
-async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str, description: Optional[str], start_time, end_time, attendee_user_ids: list):
+async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str, description: Optional[str], start_time, end_time, attendee_user_ids: list, timezone: str = "UTC"):
     import httpx
     from app.database import db
 
@@ -120,12 +120,11 @@ async def schedule_staff_meeting(cafe_id: int, owner_user_id: int, summary: str,
         raise NotFoundException("None of the specified attendee user IDs were found.")
     attendee_emails = [{"email": u.email} for u in attendees]
 
-    # 4. Build the Google Calendar event payload
     event_body = {
         "summary": summary,
         "description": description or "",
-        "start": {"dateTime": start_time.isoformat(), "timeZone": "UTC"},
-        "end": {"dateTime": end_time.isoformat(), "timeZone": "UTC"},
+        "start": {"dateTime": start_time.isoformat(), "timeZone": timezone},
+        "end": {"dateTime": end_time.isoformat(), "timeZone": timezone},
         "attendees": attendee_emails,
         "sendUpdates": "all",  # Sends email invites to all attendees
     }

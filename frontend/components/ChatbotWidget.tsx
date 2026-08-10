@@ -107,7 +107,7 @@ export default function ChatbotWidget() {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ 
         messages: currentMsgs,
-        client_time: new Date().toISOString(),
+        client_time: new Date().toString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       }));
       setMessages((prev) => [...prev, { role: "model", content: "" }]);
