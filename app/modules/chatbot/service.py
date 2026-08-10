@@ -27,7 +27,7 @@ async def _chat_completions_create_with_fallback(**kwargs):
 
 
 async def route_to_cafe_specialist() -> str:
-    """Use this to answer questions about cafes and branches."""
+    """Use this to answer questions about cafes, branches, and scheduling staff meetings."""
     return "Transferred to Cafe Specialist."
 
 async def route_to_inventory_specialist() -> str:
@@ -45,14 +45,15 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor") -> str:
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
         "2. If you don't have a tool to answer the user's request, politely inform them.\n"
         "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Just seamlessly present the results.\n"
-        "4. If a tool requires arguments that the user has not provided (like dates, times, names, or IDs), explicitly ask the user for that missing information before calling the tool. DO NOT make up data and DO NOT pretend a tool succeeded if you haven't run it.\n"
-        "5. Format your responses cleanly in Markdown."
+        "4. If a tool requires arguments that the user has not provided (like cafe IDs, dates, times, names, or attendee IDs), explicitly ask the user for that missing information before calling the tool. DO NOT make up data and DO NOT pretend a tool succeeded if you haven't run it.\n"
+        "5. For scheduling meetings: You MUST know the exact cafe_id, the meeting time/date, and the exact User IDs of the attendees. If you don't know the cafe_id, call get_my_cafes to find it. If you don't know the attendee User IDs, ALWAYS call get_staff_list first. Do not try to guess IDs.\n"
+        "6. Format your responses cleanly in Markdown."
     )
     
     if agent_type == "supervisor":
         return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}"
     elif agent_type == "cafe":
-        return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes and branches.\n{rules}"
+        return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}"
     elif agent_type == "inventory":
         return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}"
     elif agent_type == "order":
