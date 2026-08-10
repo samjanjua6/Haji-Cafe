@@ -72,7 +72,7 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
     if agent_type == "supervisor":
         return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}"
     elif agent_type == "cafe":
-        cafe_rules = "\n6. For scheduling meetings: You MUST know the exact cafe_id, the meeting time/date, and the exact User IDs of the attendees. If you don't know the attendee User IDs, ALWAYS call get_staff_list first. Do not try to guess IDs."
+        cafe_rules = "\n6. For scheduling meetings: You MUST know the exact meeting time/date, and the exact integer User IDs of the attendees. If the user says 'all staff' or you don't know the exact integer IDs, you MUST call get_staff_list FIRST to retrieve them. DO NOT guess IDs and DO NOT pass empty attendee lists."
         return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}{cafe_rules}"
     elif agent_type == "inventory":
         return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}"
@@ -96,8 +96,18 @@ def _fn_to_groq_tool(fn) -> dict:
 
     for name, param in sig.parameters.items():
         annotation = param.annotation
-        json_type = type_map.get(annotation, "string")
-        properties[name] = {"type": json_type}
+        
+        if getattr(annotation, '__origin__', None) is list:
+            item_type = getattr(annotation, '__args__', (str,))[0]
+            item_json_type = type_map.get(item_type, "string")
+            properties[name] = {
+                "type": "array",
+                "items": {"type": item_json_type}
+            }
+        else:
+            json_type = type_map.get(annotation, "string")
+            properties[name] = {"type": json_type}
+            
         if param.default is inspect.Parameter.empty:
             required.append(name)
 
