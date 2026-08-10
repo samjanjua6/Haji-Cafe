@@ -166,7 +166,7 @@ def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, 
         tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
     else:
         tool_fns = build_tools(current_user, agent_name)
-        tool_fns.extend([route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist])
+        # Sub-agents do NOT get routing tools — they only do their specialized work
     
     # We must also ensure any tool called in 'messages' history is included in groq_tools
     # to satisfy API validation (Groq/OpenAI error 400).
@@ -303,10 +303,12 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
 
-    # Stream the final answer — add the tool results to context and stream fresh
+    # Stream the final answer — tools must be passed to avoid the model regenerating raw function call text
     stream = await _chat_completions_create_with_fallback(
         model=GROQ_MODEL,
         messages=messages,
+        tools=groq_tools if groq_tools else None,
+        tool_choice="none",   # Force text-only response, no more tool calls
         stream=True,
         temperature=0.4,
     )

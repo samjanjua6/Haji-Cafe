@@ -248,11 +248,16 @@ def build_tools(current_user, agent_type: str = "all"):
             return str(e)
             
         try:
+            import re
             from datetime import datetime
-            start_time_clean = start_time_iso.replace('Z', '').split('+')[0].split('-0')[0].replace(" ", "T")
-            end_time_clean = end_time_iso.replace('Z', '').split('+')[0].split('-0')[0].replace(" ", "T")
-            start_dt = datetime.fromisoformat(start_time_clean)
-            end_dt = datetime.fromisoformat(end_time_clean)
+            # Strip trailing Z or timezone offset (+HH:MM / -HH:MM) safely from the END only
+            def _strip_tz(s: str) -> str:
+                s = s.strip().replace(" ", "T")
+                s = re.sub(r'Z$', '', s)
+                s = re.sub(r'[+-]\d{2}:\d{2}$', '', s)
+                return s
+            start_dt = datetime.fromisoformat(_strip_tz(start_time_iso))
+            end_dt = datetime.fromisoformat(_strip_tz(end_time_iso))
         except Exception as e:
             return f"ERROR: Invalid date format '{start_time_iso}' or '{end_time_iso}'. You MUST use EXACTLY 'YYYY-MM-DDTHH:MM:SS'. FIX THIS IMMEDIATELY and call the tool again. Do NOT ask the user for confirmation."
             
