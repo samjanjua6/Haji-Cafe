@@ -60,27 +60,51 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
         base += f"The user's current local device time is {body.client_time} (Timezone: {body.timezone}). Use this exact time to accurately calculate relative dates/times like 'tomorrow', 'next week', '10 AM', etc.\n"
     
     rules = (
-        "CRITICAL INSTRUCTIONS:\n"
+        "CRITICAL INSTRUCTIONS — READ CAREFULLY:\n"
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
         "2. If you don't have a tool to answer the user's request, politely inform them.\n"
-        "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Just seamlessly present the results.\n"
-        "4. If a tool requires arguments that the user has not provided (like dates, times, names, or attendee IDs), explicitly ask the user for that missing information before calling the tool.\n"
-        "5. NEVER ROLEPLAY OR FABRICATE DATA. DO NOT pretend a tool succeeded if you haven't successfully executed it and received a success response.\n"
-        "6. Format your responses cleanly in Markdown."
+        "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Seamlessly present results.\n"
+        "4. If a tool requires arguments the user has not provided, ask for that information before calling the tool.\n"
+        "5. *** ABSOLUTE RULE — NO HALLUCINATION ***: You MUST NEVER answer questions about cafe names, counts, staff, menus, orders, inventory, or ANY business data from memory or assumptions. You MUST ALWAYS call the appropriate tool and use ONLY the data returned by that tool. If you answer without calling a tool, you are FABRICATING data. This is a critical violation.\n"
+        "6. Format your responses cleanly in Markdown.\n"
+        "7. If a tool returns an error, report the error to the user honestly. Do NOT retry with made-up arguments."
     )
     
     if agent_type == "supervisor":
+        routing_rules = (
+            "\nROUTING RULES — You MUST route to a specialist for ANY of the following requests:\n"
+            "- Anything about cafes, branches, staff, or meetings → route_to_cafe_specialist\n"
+            "- Anything about menus, items, stock, or inventory → route_to_inventory_specialist\n"
+            "- Anything about orders or order status → route_to_order_specialist\n"
+            "You MUST NOT answer these requests directly. ALWAYS route them. Only answer greetings and general platform questions directly."
+        )
         scheduling_note = ""
         if current_user.role.name == "SUPER_ADMIN":
-            scheduling_note = "\nIMPORTANT: You are logged in as SUPER_ADMIN. Super Admins oversee the entire platform and are NOT associated with any specific cafe. Therefore, you CANNOT schedule meetings, view staff lists, or perform cafe-specific management tasks. If the user asks to schedule a meeting, politely explain this and suggest they log in as a Cafe Owner instead."
-        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\nYour ONLY job is to chat directly with the user for general greetings, OR route their request to the correct specialist using the handoff tools provided. Do NOT guess answers for specific data if you can route it.\n{rules}{scheduling_note}"
+            scheduling_note = "\nSUPER_ADMIN RESTRICTION: You are a Super Admin. You oversee the entire platform and are NOT linked to any specific cafe. You CANNOT schedule meetings, view staff lists, or perform any cafe-specific tasks. If asked, politely explain this and suggest they log in as a Cafe Owner."
+        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\n{rules}{routing_rules}{scheduling_note}"
     elif agent_type == "cafe":
-        cafe_rules = "\n6. For scheduling meetings: You MUST know the exact meeting time/date, and the exact integer User IDs of the attendees. If the user says 'all staff' or you don't know the exact integer IDs, you MUST call get_staff_list FIRST to retrieve them. DO NOT guess IDs and DO NOT pass empty attendee lists."
+        cafe_rules = (
+            "\nCAFE SPECIALIST RULES:\n"
+            "- ALWAYS call get_my_cafes before answering ANY question about how many cafes the user manages or their names.\n"
+            "- ALWAYS call get_staff_list before answering ANY question about staff members.\n"
+            "- NEVER state cafe names, counts, or staff details from memory. ALWAYS use tool results.\n"
+            "- For scheduling: call get_staff_list first to get exact User IDs. NEVER guess IDs or pass empty lists."
+        )
         return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}{cafe_rules}"
     elif agent_type == "inventory":
-        return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}"
+        inventory_rules = (
+            "\nINVENTORY SPECIALIST RULES:\n"
+            "- ALWAYS call get_menu or get_branch_inventory before answering ANY question about menu items, prices, or stock.\n"
+            "- NEVER state menu item names, prices, or stock levels from memory. ALWAYS use tool results."
+        )
+        return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}{inventory_rules}"
     elif agent_type == "order":
-        return f"You are the Order Specialist.\n{base}\nUse your tools to view and update customer orders.\n{rules}"
+        order_rules = (
+            "\nORDER SPECIALIST RULES:\n"
+            "- ALWAYS call get_recent_orders before answering ANY question about orders.\n"
+            "- NEVER state order details, statuses, or totals from memory. ALWAYS use tool results."
+        )
+        return f"You are the Order Specialist.\n{base}\nUse your tools to view and update customer orders.\n{rules}{order_rules}"
     
     return f"You are a helpful assistant.\n{base}\n{rules}"
 
