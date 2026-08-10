@@ -199,6 +199,62 @@ def build_tools(current_user, agent_type: str = "all"):
         )
         return f"Successfully updated item {item_id} quantity to {quantity}."
 
+    async def get_staff_list(cafe_id: int) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Get a list of all staff members for a specific cafe. 
+        Returns their User IDs, Emails, and Roles.
+        """
+        try:
+            _check_cafe_access(cafe_id)
+        except UnauthorizedException as e:
+            return str(e)
+            
+        from app.modules.cafes import service as cafe_service
+        staff = await cafe_service.get_cafe_staff(cafe_id)
+        if not staff:
+            return f"No staff found for cafe {cafe_id}."
+            
+        res = f"Staff for Cafe {cafe_id}:\n"
+        for s in staff:
+            role_name = s.role.name if s.role else 'Unknown'
+            res += f"- User ID: {s.id} | Email: {s.email} | Role: {role_name}\n"
+        return res
+
+    async def schedule_meeting(cafe_id: int, summary: str, description: str, start_time_iso: str, end_time_iso: str, attendee_user_ids_comma_separated: str) -> str:
+        """
+        [SUPER_ADMIN, CAFE_OWNER] Schedule a Google Calendar meeting with staff.
+        - start_time_iso & end_time_iso MUST be valid ISO 8601 strings (e.g. 2026-08-15T10:00:00Z).
+        - attendee_user_ids_comma_separated MUST be a comma-separated list of User IDs (e.g. '2,4,5').
+          Use get_staff_list first to find the correct User IDs.
+        """
+        try:
+            _check_cafe_access(cafe_id)
+        except UnauthorizedException as e:
+            return str(e)
+            
+        try:
+            from datetime import datetime
+            start_dt = datetime.fromisoformat(start_time_iso.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_time_iso.replace('Z', '+00:00'))
+            user_ids = [int(x.strip()) for x in attendee_user_ids_comma_separated.split(",") if x.strip().isdigit()]
+        except Exception as e:
+            return f"Error parsing arguments: {e}. Please ensure ISO formats and valid integer IDs."
+            
+        try:
+            from app.modules.cafes import service as cafe_service
+            result = await cafe_service.schedule_staff_meeting(
+                cafe_id=cafe_id,
+                owner_user_id=user_id,
+                summary=summary,
+                description=description,
+                start_time=start_dt,
+                end_time=end_dt,
+                attendee_user_ids=user_ids
+            )
+            return f"Meeting scheduled successfully! Link: {result.get('event_link')}"
+        except Exception as e:
+            return f"Failed to schedule meeting: {str(e)}"
+
     async def get_recent_orders(branch_id: int) -> str:
         """
         [ALL ROLES] Get the 10 most recent active orders for a specific branch_id.
@@ -258,17 +314,17 @@ def build_tools(current_user, agent_type: str = "all"):
         
     # Super Admin gets all tools
     if role == "SUPER_ADMIN":
-        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
+        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status, get_staff_list, schedule_meeting]
     else:
         # Re-build for specific roles to include new tools
         if role == "CAFE_OWNER":
-            tools.extend([search_cafes, search_menu])
+            tools.extend([search_cafes, search_menu, get_staff_list, schedule_meeting])
         
     # Deduplicate in case of overlaps
     unique_tools = list({f.__name__: f for f in tools}.values())
     
     if agent_type == "cafe":
-        allowed = {"get_my_cafes", "search_cafes", "get_cafe", "get_branches_for_cafe"}
+        allowed = {"get_my_cafes", "search_cafes", "get_cafe", "get_branches_for_cafe", "get_staff_list", "schedule_meeting"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "inventory":
         allowed = {"get_menu", "search_menu", "get_branch_inventory", "upsert_inventory_quantity"}
