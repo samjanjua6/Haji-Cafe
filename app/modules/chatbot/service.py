@@ -45,7 +45,8 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor") -> str:
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
         "2. If you don't have a tool to answer the user's request, politely inform them.\n"
         "3. DO NOT expose internal tool names, function signatures, or JSON to the user. Just seamlessly present the results.\n"
-        "4. Format your responses cleanly in Markdown."
+        "4. If a tool requires arguments that the user has not provided (like dates, times, names, or IDs), explicitly ask the user for that missing information before calling the tool. DO NOT make up data and DO NOT pretend a tool succeeded if you haven't run it.\n"
+        "5. Format your responses cleanly in Markdown."
     )
     
     if agent_type == "supervisor":
