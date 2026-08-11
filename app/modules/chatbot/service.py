@@ -134,9 +134,9 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
         else:  # CAFE_OWNER, SUPER_ADMIN
             inventory_rules = (
                 "\nINVENTORY SPECIALIST RULES:\n"
-                "- To answer questions about stock levels or branch inventory, you MUST know the branch_id.\n"
-                "  If the user has not provided a branch name or ID, call get_branches_for_cafe first to list\n"
-                "  available branches, then call get_branch_inventory with the correct branch_id.\n"
+                "- For stock/inventory questions, you MUST call get_branch_inventory with the branch_id.\n"
+                "- If the user has NOT specified a branch, ask them which branch they mean before calling any tool.\n"
+                "  Do NOT guess the branch_id. Do NOT call get_branches_for_cafe (you don't have that tool here).\n"
                 "- For master menu questions (items, categories, base prices), call get_menu.\n"
                 "- NEVER state menu item names, prices, or stock levels from memory. ALWAYS use tool results.\n"
                 "- NEVER pass extra parameters to tools. Each tool accepts ONLY its documented parameters."
@@ -356,14 +356,20 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         await websocket.send_json({"done": True})
         return
 
+    # Immediately acknowledge so the UI never looks frozen
+    await websocket.send_json({"progress": "⏳ Thinking..."})
+
     active_agent = "supervisor"
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
     for _ in range(7):
+        # Use the fast 8b model for the supervisor routing decision (simple classification).
+        # Switch to the full 70b model once inside a specialist for real reasoning.
+        model_to_use = FALLBACK_MODEL if active_agent == "supervisor" else GROQ_MODEL
         response = await _chat_completions_create_with_fallback(
-            model=GROQ_MODEL,
+            model=model_to_use,
             messages=messages,
             tools=groq_tools if groq_tools else None,
             tool_choice="auto" if groq_tools else None,
