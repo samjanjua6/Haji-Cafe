@@ -394,17 +394,14 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
 
     # Agentic tool-call loop (non-streaming): execute tools until model stops calling them
     for _ in range(7):
-        # Use the fast 8b model for the supervisor routing decision.
-        # Set tool_choice="required" for the supervisor so it NEVER tries to answer directly.
-        # This guarantees it will pick a routing tool and prevents 8b hallucinations.
+        # Use the fast 8b model for the supervisor routing decision (simple classification).
+        # Switch to the full 70b model once inside a specialist for real reasoning.
         model_to_use = FALLBACK_MODEL if active_agent == "supervisor" else GROQ_MODEL
-        t_choice = "required" if active_agent == "supervisor" else "auto"
-        
         response = await _chat_completions_create_with_fallback(
             model=model_to_use,
             messages=messages,
             tools=groq_tools if groq_tools else None,
-            tool_choice=t_choice if groq_tools else None,
+            tool_choice="auto" if groq_tools else None,
             temperature=0.1,
         )
         msg = response.choices[0].message
