@@ -3,6 +3,8 @@ from .base import get_base_prompt
 
 def get_order_agent_prompt(current_user, body: ChatRequest = None) -> str:
     base_prompt = get_base_prompt(current_user, body)
+    role_name = current_user.role.name
+    
     order_rules = (
         "\nORDER SPECIALIST RULES:\n"
         "\n[VIEWING A SPECIFIC ORDER]\n"
@@ -14,6 +16,15 @@ def get_order_agent_prompt(current_user, body: ChatRequest = None) -> str:
         "- Use the optional 'status' parameter: get_recent_orders(branch_id=X, status='CANCELLED').\n"
         "  Valid statuses: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.\n"
         "- If order data is already present in this turn's history, do NOT call get_recent_orders again.\n"
+    )
+    
+    if role_name in ["CAFE_OWNER", "SUPER_ADMIN"]:
+        order_rules += (
+            "- If the user has NOT specified a branch, ask them which branch they mean before calling get_recent_orders.\n"
+            "  Do NOT guess the branch_id.\n"
+        )
+        
+    order_rules += (
         "\n[UPDATING ORDER STATUS]\n"
         "- When the user asks to update a status without specifying an order ID:\n"
         "  Step 1: Call get_recent_orders with the relevant status filter to find the order(s).\n"

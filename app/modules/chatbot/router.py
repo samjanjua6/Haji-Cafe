@@ -69,7 +69,7 @@ async def chat_with_assistant(
     """
     Interact with the role-based AI Assistant.
     """
-    return await service.handle_chat(body, current_user)
+    return await engine.handle_chat(body, current_user)
 
 async def get_ws_current_user(token: str):
     if not token:
