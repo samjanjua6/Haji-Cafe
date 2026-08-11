@@ -189,7 +189,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
     for _ in range(7):
-        model_to_use = GROQ_MODEL # Always use the full 70b model to prevent tool syntax errors and hallucinations
+        model_to_use = FALLBACK_MODEL if active_agent == "supervisor" else GROQ_MODEL
         response = await _chat_completions_create_with_fallback(
             model=model_to_use,
             messages=messages,
