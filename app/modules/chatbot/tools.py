@@ -332,10 +332,12 @@ def build_tools(current_user, agent_type: str = "all"):
             return f"No orders found for branch {branch_id} {label}.".strip()
 
         label = f" (status: {status_upper})" if status_upper else ""
-        res = f"Orders for Branch {branch_id}{label}:\n"
+        # Include count + IDs at the top so the model can reference them without re-fetching
+        order_ids = [str(o.id) for o in orders]
+        res = f"Found {len(orders)} order(s) for Branch {branch_id}{label}. Order IDs: [{', '.join(order_ids)}]\n\n"
         for o in orders:
             items_str = ", ".join([f"{i.quantity}x {i.branchMenuItem.masterItem.name}" for i in o.orderItems])
-            res += f"- Order #{o.id} | Status: {o.status} | Total: ${o.totalAmount} | Items: {items_str}\n"
+            res += f"- Order #{o.id} | Status: {o.status} | Total: ${o.totalAmount} | Created: {o.createdAt.strftime('%Y-%m-%d %H:%M')} | Items: {items_str}\n"
         return res
 
     async def update_order_status(order_id: int, status: str) -> str:
