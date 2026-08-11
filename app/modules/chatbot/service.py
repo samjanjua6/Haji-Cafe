@@ -42,7 +42,7 @@ async def route_to_inventory_specialist(request_summary: str = "") -> str:
 
 async def route_to_order_specialist(request_summary: str = "") -> str:
     """
-    Use this to answer questions about customer orders and status updates. 
+    Use this to answer ANY questions about customer orders, order status, or specific order details (e.g. 'order #4', 'order id 4').
     CRITICAL: You MUST ONLY use the 'request_summary' parameter. DO NOT create or add any other parameters.
     """
     return "Transferred to Order Specialist."
@@ -92,12 +92,22 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
     )
 
     if agent_type == "supervisor":
+        routing_examples = (
+            "\n*** HOW TO ROUTE (CRITICAL EXAMPLES) ***\n"
+            "User: 'tell me order details of order id 4'\n"
+            "Your Action: Call tool `route_to_order_specialist` (DO NOT invent the order details!)\n\n"
+            "User: 'how many lattes are left?'\n"
+            "Your Action: Call tool `route_to_inventory_specialist`\n\n"
+            "User: 'hello'\n"
+            "Your Action: Reply directly 'Hello! How can I help you?' (No tool needed)\n"
+        )
+        
         # Build routing options based on what this role is actually allowed to do
         if role_name == "STAFF":
             routing_rules = (
                 "\nROUTING RULES — You MUST route to a specialist for the following requests:\n"
-                "- Anything about orders or order status → route_to_order_specialist\n"
-                "You MUST NOT answer order questions directly. ALWAYS route them.\n"
+                "- Anything about orders, order status, or specific order IDs → route_to_order_specialist\n"
+                "You MUST NOT answer order questions directly. ALWAYS route them. If you answer without routing, you are HALLUCINATING data.\n"
                 "You are not authorised to manage cafes, menus, or inventory. Politely decline those requests.\n"
                 "Only answer greetings and general platform questions directly."
             )
@@ -105,8 +115,8 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
             routing_rules = (
                 "\nROUTING RULES — You MUST route to a specialist for the following requests:\n"
                 "- Anything about branch menu items, stock, or inventory → route_to_inventory_specialist\n"
-                "- Anything about orders or order status → route_to_order_specialist\n"
-                "You MUST NOT answer these requests directly. ALWAYS route them.\n"
+                "- Anything about orders, order status, or specific order IDs → route_to_order_specialist\n"
+                "You MUST NOT answer these requests directly. ALWAYS route them. If you answer without routing, you are HALLUCINATING data.\n"
                 "You are not authorised to manage cafes or the master menu. Politely decline those requests.\n"
                 "Only answer greetings and general platform questions directly."
             )
@@ -115,14 +125,15 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
                 "\nROUTING RULES — You MUST route to a specialist for ANY of the following requests:\n"
                 "- Anything about cafes, branches, staff, or meetings → route_to_cafe_specialist\n"
                 "- Anything about menus, items, stock, or inventory → route_to_inventory_specialist\n"
-                "- Anything about orders or order status → route_to_order_specialist\n"
-                "You MUST NOT answer these requests directly. ALWAYS route them. Only answer greetings and general platform questions directly."
+                "- Anything about orders, order status, or specific order IDs → route_to_order_specialist\n"
+                "You MUST NOT answer these requests directly. ALWAYS route them. If you answer without routing, you are HALLUCINATING data.\n"
+                "Only answer greetings and general platform questions directly."
             )
 
         scheduling_note = ""
         if role_name == "SUPER_ADMIN":
             scheduling_note = "\nSUPER_ADMIN RESTRICTION: You are a Super Admin. You oversee the entire platform and are NOT linked to any specific cafe. You CANNOT schedule meetings, view staff lists, or perform any cafe-specific tasks. If asked, politely explain this and suggest they log in as a Cafe Owner."
-        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\n{rules}{routing_rules}{scheduling_note}"
+        return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\n{rules}{routing_rules}{routing_examples}{scheduling_note}"
 
     elif agent_type == "cafe":
         cafe_rules = (
