@@ -6,7 +6,7 @@ from app.core.security import decode_access_token
 from app.database import db
 from jose import JWTError
 from .schemas import ChatRequest, ChatResponse, ChatMessage
-from . import service
+from app.modules.chatbot.core import engine
 from . import voice as voice_service
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
@@ -120,7 +120,7 @@ async def websocket_chat(websocket: WebSocket, token: str):
             )
             
             try:
-                await service.stream_chat(websocket, request, current_user)
+                await engine.stream_chat(websocket, request, current_user)
             except Exception as stream_e:
                 logger.error(f"Stream Error: {stream_e}", exc_info=True)
                 await websocket.send_json({"chunk": f"\n\n**Error:** {str(stream_e)}"})
