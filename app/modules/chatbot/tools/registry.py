@@ -16,7 +16,7 @@ def build_tools(current_user, agent_type: str = "all"):
     authorized_cafes = {scope.cafeId for scope in current_user.userScopes if scope.cafeId is not None}
     authorized_branches = {scope.branchId for scope in current_user.userScopes if scope.branchId is not None}
 
-    def _check_cafe_access(cafe_id: int):
+    async def _check_cafe_access(cafe_id: int):
         if role == "SUPER_ADMIN": return
         if cafe_id not in authorized_cafes:
             raise UnauthorizedException(f"Access denied to cafe {cafe_id}.")

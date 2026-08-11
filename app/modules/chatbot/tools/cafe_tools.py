@@ -30,7 +30,7 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         [SUPER_ADMIN, CAFE_OWNER] Get all branches for a specific cafe_id.
         """
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -48,7 +48,7 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         [SUPER_ADMIN, CAFE_OWNER] Get details of a specific cafe.
         """
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -93,7 +93,7 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         if cafe_id is None or cafe_id == 0:
             return "ERROR: A valid integer cafe_id is required. Use get_my_cafes first to find your cafe ID."
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
 
@@ -131,7 +131,7 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
             return "ERROR: You cannot schedule a meeting without valid attendees. You MUST ask the user which staff members they want to invite, and then use get_staff_list to find their integer IDs. Do NOT guess IDs and do NOT say the meeting was scheduled."
             
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
             

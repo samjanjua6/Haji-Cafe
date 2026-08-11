@@ -11,7 +11,7 @@ def build_inventory_tools(current_user, _check_cafe_access, _check_branch_access
         [SUPER_ADMIN, CAFE_OWNER] Get the master menu items for a specific cafe.
         """
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -33,7 +33,7 @@ def build_inventory_tools(current_user, _check_cafe_access, _check_branch_access
         [SUPER_ADMIN, CAFE_OWNER] Search for a menu item by name in a specific cafe. Handles typos.
         """
         try:
-            _check_cafe_access(cafe_id)
+            await _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -105,7 +105,11 @@ def build_inventory_tools(current_user, _check_cafe_access, _check_branch_access
 
     if role in ["SUPER_ADMIN", "CAFE_OWNER"]:
         tools.extend([get_menu, search_menu, get_branch_inventory, upsert_inventory_quantity])
-    elif role in ["BRANCH_MANAGER", "STAFF"]:
+    elif role == "BRANCH_MANAGER":
+        # BUG #5 FIX: STAFF should NOT have write access to inventory.
+        # Only BRANCH_MANAGER can update stock quantities.
         tools.extend([get_branch_inventory, upsert_inventory_quantity])
+    elif role == "STAFF":
+        tools.extend([get_branch_inventory])
         
     return tools

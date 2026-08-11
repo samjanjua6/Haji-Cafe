@@ -67,6 +67,12 @@ def _build_messages(system_prompt: str, history: list, latest_content: str) -> l
     msgs = [{"role": "system", "content": system_prompt}]
     for msg in history:
         role = "user" if msg.role == "user" else "assistant"
-        msgs.append({"role": role, "content": msg.content})
+        # BUG #2 FIX: preserve tool_calls on assistant messages so the Groq API
+        # receives the full tool-use chain on subsequent turns. Without this, the
+        # model loses context of what it already fetched and hallucinates answers.
+        entry: dict = {"role": role, "content": msg.content or ""}
+        if role == "assistant" and msg.tool_calls:
+            entry["tool_calls"] = msg.tool_calls
+        msgs.append(entry)
     msgs.append({"role": "user", "content": latest_content})
     return msgs
