@@ -16,21 +16,36 @@ async def route_to_cafe_specialist(request_summary: str = "") -> str:
     Use this to answer questions about cafes, branches, and scheduling staff meetings. 
     CRITICAL: You MUST ONLY use the 'request_summary' parameter. DO NOT create or add any other parameters (like cafe_id, start_time, attendees). Dump all extracted information into the single request_summary string.
     """
-    return "Transferred to Cafe Specialist."
+    context = f" User query: '{request_summary}'." if request_summary.strip() else ""
+    return (
+        f"[Cafe Specialist active.{context}"
+        " You MUST immediately call one of your tools (get_my_cafes, get_cafe, get_branches_for_cafe, get_staff_list, or schedule_meeting) before generating any response."
+        " Do NOT write anything about cafes or staff without first calling a tool.]"
+    )
 
 async def route_to_inventory_specialist(request_summary: str = "") -> str:
     """
     Use this to answer questions about menus, items, and stock inventory. 
     CRITICAL: You MUST ONLY use the 'request_summary' parameter. DO NOT create or add any other parameters.
     """
-    return "Transferred to Inventory Specialist."
+    context = f" User query: '{request_summary}'." if request_summary.strip() else ""
+    return (
+        f"[Inventory Specialist active.{context}"
+        " You MUST immediately call one of your tools (get_menu, search_menu, get_branch_inventory, or upsert_inventory_quantity) before generating any response."
+        " Do NOT write anything about menus or stock without first calling a tool.]"
+    )
 
 async def route_to_order_specialist(request_summary: str = "") -> str:
     """
     Use this to answer ANY questions about customer orders, order status, or specific order details (e.g. 'order #4', 'order id 4').
     CRITICAL: You MUST ONLY use the 'request_summary' parameter. DO NOT create or add any other parameters.
     """
-    return "Transferred to Order Specialist."
+    context = f" User query: '{request_summary}'." if request_summary.strip() else ""
+    return (
+        f"[Order Specialist active.{context}"
+        " You MUST immediately call get_recent_orders or get_order_by_id to fetch real data before generating any response."
+        " Do NOT write anything about orders without first calling a tool.]"
+    )
 
 _TOOL_PROGRESS_MESSAGES = {
     "route_to_cafe_specialist":      "🔀 Routing to Cafe Specialist...",
@@ -140,21 +155,30 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
-    # After routing, the first specialist call is forced to use a tool so it
-    # cannot hallucinate answers without fetching real data first.
-    force_tool_call = False
-
     for _ in range(7):
-        tool_choice = "required" if (force_tool_call and groq_tools) else ("auto" if groq_tools else None)
-        force_tool_call = False  # reset immediately; only applies once per routing event
+        try:
+            response = await _chat_completions_create_with_fallback(
+                model=GROQ_MODEL,
+                messages=messages,
+                tools=groq_tools if groq_tools else None,
+                tool_choice="auto" if groq_tools else None,
+                temperature=0.1,
+            )
+        except Exception as e:
+            # Safety net: if the model generated a malformed tool call (400 tool_use_failed),
+            # retry without any tool_choice constraint so it can respond normally.
+            err_str = str(e)
+            if "400" in err_str and "tool_use_failed" in err_str:
+                response = await _chat_completions_create_with_fallback(
+                    model=GROQ_MODEL,
+                    messages=messages,
+                    tools=groq_tools if groq_tools else None,
+                    tool_choice=None,
+                    temperature=0.1,
+                )
+            else:
+                raise
 
-        response = await _chat_completions_create_with_fallback(
-            model=GROQ_MODEL,
-            messages=messages,
-            tools=groq_tools if groq_tools else None,
-            tool_choice=tool_choice,
-            temperature=0.1,
-        )
         msg = response.choices[0].message
         messages.append({"role": "assistant", "content": msg.content or "", "tool_calls": [
             {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
@@ -182,7 +206,6 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
         if routed:
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
-            force_tool_call = True  # force the specialist to call a data tool on its first turn
 
     final_text = msg.content or ""
     new_messages = body.messages.copy()
@@ -201,21 +224,30 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
-    # After routing, force the specialist's first call to use a tool so it
-    # cannot hallucinate answers without fetching real data first.
-    force_tool_call = False
-
     for _ in range(7):
-        tool_choice = "required" if (force_tool_call and groq_tools) else ("auto" if groq_tools else None)
-        force_tool_call = False  # reset immediately; only applies once per routing event
+        try:
+            response = await _chat_completions_create_with_fallback(
+                model=GROQ_MODEL,
+                messages=messages,
+                tools=groq_tools if groq_tools else None,
+                tool_choice="auto" if groq_tools else None,
+                temperature=0.1,
+            )
+        except Exception as e:
+            # Safety net: if the model generated a malformed tool call (400 tool_use_failed),
+            # retry without any tool_choice constraint so it can respond normally.
+            err_str = str(e)
+            if "400" in err_str and "tool_use_failed" in err_str:
+                response = await _chat_completions_create_with_fallback(
+                    model=GROQ_MODEL,
+                    messages=messages,
+                    tools=groq_tools if groq_tools else None,
+                    tool_choice=None,
+                    temperature=0.1,
+                )
+            else:
+                raise
 
-        response = await _chat_completions_create_with_fallback(
-            model=GROQ_MODEL,
-            messages=messages,
-            tools=groq_tools if groq_tools else None,
-            tool_choice=tool_choice,
-            temperature=0.1,
-        )
         msg = response.choices[0].message
 
         # BUG #1 FIX: append the assistant message BEFORE checking tool_calls,
@@ -254,7 +286,6 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         if routed:
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
-            force_tool_call = True  # force the specialist to call a data tool on its first turn
 
     # BUG #3 FIX: if the loop already produced a final text answer (msg.content),
     # stream it directly instead of firing a redundant second LLM call that would
