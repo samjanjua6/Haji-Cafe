@@ -370,9 +370,13 @@ export default function ChatbotWidget() {
                       ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
                       ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
                       li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
-                      table: ({ node, ...props }) => <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />,
-                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "4px 8px", backgroundColor: "var(--bg-default)", textAlign: "left" }} {...props} />,
-                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "4px 8px" }} {...props} />,
+                      table: ({ node, ...props }) => (
+                        <div style={{ overflowX: "auto", width: "100%" }}>
+                          <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
+                        </div>
+                      ),
+                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
+                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
                     }}
                   >
                     {msg.content}
