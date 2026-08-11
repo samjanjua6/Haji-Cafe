@@ -49,7 +49,16 @@ async def route_to_order_specialist(request_summary: str = "") -> str:
 
 def _build_system_prompt(current_user, agent_type: str = "supervisor", body: ChatRequest = None) -> str:
     role_name = current_user.role.name
-    base = f"The current user is logged in as {role_name} with User ID {current_user.id}.\n"
+    base = (
+        "You are the AI assistant for Haji Cafe — a cafe management platform.\n"
+        "Your ONLY purpose is to help users manage cafes, branches, menus, inventory, orders, and staff.\n"
+        "*** OUT-OF-SCOPE RULE ***: If the user asks about ANYTHING unrelated to cafe management "
+        "(e.g. travel, weather, general knowledge, coding, personal advice), you MUST respond with:\n"
+        "  'I'm your Haji Cafe assistant. I can only help with cafe management tasks such as "
+        "menus, orders, inventory, and staff. Is there anything cafe-related I can help you with?'\n"
+        "DO NOT attempt to answer off-topic requests under any circumstances.\n\n"
+        f"The current user is logged in as {role_name} with User ID {current_user.id}.\n"
+    )
 
     # --- Cafe-level scope (for SUPER_ADMIN and CAFE_OWNER) ---
     authorized_cafes = list({scope.cafeId for scope in current_user.userScopes if scope.cafeId is not None})
