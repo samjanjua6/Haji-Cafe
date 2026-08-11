@@ -299,28 +299,40 @@ def build_tools(current_user, agent_type: str = "all"):
         except Exception as e:
             return f"Failed to schedule meeting: {str(e)}"
 
-    async def get_recent_orders(branch_id: int) -> str:
+    async def get_recent_orders(branch_id: int, status: str = "") -> str:
         """
-        [ALL ROLES] Get the 10 most recent active orders for a specific branch_id.
-        Useful for Kitchen Display or POS queries.
-        IMPORTANT: This tool ONLY accepts 'branch_id' (integer). Do NOT pass any other parameters.
+        [ALL ROLES] Get orders for a specific branch, optionally filtered by status.
+        - branch_id: required integer. The branch to query.
+        - status: optional filter. Pass one of: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.
+                  If omitted, returns the 50 most recent orders regardless of status.
+        Use this whenever the user asks about orders, order history, or a specific status (e.g. cancelled, completed).
         """
         try:
             await _check_branch_access(branch_id)
         except UnauthorizedException as e:
             return str(e)
-            
+
+        where_clause: dict = {"branchId": branch_id}
+        valid_statuses = {"PENDING", "IN_PREPARATION", "COMPLETED", "CANCELLED"}
+        status_upper = status.strip().upper() if status else ""
+        if status_upper in valid_statuses:
+            where_clause["status"] = status_upper
+        elif status_upper:
+            return f"Invalid status filter '{status}'. Valid values: PENDING, IN_PREPARATION, COMPLETED, CANCELLED."
+
         orders = await db.order.find_many(
-            where={"branchId": branch_id},
+            where=where_clause,
             order={"createdAt": "desc"},
-            take=10,
+            take=50,
             include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}}
         )
-        
+
         if not orders:
-            return f"No recent orders for branch {branch_id}."
-            
-        res = f"Recent Orders for Branch {branch_id}:\n"
+            label = f"with status '{status_upper}'" if status_upper else ""
+            return f"No orders found for branch {branch_id} {label}.".strip()
+
+        label = f" (status: {status_upper})" if status_upper else ""
+        res = f"Orders for Branch {branch_id}{label}:\n"
         for o in orders:
             items_str = ", ".join([f"{i.quantity}x {i.branchMenuItem.masterItem.name}" for i in o.orderItems])
             res += f"- Order #{o.id} | Status: {o.status} | Total: ${o.totalAmount} | Items: {items_str}\n"

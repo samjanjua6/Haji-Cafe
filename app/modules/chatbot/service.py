@@ -146,7 +146,11 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
     elif agent_type == "order":
         order_rules = (
             "\nORDER SPECIALIST RULES:\n"
-            "- ALWAYS call get_recent_orders before answering ANY question about orders.\n"
+            "- ALWAYS call get_recent_orders to answer ANY question about orders. Never answer from memory.\n"
+            "- get_recent_orders accepts an optional 'status' parameter. Use it when the user asks for a\n"
+            "  specific status, e.g. get_recent_orders(branch_id=X, status='CANCELLED').\n"
+            "  Valid statuses: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.\n"
+            "- NEVER expose tool names or suggest the user 'run a tool'. Just call the tool silently and report results.\n"
             "- NEVER state order details, statuses, or totals from memory. ALWAYS use tool results."
         )
         return f"You are the Order Specialist.\n{base}\nUse your tools to view and update customer orders.\n{rules}{order_rules}"
