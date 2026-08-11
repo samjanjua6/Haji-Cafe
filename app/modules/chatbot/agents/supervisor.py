@@ -12,7 +12,13 @@ def get_supervisor_prompt(current_user, body: ChatRequest = None) -> str:
         "User: 'how many lattes are left?'\n"
         "Your Action: Call tool `route_to_inventory_specialist`\n\n"
         "User: 'hello'\n"
-        "Your Action: Reply directly 'Hello! How can I help you?' (No tool needed)\n"
+        "Your Action: Reply directly 'Hello! How can I help you?' (No tool needed)\n\n"
+        "FOLLOW-UP MESSAGES — If the user says something vague like 'tell me details', 'show me more',\n"
+        "'give me the breakdown', or 'what about X?' look at the conversation history to determine the topic.\n"
+        "If the prior topic was orders → route_to_order_specialist.\n"
+        "If the prior topic was inventory/menu → route_to_inventory_specialist.\n"
+        "If the prior topic was cafes/branches → route_to_cafe_specialist.\n"
+        "NEVER answer a follow-up about orders, inventory, or cafes directly — ALWAYS route it.\n"
     )
     
     # Build routing options based on what this role is actually allowed to do

@@ -16,9 +16,11 @@ def get_order_agent_prompt(current_user, body: ChatRequest = None) -> str:
         "- Use the optional 'status' parameter: get_recent_orders(branch_id=X, status='CANCELLED').\n"
         "  Valid statuses: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.\n"
         "- If order data is already present as a **tool result** within the current agentic loop (same response), do NOT call get_recent_orders again.\n"
-        "- CRITICAL: If a previous conversation turn only contains a text summary (e.g. 'There are 4 completed orders'), that is NOT real data.\n"
-        "  You MUST call get_recent_orders again to fetch the actual records before answering ANY follow-up question about details, IDs, dates, or amounts.\n"
-        "  NEVER derive order details from a text summary — text summaries contain no actual order data.\n"
+        "- CRITICAL — FOLLOW-UP REQUESTS: If the user says 'tell me details', 'show me more', 'give me the breakdown',\n"
+        "  or any vague follow-up about orders, look at the conversation history to determine the last status filter used\n"
+        "  (e.g. if the prior response said 'There are 4 completed orders', the implied status is COMPLETED).\n"
+        "  ALWAYS call get_recent_orders again with that inferred status. A text summary is NOT real data —\n"
+        "  you MUST re-fetch before answering ANY follow-up about details, IDs, dates, or amounts.\n"
     )
     
     if role_name in ["CAFE_OWNER", "SUPER_ADMIN"]:
@@ -35,6 +37,11 @@ def get_order_agent_prompt(current_user, body: ChatRequest = None) -> str:
         "  Step 2b: If multiple results → list their IDs and ask the user which one to update.\n"
         "  Step 3: Confirm the update to the user.\n"
         "- NEVER ask 'what is the order ID?' if you can determine it from a tool result.\n"
+        "\n[PRESENTING RESULTS — CRITICAL]\n"
+        "- After ANY tool returns data, you MUST present the COMPLETE data to the user FIRST.\n"
+        "  Do NOT skip to asking 'Would you like to view more orders?' or 'Would you like to update the status?'\n"
+        "  without first displaying every field returned by the tool (ID, status, total, items, date, etc.).\n"
+        "- Only AFTER fully presenting the data may you offer optional follow-up actions.\n"
         "\n[GENERAL]\n"
         "- When formatting orders as a table, ALWAYS use the exact database terminology 'Total Amount' for the price column, NEVER just 'Total'.\n"
         "- NEVER expose tool names or suggest the user 'run a tool'.\n"
