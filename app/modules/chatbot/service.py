@@ -185,6 +185,7 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
             "  Step 3: Confirm the update to the user.\n"
             "- NEVER ask 'what is the order ID?' if you can determine it from a tool result.\n"
             "\n[GENERAL]\n"
+            "- When formatting orders as a table, ALWAYS use the exact database terminology 'Total Amount' for the price column, NEVER just 'Total'.\n"
             "- NEVER expose tool names or suggest the user 'run a tool'.\n"
             "- NEVER state order details, statuses, or totals from memory. ALWAYS use tool results."
         )

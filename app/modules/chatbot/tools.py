@@ -337,7 +337,7 @@ def build_tools(current_user, agent_type: str = "all"):
         res = f"Found {len(orders)} order(s) for Branch {branch_id}{label}. Order IDs: [{', '.join(order_ids)}]\n\n"
         for o in orders:
             items_str = ", ".join([f"{i.quantity}x {i.branchMenuItem.masterItem.name}" for i in o.orderItems])
-            res += f"- Order #{o.id} | Status: {o.status} | Total: ${o.totalAmount} | Created: {o.createdAt.strftime('%Y-%m-%d %H:%M')} | Items: {items_str}\n"
+            res += f"- Order #{o.id} (Status: {o.status}), Total Amount: ${o.totalAmount}, Created: {o.createdAt.strftime('%Y-%m-%d %H:%M')}, Items: [{items_str}]\n"
         return res
 
     async def get_order_by_id(order_id: int) -> str:

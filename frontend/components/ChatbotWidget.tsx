@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
@@ -362,10 +363,16 @@ export default function ChatbotWidget() {
               >
                 {msg.role === "model" ? (
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
-                      p: ({ node, ...props }) => <p style={{ margin: 0 }} {...props} />,
+                      p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
+                      a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
                       ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                      ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
                       li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
+                      table: ({ node, ...props }) => <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />,
+                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "4px 8px", backgroundColor: "var(--bg-default)", textAlign: "left" }} {...props} />,
+                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "4px 8px" }} {...props} />,
                     }}
                   >
                     {msg.content}
