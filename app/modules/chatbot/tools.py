@@ -25,8 +25,20 @@ def build_tools(current_user, agent_type: str = "all"):
         if cafe_id not in authorized_cafes:
             raise UnauthorizedException(f"Access denied to cafe {cafe_id}.")
 
-    def _check_branch_access(branch_id: int):
-        if role == "SUPER_ADMIN": return
+    async def _check_branch_access(branch_id: int):
+        """Async branch access guard.
+        - SUPER_ADMIN: always allowed.
+        - CAFE_OWNER: allowed if the branch belongs to one of their authorized cafes.
+        - BRANCH_MANAGER / STAFF: allowed only if branch_id is in their explicit scope.
+        """
+        if role == "SUPER_ADMIN":
+            return
+        if role == "CAFE_OWNER":
+            branch = await db.branch.find_unique(where={"id": branch_id})
+            if not branch or branch.cafeId not in authorized_cafes:
+                raise UnauthorizedException(f"Access denied to branch {branch_id}.")
+            return
+        # BRANCH_MANAGER, STAFF
         if branch_id not in authorized_branches:
             raise UnauthorizedException(f"Access denied to branch {branch_id}.")
 
@@ -161,10 +173,13 @@ def build_tools(current_user, agent_type: str = "all"):
 
     async def get_branch_inventory(branch_id: int) -> str:
         """
-        [ALL ROLES] Get the current inventory and menu items for a specific branch_id.
+        [ALL ROLES] Get the current inventory and menu items for a specific branch.
+        IMPORTANT: This tool ONLY accepts 'branch_id' (integer). Do NOT pass any other
+        parameters such as item_name, query, or filter. To search for a specific item,
+        call this tool first and then filter the returned list yourself.
         """
         try:
-            _check_branch_access(branch_id)
+            await _check_branch_access(branch_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -184,11 +199,11 @@ def build_tools(current_user, agent_type: str = "all"):
 
     async def upsert_inventory_quantity(branch_id: int, item_id: int, quantity: int) -> str:
         """
-        [BRANCH_MANAGER, STAFF] Update the available quantity of a specific menu item in a branch.
+        [BRANCH_MANAGER] Update the available quantity of a specific menu item in a branch.
         Use this when asked to add or set stock.
         """
         try:
-            _check_branch_access(branch_id)
+            await _check_branch_access(branch_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -288,9 +303,10 @@ def build_tools(current_user, agent_type: str = "all"):
         """
         [ALL ROLES] Get the 10 most recent active orders for a specific branch_id.
         Useful for Kitchen Display or POS queries.
+        IMPORTANT: This tool ONLY accepts 'branch_id' (integer). Do NOT pass any other parameters.
         """
         try:
-            _check_branch_access(branch_id)
+            await _check_branch_access(branch_id)
         except UnauthorizedException as e:
             return str(e)
             
@@ -312,15 +328,16 @@ def build_tools(current_user, agent_type: str = "all"):
 
     async def update_order_status(order_id: int, status: str) -> str:
         """
-        [BRANCH_MANAGER, STAFF] Update the status of an order. 
+        [BRANCH_MANAGER, STAFF] Update the status of an order.
         Valid statuses: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.
+        IMPORTANT: This tool ONLY accepts 'order_id' (integer) and 'status' (string). Do NOT pass other parameters.
         """
         order = await db.order.find_unique(where={"id": order_id})
         if not order:
             return f"Order {order_id} not found."
-            
+
         try:
-            _check_branch_access(order.branchId)
+            await _check_branch_access(order.branchId)
         except UnauthorizedException as e:
             return str(e)
             
