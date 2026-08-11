@@ -39,7 +39,8 @@ def get_base_prompt(current_user, body: ChatRequest = None) -> str:
         "5. *** ABSOLUTE RULE — NO HALLUCINATION ***: You MUST NEVER answer questions about cafe names, counts, staff, menus, orders, inventory, or ANY business data from memory or assumptions. You MUST ALWAYS call the appropriate tool and use ONLY the data returned by that tool. If you answer without calling a tool, you are FABRICATING data. This is a critical violation.\n"
         "6. Format your responses cleanly in Markdown.\n"
         "7. If a tool returns an error, report the error to the user honestly. Do NOT retry with made-up arguments.\n"
-        "8. *** ABSOLUTE RULE — NO FUNCTION SYNTAX ***: NEVER output raw function call syntax, XML tags, JSON blocks, or <function=...> patterns in your response text. Tool calls are invisible system operations — they NEVER appear in your text output under any circumstances."
+        "8. *** ABSOLUTE RULE — NO FUNCTION SYNTAX ***: NEVER output raw function call syntax, XML tags, JSON blocks, or <function=...> patterns in your response text. Tool calls are invisible system operations — they NEVER appear in your text output under any circumstances.\n"
+        "9. *** ABSOLUTE RULE — PRESENT DATA FIRST ***: After a tool returns data, you MUST display ALL of the returned information to the user (every field: ID, status, amounts, dates, items, etc.) BEFORE asking any follow-up questions. NEVER skip directly to 'Would you like to do X?' without first showing the complete data. This rule has no exceptions."
     )
 
     return f"{base}\n{rules}"

@@ -105,15 +105,20 @@ def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, 
         tool_fns = []
     
     history_tool_names = set()
-    if messages:
+    # Routing tools that should NEVER be injected into specialist tool lists.
+    # A specialist must never be able to re-route; that is the supervisor's job.
+    _routing_tool_names = {"route_to_cafe_specialist", "route_to_inventory_specialist", "route_to_order_specialist"}
+
+    if messages and agent_name != "supervisor":
         for m in messages:
             if m.get("role") == "assistant" and m.get("tool_calls"):
                 for tc in m["tool_calls"]:
                     if "function" in tc and "name" in tc["function"]:
-                        history_tool_names.add(tc["function"]["name"])
+                        name = tc["function"]["name"]
+                        if name not in _routing_tool_names:  # never inject routing tools into specialists
+                            history_tool_names.add(name)
                         
     all_possible_tools = build_tools(current_user, "all")
-    all_possible_tools.extend([route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist])
     all_tool_fn_map = {fn.__name__: fn for fn in all_possible_tools}
 
     current_tool_names = {fn.__name__ for fn in tool_fns}
@@ -135,12 +140,19 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
+    # After routing, the first specialist call is forced to use a tool so it
+    # cannot hallucinate answers without fetching real data first.
+    force_tool_call = False
+
     for _ in range(7):
+        tool_choice = "required" if (force_tool_call and groq_tools) else ("auto" if groq_tools else None)
+        force_tool_call = False  # reset immediately; only applies once per routing event
+
         response = await _chat_completions_create_with_fallback(
             model=GROQ_MODEL,
             messages=messages,
             tools=groq_tools if groq_tools else None,
-            tool_choice="auto" if groq_tools else None,
+            tool_choice=tool_choice,
             temperature=0.1,
         )
         msg = response.choices[0].message
@@ -170,6 +182,7 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
         if routed:
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
+            force_tool_call = True  # force the specialist to call a data tool on its first turn
 
     final_text = msg.content or ""
     new_messages = body.messages.copy()
@@ -188,12 +201,19 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
 
+    # After routing, force the specialist's first call to use a tool so it
+    # cannot hallucinate answers without fetching real data first.
+    force_tool_call = False
+
     for _ in range(7):
+        tool_choice = "required" if (force_tool_call and groq_tools) else ("auto" if groq_tools else None)
+        force_tool_call = False  # reset immediately; only applies once per routing event
+
         response = await _chat_completions_create_with_fallback(
             model=GROQ_MODEL,
             messages=messages,
             tools=groq_tools if groq_tools else None,
-            tool_choice="auto" if groq_tools else None,
+            tool_choice=tool_choice,
             temperature=0.1,
         )
         msg = response.choices[0].message
@@ -234,6 +254,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         if routed:
             sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body, messages)
             messages[0]["content"] = sys_prompt
+            force_tool_call = True  # force the specialist to call a data tool on its first turn
 
     # BUG #3 FIX: if the loop already produced a final text answer (msg.content),
     # stream it directly instead of firing a redundant second LLM call that would
