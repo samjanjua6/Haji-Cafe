@@ -305,7 +305,8 @@ def build_tools(current_user, agent_type: str = "all"):
         - branch_id: required integer. The branch to query.
         - status: optional filter. Pass one of: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.
                   If omitted, returns the 50 most recent orders regardless of status.
-        Use this whenever the user asks about orders, order history, or a specific status (e.g. cancelled, completed).
+        Use this for order history or status-based queries (e.g. show all cancelled orders).
+        Use get_order_by_id instead when the user mentions a specific order number.
         """
         try:
             await _check_branch_access(branch_id)
@@ -332,13 +333,44 @@ def build_tools(current_user, agent_type: str = "all"):
             return f"No orders found for branch {branch_id} {label}.".strip()
 
         label = f" (status: {status_upper})" if status_upper else ""
-        # Include count + IDs at the top so the model can reference them without re-fetching
         order_ids = [str(o.id) for o in orders]
         res = f"Found {len(orders)} order(s) for Branch {branch_id}{label}. Order IDs: [{', '.join(order_ids)}]\n\n"
         for o in orders:
             items_str = ", ".join([f"{i.quantity}x {i.branchMenuItem.masterItem.name}" for i in o.orderItems])
             res += f"- Order #{o.id} | Status: {o.status} | Total: ${o.totalAmount} | Created: {o.createdAt.strftime('%Y-%m-%d %H:%M')} | Items: {items_str}\n"
         return res
+
+    async def get_order_by_id(order_id: int) -> str:
+        """
+        [ALL ROLES] Get full details of a specific order by its order ID.
+        Use this whenever the user mentions a specific order number (e.g. 'order #5', 'order number 5',
+        'details of order 5', 'is order 5 completed').
+        NEVER answer questions about a specific order from memory — ALWAYS call this tool first.
+        """
+        order = await db.order.find_unique(
+            where={"id": order_id},
+            include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}}
+        )
+        if not order:
+            return f"Order #{order_id} not found."
+
+        try:
+            await _check_branch_access(order.branchId)
+        except UnauthorizedException as e:
+            return str(e)
+
+        items_str = ", ".join([
+            f"{i.quantity}x {i.branchMenuItem.masterItem.name} (${i.priceAtPurchase})"
+            for i in order.orderItems
+        ])
+        return (
+            f"Order #{order.id}\n"
+            f"  Status:  {order.status}\n"
+            f"  Total:   ${order.totalAmount}\n"
+            f"  Branch:  {order.branchId}\n"
+            f"  Created: {order.createdAt.strftime('%Y-%m-%d %H:%M')}\n"
+            f"  Items:   {items_str}"
+        )
 
     async def update_order_status(order_id: int, status: str) -> str:
         """
@@ -367,32 +399,28 @@ def build_tools(current_user, agent_type: str = "all"):
     # Build tool list — explicit per role, no ambiguous overlap
     # ---------------------------------------------------------------------------
     if role == "SUPER_ADMIN":
-        # Super Admin: full platform visibility, no meeting scheduling
         tools = [
             get_my_cafes, search_cafes, get_cafe,
             get_menu, search_menu,
             get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity,
-            get_recent_orders, update_order_status,
+            get_recent_orders, get_order_by_id, update_order_status,
         ]
     elif role == "CAFE_OWNER":
-        # Cafe Owner: manages their cafes, master menu, branches, and staff
         tools = [
             get_my_cafes, search_cafes, get_cafe,
             get_menu, search_menu,
             get_branches_for_cafe, get_branch_inventory,
             get_staff_list, schedule_meeting,
-            get_recent_orders,
+            get_recent_orders, get_order_by_id,
         ]
     elif role == "BRANCH_MANAGER":
-        # Branch Manager: manages branch override menu, stock, and orders
         tools = [
             get_branch_inventory, upsert_inventory_quantity,
-            get_recent_orders, update_order_status,
+            get_recent_orders, get_order_by_id, update_order_status,
         ]
     elif role == "STAFF":
-        # Staff: order processing only
         tools = [
-            get_recent_orders, update_order_status,
+            get_recent_orders, get_order_by_id, update_order_status,
         ]
     else:
         tools = []
@@ -413,7 +441,7 @@ def build_tools(current_user, agent_type: str = "all"):
             allowed = {"get_menu", "search_menu", "get_branch_inventory", "upsert_inventory_quantity"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "order":
-        allowed = {"get_recent_orders", "update_order_status"}
+        allowed = {"get_recent_orders", "get_order_by_id", "update_order_status"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "supervisor":
         unique_tools = []
