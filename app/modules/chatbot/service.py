@@ -48,17 +48,26 @@ async def route_to_order_specialist(request_summary: str = "") -> str:
     return "Transferred to Order Specialist."
 
 def _build_system_prompt(current_user, agent_type: str = "supervisor", body: ChatRequest = None) -> str:
-    base = f"The current user is logged in as {current_user.role.name} with User ID {current_user.id}.\n"
-    
+    role_name = current_user.role.name
+    base = f"The current user is logged in as {role_name} with User ID {current_user.id}.\n"
+
+    # --- Cafe-level scope (for SUPER_ADMIN and CAFE_OWNER) ---
     authorized_cafes = list({scope.cafeId for scope in current_user.userScopes if scope.cafeId is not None})
     if len(authorized_cafes) == 1:
         base += f"The user manages a single Cafe (ID: {authorized_cafes[0]}). Use this cafe ID automatically when scheduling meetings, viewing staff, or searching menus.\n"
     elif len(authorized_cafes) > 1:
         base += f"The user manages multiple cafes (IDs: {authorized_cafes}). Always ask which cafe they want to interact with if they don't specify.\n"
-        
+
+    # --- Branch-level scope (for BRANCH_MANAGER and STAFF) ---
+    authorized_branches = list({scope.branchId for scope in current_user.userScopes if scope.branchId is not None})
+    if len(authorized_branches) == 1:
+        base += f"The user manages a single Branch (ID: {authorized_branches[0]}). Use this branch ID automatically when querying inventory or orders — do NOT ask the user for it.\n"
+    elif len(authorized_branches) > 1:
+        base += f"The user manages multiple branches (IDs: {authorized_branches}). Always ask which branch they want to interact with if they don't specify.\n"
+
     if body and body.client_time:
         base += f"The user's current local device time is {body.client_time} (Timezone: {body.timezone}). Use this exact time to accurately calculate relative dates/times like 'tomorrow', 'next week', '10 AM', etc.\n"
-    
+
     rules = (
         "CRITICAL INSTRUCTIONS — READ CAREFULLY:\n"
         "1. ONLY use the exact tools provided. DO NOT guess or invent tool names.\n"
@@ -69,19 +78,40 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
         "6. Format your responses cleanly in Markdown.\n"
         "7. If a tool returns an error, report the error to the user honestly. Do NOT retry with made-up arguments."
     )
-    
+
     if agent_type == "supervisor":
-        routing_rules = (
-            "\nROUTING RULES — You MUST route to a specialist for ANY of the following requests:\n"
-            "- Anything about cafes, branches, staff, or meetings → route_to_cafe_specialist\n"
-            "- Anything about menus, items, stock, or inventory → route_to_inventory_specialist\n"
-            "- Anything about orders or order status → route_to_order_specialist\n"
-            "You MUST NOT answer these requests directly. ALWAYS route them. Only answer greetings and general platform questions directly."
-        )
+        # Build routing options based on what this role is actually allowed to do
+        if role_name == "STAFF":
+            routing_rules = (
+                "\nROUTING RULES — You MUST route to a specialist for the following requests:\n"
+                "- Anything about orders or order status → route_to_order_specialist\n"
+                "You MUST NOT answer order questions directly. ALWAYS route them.\n"
+                "You are not authorised to manage cafes, menus, or inventory. Politely decline those requests.\n"
+                "Only answer greetings and general platform questions directly."
+            )
+        elif role_name == "BRANCH_MANAGER":
+            routing_rules = (
+                "\nROUTING RULES — You MUST route to a specialist for the following requests:\n"
+                "- Anything about branch menu items, stock, or inventory → route_to_inventory_specialist\n"
+                "- Anything about orders or order status → route_to_order_specialist\n"
+                "You MUST NOT answer these requests directly. ALWAYS route them.\n"
+                "You are not authorised to manage cafes or the master menu. Politely decline those requests.\n"
+                "Only answer greetings and general platform questions directly."
+            )
+        else:  # CAFE_OWNER, SUPER_ADMIN
+            routing_rules = (
+                "\nROUTING RULES — You MUST route to a specialist for ANY of the following requests:\n"
+                "- Anything about cafes, branches, staff, or meetings → route_to_cafe_specialist\n"
+                "- Anything about menus, items, stock, or inventory → route_to_inventory_specialist\n"
+                "- Anything about orders or order status → route_to_order_specialist\n"
+                "You MUST NOT answer these requests directly. ALWAYS route them. Only answer greetings and general platform questions directly."
+            )
+
         scheduling_note = ""
-        if current_user.role.name == "SUPER_ADMIN":
+        if role_name == "SUPER_ADMIN":
             scheduling_note = "\nSUPER_ADMIN RESTRICTION: You are a Super Admin. You oversee the entire platform and are NOT linked to any specific cafe. You CANNOT schedule meetings, view staff lists, or perform any cafe-specific tasks. If asked, politely explain this and suggest they log in as a Cafe Owner."
         return f"You are the Supervisor Assistant for Haji Cafe Platform.\n{base}\n{rules}{routing_rules}{scheduling_note}"
+
     elif agent_type == "cafe":
         cafe_rules = (
             "\nCAFE SPECIALIST RULES:\n"
@@ -91,13 +121,23 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
             "- For scheduling: call get_staff_list first to get exact User IDs. NEVER guess IDs or pass empty lists."
         )
         return f"You are the Cafe Specialist.\n{base}\nUse your tools to view and manage cafes, branches, and schedule staff meetings.\n{rules}{cafe_rules}"
+
     elif agent_type == "inventory":
-        inventory_rules = (
-            "\nINVENTORY SPECIALIST RULES:\n"
-            "- ALWAYS call get_menu or get_branch_inventory before answering ANY question about menu items, prices, or stock.\n"
-            "- NEVER state menu item names, prices, or stock levels from memory. ALWAYS use tool results."
-        )
+        if role_name in ["BRANCH_MANAGER", "STAFF"]:
+            inventory_rules = (
+                "\nINVENTORY SPECIALIST RULES:\n"
+                "- ALWAYS call get_branch_inventory before answering ANY question about stock or branch menu items.\n"
+                "- You manage the BRANCH menu (overrides and stock levels). You do NOT manage the master cafe menu.\n"
+                "- NEVER state item names, prices, or stock levels from memory. ALWAYS use tool results."
+            )
+        else:
+            inventory_rules = (
+                "\nINVENTORY SPECIALIST RULES:\n"
+                "- ALWAYS call get_menu or get_branch_inventory before answering ANY question about menu items, prices, or stock.\n"
+                "- NEVER state menu item names, prices, or stock levels from memory. ALWAYS use tool results."
+            )
         return f"You are the Inventory Specialist.\n{base}\nUse your tools to view menus and manage branch inventory.\n{rules}{inventory_rules}"
+
     elif agent_type == "order":
         order_rules = (
             "\nORDER SPECIALIST RULES:\n"
@@ -105,7 +145,7 @@ def _build_system_prompt(current_user, agent_type: str = "supervisor", body: Cha
             "- NEVER state order details, statuses, or totals from memory. ALWAYS use tool results."
         )
         return f"You are the Order Specialist.\n{base}\nUse your tools to view and update customer orders.\n{rules}{order_rules}"
-    
+
     return f"You are a helpful assistant.\n{base}\n{rules}"
 
 
@@ -215,7 +255,14 @@ async def _execute_tool_calls(tool_calls, tool_fn_map: dict, websocket=None) -> 
 def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, messages: list = None):
     sys_prompt = _build_system_prompt(current_user, agent_name, body)
     if agent_name == "supervisor":
-        tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
+        role_name = current_user.role.name
+        # Only expose routing functions that lead to specialists with real tools for this role
+        if role_name == "STAFF":
+            tool_fns = [route_to_order_specialist]
+        elif role_name == "BRANCH_MANAGER":
+            tool_fns = [route_to_inventory_specialist, route_to_order_specialist]
+        else:  # CAFE_OWNER, SUPER_ADMIN
+            tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
     else:
         tool_fns = build_tools(current_user, agent_name)
         # Sub-agents do NOT get routing tools — they only do their specialized work
@@ -362,7 +409,7 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         tools=groq_tools if groq_tools else None,
         tool_choice="none",   # Force text-only response, no more tool calls
         stream=True,
-        temperature=0.4,
+        temperature=0.1,
     )
     async for chunk in stream:
         delta = chunk.choices[0].delta.content

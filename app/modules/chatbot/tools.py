@@ -207,18 +207,20 @@ def build_tools(current_user, agent_type: str = "all"):
         [CAFE_OWNER] Get a list of all staff members for a specific cafe. 
         Returns their User IDs, Emails, and Roles.
         """
+        if role == "SUPER_ADMIN":
+            return "Error: Super Admins cannot view staff lists directly. Please log in as a Cafe Owner to manage cafe staff."
         if cafe_id is None or cafe_id == 0:
             return "ERROR: A valid integer cafe_id is required. Use get_my_cafes first to find your cafe ID."
         try:
             _check_cafe_access(cafe_id)
         except UnauthorizedException as e:
             return str(e)
-            
+
         from app.modules.cafes import service as cafe_service
         staff = await cafe_service.get_cafe_staff(cafe_id)
         if not staff:
             return f"No staff found for cafe {cafe_id}."
-            
+
         res = f"Staff for Cafe {cafe_id}:\n"
         for s in staff:
             role_name = s.role.name if s.role else 'Unknown'
@@ -330,36 +332,59 @@ def build_tools(current_user, agent_type: str = "all"):
         await db.order.update(where={"id": order_id}, data={"status": status})
         return f"Order #{order_id} status updated to {status}."
 
-    # Return the tools that this user's role is allowed to see
-    tools = []
-    
-    if role in ["SUPER_ADMIN", "CAFE_OWNER"]:
-        tools.extend([get_my_cafes, get_cafe, get_menu, get_branches_for_cafe, get_branch_inventory, get_recent_orders])
-        
-    if role in ["BRANCH_MANAGER", "STAFF"]:
-        tools.extend([get_branch_inventory, get_recent_orders, upsert_inventory_quantity, update_order_status])
-        
-    # Super Admin gets all tools EXCEPT meeting scheduling (they don't manage a specific cafe)
+    # ---------------------------------------------------------------------------
+    # Build tool list — explicit per role, no ambiguous overlap
+    # ---------------------------------------------------------------------------
     if role == "SUPER_ADMIN":
-        tools = [get_my_cafes, search_cafes, get_cafe, get_menu, search_menu, get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity, get_recent_orders, update_order_status]
+        # Super Admin: full platform visibility, no meeting scheduling
+        tools = [
+            get_my_cafes, search_cafes, get_cafe,
+            get_menu, search_menu,
+            get_branches_for_cafe, get_branch_inventory, upsert_inventory_quantity,
+            get_recent_orders, update_order_status,
+        ]
+    elif role == "CAFE_OWNER":
+        # Cafe Owner: manages their cafes, master menu, branches, and staff
+        tools = [
+            get_my_cafes, search_cafes, get_cafe,
+            get_menu, search_menu,
+            get_branches_for_cafe, get_branch_inventory,
+            get_staff_list, schedule_meeting,
+            get_recent_orders,
+        ]
+    elif role == "BRANCH_MANAGER":
+        # Branch Manager: manages branch override menu, stock, and orders
+        tools = [
+            get_branch_inventory, upsert_inventory_quantity,
+            get_recent_orders, update_order_status,
+        ]
+    elif role == "STAFF":
+        # Staff: order processing only
+        tools = [
+            get_recent_orders, update_order_status,
+        ]
     else:
-        # Re-build for specific roles to include new tools
-        if role == "CAFE_OWNER":
-            tools.extend([search_cafes, search_menu, get_staff_list, schedule_meeting])
-        
-    # Deduplicate in case of overlaps
+        tools = []
+
+    # Deduplicate (safety net)
     unique_tools = list({f.__name__: f for f in tools}.values())
-    
+
+    # Filter to only the tools appropriate for this specialist agent
     if agent_type == "cafe":
         allowed = {"get_my_cafes", "search_cafes", "get_cafe", "get_branches_for_cafe", "get_staff_list", "schedule_meeting"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "inventory":
-        allowed = {"get_menu", "search_menu", "get_branch_inventory", "upsert_inventory_quantity"}
+        if role in ["BRANCH_MANAGER", "STAFF"]:
+            # Branch-level: override menu and stock only
+            allowed = {"get_branch_inventory", "upsert_inventory_quantity"}
+        else:
+            # Cafe-level: master menu + branch inventory
+            allowed = {"get_menu", "search_menu", "get_branch_inventory", "upsert_inventory_quantity"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "order":
         allowed = {"get_recent_orders", "update_order_status"}
         unique_tools = [t for t in unique_tools if t.__name__ in allowed]
     elif agent_type == "supervisor":
         unique_tools = []
-        
+
     return unique_tools
