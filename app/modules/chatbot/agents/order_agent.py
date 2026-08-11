@@ -15,7 +15,10 @@ def get_order_agent_prompt(current_user, body: ChatRequest = None) -> str:
         "- For order history or status-based queries (e.g. 'show cancelled orders'), call get_recent_orders.\n"
         "- Use the optional 'status' parameter: get_recent_orders(branch_id=X, status='CANCELLED').\n"
         "  Valid statuses: PENDING, IN_PREPARATION, COMPLETED, CANCELLED.\n"
-        "- If order data is already present in this turn's history, do NOT call get_recent_orders again.\n"
+        "- If order data is already present as a **tool result** within the current agentic loop (same response), do NOT call get_recent_orders again.\n"
+        "- CRITICAL: If a previous conversation turn only contains a text summary (e.g. 'There are 4 completed orders'), that is NOT real data.\n"
+        "  You MUST call get_recent_orders again to fetch the actual records before answering ANY follow-up question about details, IDs, dates, or amounts.\n"
+        "  NEVER derive order details from a text summary — text summaries contain no actual order data.\n"
     )
     
     if role_name in ["CAFE_OWNER", "SUPER_ADMIN"]:
