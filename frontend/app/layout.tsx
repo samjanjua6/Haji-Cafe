@@ -14,12 +14,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <title>Haji Cafe</title>
         <meta name="description" content="Haji Cafe Management System" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <QueryProvider>
           <ThemeProvider>
             {children}
