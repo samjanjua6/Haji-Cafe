@@ -1,129 +1,235 @@
-"use client";
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Coffee, LogIn, UserPlus } from "lucide-react";
-import { api } from "@/lib/api";
-import { auth } from "@/lib/auth";
-import toast from "react-hot-toast";
+'use client'
 
-function AuthContent() {
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Form, Input, Button, Segmented, message } from 'antd';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/lib/stores/authStore';
+import api from '@/lib/api';
+import { GoogleOutlined } from '@ant-design/icons';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const loginStore = useAuthStore((state) => state.login);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  const [mode, setMode] = useState<'Login' | 'Register'>('Login');
   const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
+    if (isAuthenticated) {
+      router.replace('/dashboard');
+      return;
+    }
+
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
 
     if (accessToken && refreshToken) {
-      auth.setTokens(accessToken, refreshToken);
-      toast.success("Successfully logged in with Google!");
-      router.push("/dashboard");
+      loginStore(accessToken, refreshToken);
+      router.replace('/dashboard');
     }
-  }, [searchParams, router]);
+  }, [isAuthenticated, router, searchParams, loginStore]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const endpoint = tab === "login" ? "/auth/login" : "/auth/register";
-      const data: any = await api.post(endpoint, { email, password });
-      auth.setTokens(data.access_token, data.refresh_token);
-      toast.success(tab === "login" ? "Welcome back!" : "Account created!");
-      router.push("/dashboard");
-    } catch (err: any) {
-      console.error("Auth Error:", err);
-      toast.error(err.message || "An unexpected error occurred");
+      if (mode === 'Login') {
+        const { data } = await api.post('/auth/login', {
+          email: values.email,
+          password: values.password,
+        });
+        loginStore(data.access_token, data.refresh_token);
+        router.push('/dashboard');
+      } else {
+        const { data } = await api.post('/auth/register', {
+          email: values.email,
+          password: values.password,
+        });
+        loginStore(data.access_token, data.refresh_token);
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || `Failed to ${mode.toLowerCase()}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogle = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/google`;
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/auth/google`;
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.5 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.1, duration: 0.3 }
+    }),
+    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+  };
+
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center",
-      justifyContent: "center", background: "var(--bg-base)", padding: 20,
-    }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
-            <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: 80, height: 80, objectFit: "contain" }} />
-          </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Haji Cafe</h1>
-          <p style={{ color: "var(--text-muted)", marginTop: 4, fontSize: 14 }}>Admin Dashboard</p>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0f] relative overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(245,158,11,0.15)_0%,_rgba(0,0,0,0)_70%)] animate-pulse" style={{ animationDuration: '4s' }} />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,_rgba(128,90,213,0.1)_0%,_rgba(0,0,0,0)_70%)] animate-pulse" style={{ animationDuration: '6s' }} />
+
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-[420px] p-8 rounded-2xl bg-[rgba(18,18,26,0.8)] backdrop-blur-md border border-[#2a2a3e] shadow-[0_0_20px_rgba(245,158,11,0.1)] relative z-10"
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-[#f59e0b] drop-shadow-[0_2px_4px_rgba(245,158,11,0.2)] mb-2">Haji Cafe</h1>
+          <p className="text-[#8b8b9e]">Cafe Management Platform</p>
         </div>
 
-        <div className="card">
-          {/* Tabs */}
-          <div style={{
-            display: "flex", background: "var(--bg-surface)",
-            borderRadius: 10, padding: 4, marginBottom: 24, gap: 4,
-          }}>
-            {(["login", "register"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                style={{
-                  flex: 1, padding: "8px 0", border: "none", cursor: "pointer",
-                  borderRadius: 8, fontWeight: 600, fontSize: 14,
-                  background: tab === t ? "var(--accent)" : "transparent",
-                  color: tab === t ? "#0f172a" : "var(--text-muted)",
-                  transition: "all 0.2s",
-                }}
-              >
-                {t === "login" ? "Login" : "Register"}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
-            </div>
-            <div>
-              <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-            </div>
-            <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
-              {tab === "login" ? <><LogIn size={16} /> {loading ? "Signing in..." : "Sign In"}</> : <><UserPlus size={16} /> {loading ? "Creating..." : "Create Account"}</>}
-            </button>
-          </form>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-          </div>
-
-          <button onClick={handleGoogle} className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Continue with Google
-          </button>
+        <div className="mb-6 flex justify-center">
+          <Segmented
+            options={['Login', 'Register']}
+            value={mode}
+            onChange={(value) => {
+              setMode(value as 'Login' | 'Register');
+              form.resetFields();
+            }}
+            className="bg-[#1a1a2e] text-[#8b8b9e] p-1"
+          />
         </div>
-      </div>
+
+        <Form
+          form={form}
+          name="auth_form"
+          layout="vertical"
+          onFinish={onFinish}
+          requiredMark={false}
+          className="space-y-4"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={itemVariants}
+              custom={0}
+              className="space-y-4"
+            >
+              <motion.div custom={1} variants={itemVariants}>
+                <Form.Item
+                  name="email"
+                  rules={[{ required: true, message: 'Please enter your email!' }, { type: 'email', message: 'Invalid email!' }]}
+                >
+                  <Input 
+                    placeholder="Email Address" 
+                    size="large" 
+                    className="bg-[#1a1a2e] border-[#2a2a3e] text-[#e8e8ed] hover:border-[#f59e0b] focus:border-[#f59e0b] h-12" 
+                  />
+                </Form.Item>
+              </motion.div>
+
+              <motion.div custom={2} variants={itemVariants}>
+                <Form.Item
+                  name="password"
+                  rules={[{ required: true, message: 'Please enter your password!' }]}
+                >
+                  <Input.Password 
+                    placeholder="Password" 
+                    size="large" 
+                    className="bg-[#1a1a2e] border-[#2a2a3e] text-[#e8e8ed] hover:border-[#f59e0b] focus:border-[#f59e0b] h-12" 
+                  />
+                </Form.Item>
+              </motion.div>
+
+              {mode === 'Register' && (
+                <motion.div custom={3} variants={itemVariants}>
+                  <Form.Item
+                    name="confirm"
+                    dependencies={['password']}
+                    rules={[
+                      { required: true, message: 'Please confirm your password!' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('Passwords do not match!'));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password 
+                      placeholder="Confirm Password" 
+                      size="large" 
+                      className="bg-[#1a1a2e] border-[#2a2a3e] text-[#e8e8ed] hover:border-[#f59e0b] focus:border-[#f59e0b] h-12" 
+                    />
+                  </Form.Item>
+                </motion.div>
+              )}
+
+              <motion.div custom={mode === 'Register' ? 4 : 3} variants={itemVariants}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  size="large"
+                  loading={loading}
+                  className="bg-[#f59e0b] hover:bg-[#d97706] text-[#0a0a0f] font-semibold border-none h-12 mt-2"
+                >
+                  {mode === 'Login' ? 'Sign In' : 'Create Account'}
+                </Button>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        </Form>
+
+        {mode === 'Login' && (
+          <motion.div custom={4} variants={itemVariants} initial="hidden" animate="visible" className="mt-6">
+            <div className="relative flex items-center mb-6">
+              <div className="flex-grow border-t border-[#2a2a3e]"></div>
+              <span className="flex-shrink-0 mx-4 text-[#8b8b9e] text-sm">or</span>
+              <div className="flex-grow border-t border-[#2a2a3e]"></div>
+            </div>
+            
+            <Button
+              block
+              size="large"
+              icon={<GoogleOutlined />}
+              onClick={handleGoogleLogin}
+              className="bg-[#1a1a2e] border-[#2a2a3e] text-[#e8e8ed] hover:border-[#f59e0b] hover:text-[#f59e0b] h-12"
+            >
+              Continue with Google
+            </Button>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>}>
-      <AuthContent />
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0a0a0f' }}>
+        <div style={{ color: '#f59e0b', fontSize: '18px' }}>Loading...</div>
+      </div>
+    }>
+      <AuthPageInner />
     </Suspense>
   );
 }
