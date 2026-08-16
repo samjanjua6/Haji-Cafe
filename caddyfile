@@ -1,0 +1,28 @@
+haji-cafe.mychatbot.codes {
+    # ── Next.js static assets (must be first) ─────────────────────────────
+    handle /_next/* {
+        reverse_proxy localhost:3000
+    }
+
+    # ── FastAPI backend routes ─────────────────────────────────────────────
+    handle /auth/* {
+        reverse_proxy localhost:8000
+    }
+    handle /admin/* {
+        reverse_proxy localhost:8000
+    }
+    handle /cafes/* {
+        reverse_proxy localhost:8000
+    }
+    handle /branches/* {
+        reverse_proxy localhost:8000
+    }
+    handle /chatbot/* {
+        reverse_proxy localhost:8000
+    }
+
+    # ── Everything else → Next.js frontend ────────────────────────────────
+    handle {
+        reverse_proxy localhost:3000
+    }
+}
