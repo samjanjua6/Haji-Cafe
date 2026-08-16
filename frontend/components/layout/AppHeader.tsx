@@ -62,7 +62,7 @@ export default function AppHeader({ user }: AppHeaderProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {user?.role && (
           <Tag color={getRoleColor(user.role.name)} style={{ margin: 0 }}>
-            {user.role.name.replace('_', ' ')}
+            {user.role.name?.replace('_', ' ')}
           </Tag>
         )}
         
