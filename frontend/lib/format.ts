@@ -36,9 +36,8 @@ const STATUS_LABELS: Record<string, string> = {
   STAFF: "Staff",
 };
 
-export function formatStatus(status: string | null | undefined): string {
-  if (!status) return '—';
-  return STATUS_LABELS[status] || status.replace(/_/g, ' ');
+export function formatStatus(status: string): string {
+  return STATUS_LABELS[status] || status.replace(/_/g, " ");
 }
 
 /**
@@ -54,7 +53,6 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 /**
  * Format a role string for display — "CAFE_OWNER" → "Café Owner"
  */
-export function formatRole(role: string | null | undefined): string {
-  if (!role) return '—';
-  return STATUS_LABELS[role] || role.replace(/_/g, ' ');
+export function formatRole(role: string): string {
+  return STATUS_LABELS[role] || role.replace(/_/g, " ");
 }

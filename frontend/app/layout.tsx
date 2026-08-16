@@ -1,32 +1,38 @@
-'use client'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Toaster } from "react-hot-toast";
 
-import { Inter } from 'next/font/google'
-import '@/styles/globals.css'
-import '@/styles/animations.css'
-import QueryProvider from '@/lib/providers/QueryProvider'
-import ThemeProvider from '@/lib/providers/ThemeProvider'
+const inter = Inter({ subsets: ["latin"] });
 
-const inter = Inter({ subsets: ['latin'] })
+export const metadata: Metadata = {
+  title: "Haji Cafe — Admin Dashboard",
+  description: "Multi-Branch Café Management System",
+};
+
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <title>Haji Cafe</title>
-        <meta name="description" content="Haji Cafe Management System" />
-      </head>
-      <body className={inter.className} suppressHydrationWarning>
-        <QueryProvider>
-          <ThemeProvider>
-            {children}
-            {/* <ChatbotWidget /> */}
-          </ThemeProvider>
-        </QueryProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "#1e293b",
+              color: "#f1f5f9",
+              border: "1px solid #334155",
+            },
+          }}
+        />
+        {children}
+        <ChatbotWidget />
       </body>
     </html>
-  )
+  );
 }
