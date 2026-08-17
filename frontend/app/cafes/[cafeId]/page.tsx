@@ -192,8 +192,8 @@ export default function CafeDetailPage() {
               <MapPin size={12} /> {b.location}
             </div>}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-              <Link href={`/branches/${b.id}/menu`} className="btn btn-ghost btn-sm"><UtensilsCrossed size={12} /> Branch Menu</Link>
-              <Link href={`/branches/${b.id}/orders`} className="btn btn-ghost btn-sm"><ShoppingCart size={12} /> Orders</Link>
+              <Link href={`/branches/${b.id}/menu?cafeId=${cafeId}`} className="btn btn-ghost btn-sm"><UtensilsCrossed size={12} /> Branch Menu</Link>
+              <Link href={`/branches/${b.id}/orders?cafeId=${cafeId}`} className="btn btn-ghost btn-sm"><ShoppingCart size={12} /> Orders</Link>
               <button className="btn btn-ghost btn-sm" onClick={() => { setEditBranch(b); setBranchName(b.name); setBranchLocation(b.location || ""); }}>
                 <Pencil size={12} /> Edit
               </button>

@@ -152,13 +152,13 @@ export default function Sidebar() {
                 {scope.branchName || `Branch #${scope.branchId}`}
               </div>
               <NavLink
-                href={`/branches/${scope.branchId}/orders`}
+                href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`}
                 label="Orders"
                 icon={ShoppingCart}
                 active={pathname.includes(`/branches/${scope.branchId}/orders`)}
               />
               <NavLink
-                href={`/branches/${scope.branchId}/menu`}
+                href={`/branches/${scope.branchId}/menu?cafeId=${scope.cafeId}`}
                 label="Branch Menu"
                 icon={UtensilsCrossed}
                 active={pathname.includes(`/branches/${scope.branchId}/menu`)}

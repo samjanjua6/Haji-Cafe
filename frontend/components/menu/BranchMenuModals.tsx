@@ -8,6 +8,7 @@ import { Cafe } from "@/types/cafe";
 import { Dispatch, SetStateAction } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSearchParams } from "next/navigation";
 
 export interface BranchMenuFormState {
   masterItemId: string;
@@ -40,16 +41,19 @@ export default function BranchMenuModals({
   onSuccess,
 }: BranchMenuModalsProps) {
   const { data: user } = useCurrentUser();
+  const searchParams = useSearchParams();
+  const urlCafeId = searchParams.get("cafeId");
+  
   const branchScope = user?.scopes?.find((s) => String(s.branchId) === String(branchId));
 
   // If SUPER_ADMIN without specific scope, fetch all cafes to deduce the cafeId
   const { data: cafes } = useQuery({
     queryKey: ["all-cafes-for-branch-deduction"],
     queryFn: () => api.get<Cafe[]>("/cafes"),
-    enabled: user?.role === "SUPER_ADMIN" && !branchScope,
+    enabled: !urlCafeId && user?.role === "SUPER_ADMIN" && !branchScope,
   });
 
-  const cafeId = branchScope?.cafeId || cafes?.find((c) => c.branches?.some((b) => String(b.id) === String(branchId)))?.id;
+  const cafeId = urlCafeId || branchScope?.cafeId || cafes?.find((c) => c.branches?.some((b) => String(b.id) === String(branchId)))?.id;
 
   const { data: masterMenu = [], isLoading: loadingMaster } = useQuery({
     queryKey: ["masterMenu", cafeId],
