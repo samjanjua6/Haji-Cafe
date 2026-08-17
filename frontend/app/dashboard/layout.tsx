@@ -1,14 +1,20 @@
 "use client";
 import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
 import { ReactNode } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="app-shell">
       <Sidebar />
-      <main style={{ flex: 1, padding: 32, overflowY: "auto" }}>
-        {children}
-      </main>
+      <div className="app-main">
+        <Topbar />
+        <main className="page-content">
+          <div className="page-content-inner">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

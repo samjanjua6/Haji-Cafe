@@ -1,0 +1,147 @@
+"use client";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+// Converts a URL segment to a readable label
+function segmentToLabel(segment: string): string {
+  // If it's a numeric ID, show it as "#ID"
+  if (/^\d+$/.test(segment)) return `#${segment}`;
+  return segment
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Build breadcrumb items from the current pathname
+function useBreadcrumbs() {
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+
+  const crumbs = segments.map((seg, idx) => {
+    const href = "/" + segments.slice(0, idx + 1).join("/");
+    return { label: segmentToLabel(seg), href };
+  });
+
+  return crumbs;
+}
+
+// User avatar with initials
+function UserAvatar({ email, role }: { email: string; role: string }) {
+  const initials = email.slice(0, 2).toUpperCase();
+
+  const roleColors: Record<string, { bg: string; color: string }> = {
+    SUPER_ADMIN: { bg: "rgba(239,68,68,0.15)", color: "#f87171" },
+    CAFE_OWNER: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
+    BRANCH_MANAGER: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa" },
+    STAFF: { bg: "rgba(34,197,94,0.15)", color: "#4ade80" },
+  };
+  const roleStyle = roleColors[role] || { bg: "rgba(148,163,184,0.15)", color: "#94a3b8" };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Role badge */}
+      <span style={{
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        padding: "3px 10px",
+        borderRadius: 99,
+        background: roleStyle.bg,
+        color: roleStyle.color,
+        border: `1px solid ${roleStyle.color}33`,
+        whiteSpace: "nowrap",
+      }}>
+        {role.replace(/_/g, " ")}
+      </span>
+
+      {/* Avatar circle */}
+      <div style={{
+        width: 34,
+        height: 34,
+        borderRadius: "50%",
+        background: "var(--accent)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 800,
+        fontSize: 13,
+        color: "#0f172a",
+        flexShrink: 0,
+        cursor: "default",
+        boxShadow: "0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-glow)",
+      }}
+        title={email}
+      >
+        {initials}
+      </div>
+    </div>
+  );
+}
+
+export default function Topbar() {
+  const crumbs = useBreadcrumbs();
+  const { data: user } = useCurrentUser();
+
+  return (
+    <header className="topbar">
+      {/* Breadcrumb */}
+      <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <Link
+          href="/dashboard"
+          style={{
+            fontSize: 13,
+            color: "var(--text-faint)",
+            textDecoration: "none",
+            transition: "color 0.15s",
+            fontWeight: 500,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-muted)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}
+        >
+          Home
+        </Link>
+
+        {crumbs.map((crumb, idx) => {
+          const isLast = idx === crumbs.length - 1;
+          return (
+            <span key={crumb.href} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <ChevronRight size={13} style={{ color: "var(--text-faint)", flexShrink: 0 }} />
+              {isLast ? (
+                <span style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  whiteSpace: "nowrap",
+                }}>
+                  {crumb.label}
+                </span>
+              ) : (
+                <Link
+                  href={crumb.href}
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-faint)",
+                    textDecoration: "none",
+                    transition: "color 0.15s",
+                    fontWeight: 500,
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--text-muted)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}
+                >
+                  {crumb.label}
+                </Link>
+              )}
+            </span>
+          );
+        })}
+      </nav>
+
+      {/* Right side — user identity */}
+      {user && (
+        <UserAvatar email={user.email} role={user.role} />
+      )}
+    </header>
+  );
+}
