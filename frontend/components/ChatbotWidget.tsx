@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type Message = {
   role: "user" | "model";
@@ -27,11 +28,8 @@ const btnBase: React.CSSProperties = {
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(auth.isLoggedIn());
-  }, []);
+  const { data: user } = useCurrentUser();
+  const isLoggedIn = !!user;
 
   const [messages, setMessages] = useState<Message[]>([
     { role: "model", content: "Hi there! I am your AI assistant. How can I help you today?" },
@@ -272,6 +270,11 @@ export default function ChatbotWidget() {
   };
 
   if (!isLoggedIn) return null;
+
+  // Auto-close chatbot on logout to ensure state is clean for next user
+  useEffect(() => {
+    if (!isLoggedIn && isOpen) setIsOpen(false);
+  }, [isLoggedIn, isOpen]);
 
   const micActive = isRecording || isTranscribing;
 
