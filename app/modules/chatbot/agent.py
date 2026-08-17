@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
-from livekit.agents.voice_assistant import VoiceAssistant
+from livekit.agents.voice import Agent
 from livekit.plugins import groq, deepgram, elevenlabs
 import os
 
@@ -17,8 +17,8 @@ async def entrypoint(ctx: JobContext):
     # Connect to the LiveKit room, subscribing only to audio tracks (microphone)
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    # Instantiate the VoiceAssistant with our chosen plugins
-    assistant = VoiceAssistant(
+    # Instantiate the Agent with our chosen plugins
+    assistant = Agent(
         vad=deepgram.VAD(),
         stt=deepgram.STT(),
         llm=groq.LLM(model="openai/gpt-oss-120b"),
