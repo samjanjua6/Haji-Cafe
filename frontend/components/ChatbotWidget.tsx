@@ -269,12 +269,12 @@ export default function ChatbotWidget() {
     }
   };
 
-  if (!isLoggedIn) return null;
-
   // Auto-close chatbot on logout to ensure state is clean for next user
   useEffect(() => {
     if (!isLoggedIn && isOpen) setIsOpen(false);
   }, [isLoggedIn, isOpen]);
+
+  if (!isLoggedIn) return null;
 
   const micActive = isRecording || isTranscribing;
 
