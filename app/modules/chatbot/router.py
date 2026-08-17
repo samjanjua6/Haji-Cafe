@@ -16,16 +16,20 @@ class TTSRequest(BaseModel):
     text: str
 
 
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, WebSocketException, status, UploadFile, File, HTTPException
+
 @router.post("/stt")
 async def speech_to_text_endpoint(
     audio: UploadFile = File(...),
     current_user=Depends(get_current_user),
 ):
     """Convert uploaded audio to text using Deepgram Nova-2."""
-    audio_bytes = await audio.read()
-    transcript = await voice_service.speech_to_text(audio_bytes, audio.content_type)
-    return {"transcript": transcript}
-
+    try:
+        audio_bytes = await audio.read()
+        transcript = await voice_service.speech_to_text(audio_bytes, audio.content_type)
+        return {"transcript": transcript}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/tts")
 async def text_to_speech_endpoint(
@@ -33,8 +37,11 @@ async def text_to_speech_endpoint(
     current_user=Depends(get_current_user),
 ):
     """Convert text to speech audio (mp3) using ElevenLabs."""
-    audio_bytes = await voice_service.text_to_speech(body.text)
-    return Response(content=audio_bytes, media_type="audio/mpeg")
+    try:
+        audio_bytes = await voice_service.text_to_speech(body.text)
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tts/test")
