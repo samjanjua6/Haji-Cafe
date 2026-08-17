@@ -4,7 +4,8 @@ import Modal from "@/components/Modal";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { BranchMenuItem } from "@/types/menu";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction } from "react";
+import { useMutation } from "@tanstack/react-query";
 
 export interface BranchMenuFormState {
   masterItemId: string;
@@ -36,48 +37,47 @@ export default function BranchMenuModals({
   setForm,
   onSuccess,
 }: BranchMenuModalsProps) {
-  const [saving, setSaving] = useState(false);
 
-  const handleUpsert = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    setSaving(true);
-    try {
-      await api.post(`/branches/${branchId}/menu`, {
-        master_item_id: parseInt(form.masterItemId),
-        price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
-        available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
-        is_in_stock: form.isInStock,
-        is_active: form.isActive,
-      });
+  const upsertMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/branches/${branchId}/menu`, data),
+    onSuccess: () => {
       toast.success("Branch menu item upserted!"); 
       setUpsertModal(false); 
       onSuccess();
-    } catch (e: any) { 
-      toast.error(e.message); 
-    } finally { 
-      setSaving(false); 
-    }
-  };
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    if (!editItem) return; 
-    setSaving(true);
-    try {
-      await api.patch(`/branches/${branchId}/menu/${editItem.id}`, {
-        price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
-        available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
-        is_in_stock: form.isInStock,
-        is_active: form.isActive,
-      });
+  const editMutation = useMutation({
+    mutationFn: (data: any) => api.patch(`/branches/${branchId}/menu/${editItem!.id}`, data),
+    onSuccess: () => {
       toast.success("Updated!"); 
       setEditItem(null); 
       onSuccess();
-    } catch (e: any) { 
-      toast.error(e.message); 
-    } finally { 
-      setSaving(false); 
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handleUpsert = (e: React.FormEvent) => {
+    e.preventDefault(); 
+    upsertMutation.mutate({
+      master_item_id: parseInt(form.masterItemId),
+      price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
+      available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
+      is_in_stock: form.isInStock,
+      is_active: form.isActive,
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault(); 
+    if (!editItem) return; 
+    editMutation.mutate({
+      price_override: form.priceOverride ? parseFloat(form.priceOverride) : null,
+      available_quantity: form.isInfinite ? null : parseInt(form.availableQuantity || "0", 10),
+      is_in_stock: form.isInStock,
+      is_active: form.isActive,
+    });
   };
 
   return (
@@ -114,8 +114,8 @@ export default function BranchMenuModals({
               Active
             </label>
           </div>
-          <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-            {saving ? "Saving..." : "Upsert Item"}
+          <button className="btn btn-primary" type="submit" disabled={upsertMutation.isPending} style={{ justifyContent: "center" }}>
+            {upsertMutation.isPending ? "Saving..." : "Upsert Item"}
           </button>
         </form>
       </Modal>
@@ -148,8 +148,8 @@ export default function BranchMenuModals({
               Active
             </label>
           </div>
-          <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-            {saving ? "Saving..." : "Save Changes"}
+          <button className="btn btn-primary" type="submit" disabled={editMutation.isPending} style={{ justifyContent: "center" }}>
+            {editMutation.isPending ? "Saving..." : "Save Changes"}
           </button>
         </form>
       </Modal>

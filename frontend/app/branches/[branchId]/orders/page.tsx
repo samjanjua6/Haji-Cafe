@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Plus, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -8,34 +7,42 @@ import { Order } from "@/types/order";
 import { BranchMenuItem } from "@/types/menu";
 import OrderTable from "@/components/orders/OrderTable";
 import OrderModals from "@/components/orders/OrderModals";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-export default function BranchOrdersPage() {
-  const { branchId } = useParams<{ branchId: string }>();
+export default function BranchOrdersPage({ params }: { params: { branchId: string } }) {
   const router = useRouter();
-  
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [menuItems, setMenuItems] = useState<BranchMenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const branchId = params.branchId;
   
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [placeModal, setPlaceModal] = useState(false);
 
-  const load = async () => {
-    try {
-      const [o, m] = await Promise.all([
-        api.get<Order[]>(`/branches/${branchId}/orders`),
-        api.get<BranchMenuItem[]>(`/branches/${branchId}/menu`),
-      ]);
-      setOrders(o); 
-      setMenuItems(m.filter(i => i.isInStock && i.isActive));
-    } catch (e: any) { 
-      toast.error(e.message); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["orders", branchId],
+    queryFn: () => api.get<Order[]>(`/branches/${branchId}/orders`)
+  });
 
-  useEffect(() => { load(); }, [branchId]);
+  const { data: menuItems = [], isLoading: loadingMenu } = useQuery({
+    queryKey: ["menu", branchId],
+    queryFn: async () => {
+      const data = await api.get<BranchMenuItem[]>(`/branches/${branchId}/menu`);
+      return data.filter(i => i.isInStock && i.isActive);
+    }
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ orderId, status }: { orderId: number, status: string }) => 
+      api.patch(`/branches/${branchId}/orders/${orderId}/status`, { status }),
+    onSuccess: (_, variables) => {
+      toast.success(`Status → ${variables.status}`); 
+      queryClient.invalidateQueries({ queryKey: ["orders", branchId] });
+      if (detailOrder?.id === variables.orderId) {
+        setDetailOrder({ ...detailOrder, status: variables.status as any });
+      }
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
 
   const openDetail = async (order: Order) => {
     try {
@@ -46,18 +53,11 @@ export default function BranchOrdersPage() {
     }
   };
 
-  const handleStatusChange = async (order: Order, newStatus: string) => {
-    try {
-      await api.patch(`/branches/${branchId}/orders/${order.id}/status`, { status: newStatus });
-      toast.success(`Status → ${newStatus}`); 
-      load();
-      if (detailOrder?.id === order.id) {
-        setDetailOrder({ ...detailOrder, status: newStatus as any });
-      }
-    } catch (e: any) { 
-      toast.error(e.message); 
-    }
+  const handleStatusChange = (order: Order, newStatus: string) => {
+    statusMutation.mutate({ orderId: order.id, status: newStatus });
   };
+
+  const isLoading = loadingOrders || loadingMenu;
 
   return (
     <div>
@@ -76,7 +76,7 @@ export default function BranchOrdersPage() {
 
       <OrderTable 
         orders={orders}
-        loading={loading}
+        loading={isLoading}
         onOpenDetail={openDetail}
         onStatusChange={handleStatusChange}
       />
@@ -88,7 +88,7 @@ export default function BranchOrdersPage() {
         placeModal={placeModal}
         setPlaceModal={setPlaceModal}
         menuItems={menuItems}
-        onSuccess={load}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["orders", branchId] })}
         onStatusChange={handleStatusChange}
       />
     </div>

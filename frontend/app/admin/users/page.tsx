@@ -1,70 +1,72 @@
 "use client";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import { User } from "@/types/auth";
 import UserTable from "@/components/admin/UserTable";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!auth.isLoggedIn()) { router.push("/"); return; }
-    fetchUsers();
-  }, []);
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => api.get<User[]>("/admin/users")
+  });
 
-  const fetchUsers = async () => {
-    try {
-      const data = await api.get<User[]>("/admin/users");
-      setUsers(data);
-    } catch (e: any) {
-      toast.error("Failed to load users: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRoleChange = async (userId: number, roleName: string) => {
-    try {
-      await api.put(`/admin/users/${userId}/role`, { role_name: roleName });
+  const roleMutation = useMutation({
+    mutationFn: ({ userId, roleName }: { userId: number, roleName: string }) => 
+      api.put(`/admin/users/${userId}/role`, { role_name: roleName }),
+    onSuccess: () => {
       toast.success("Role updated successfully");
-      fetchUsers();
-    } catch (e: any) {
-      toast.error("Failed to update role: " + e.message);
-    }
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const assignScopeMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: number, data: any }) => 
+      api.post(`/admin/users/${userId}/scopes`, data),
+    onSuccess: () => {
+      toast.success("Assigned successfully");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const removeScopeMutation = useMutation({
+    mutationFn: ({ userId, scopeId }: { userId: number, scopeId: number }) => 
+      api.delete(`/admin/users/${userId}/scopes/${scopeId}`),
+    onSuccess: () => {
+      toast.success("Removed successfully");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handleRoleChange = (userId: number, roleName: string) => {
+    roleMutation.mutate({ userId, roleName });
   };
 
-  const assignScope = async (userId: number) => {
+  const assignScope = (userId: number) => {
     const cafeId = prompt("Enter Cafe ID (or leave blank if assigning to a branch):");
     const branchId = prompt("Enter Branch ID (or leave blank if assigning to a cafe):");
     
     if (!cafeId && !branchId) return;
 
-    try {
-      await api.post(`/admin/users/${userId}/scopes`, { 
+    assignScopeMutation.mutate({
+      userId,
+      data: { 
         cafe_id: cafeId ? parseInt(cafeId) : null, 
         branch_id: branchId ? parseInt(branchId) : null 
-      });
-      toast.success("Assigned successfully");
-      fetchUsers();
-    } catch (e: any) {
-      toast.error("Failed to assign scope: " + e.message);
-    }
+      }
+    });
   };
 
-  const removeScope = async (userId: number, scopeId: number) => {
+  const removeScope = (userId: number, scopeId: number) => {
     if (!confirm("Remove this assignment?")) return;
-    try {
-      await api.delete(`/admin/users/${userId}/scopes/${scopeId}`);
-      toast.success("Removed successfully");
-      fetchUsers();
-    } catch (e: any) {
-      toast.error("Failed to remove scope: " + e.message);
-    }
+    removeScopeMutation.mutate({ userId, scopeId });
   };
 
   return (

@@ -1,19 +1,18 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Plus, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { BranchMenuItem } from "@/types/menu";
 import BranchMenuTable from "@/components/menu/BranchMenuTable";
 import BranchMenuModals, { BranchMenuFormState } from "@/components/menu/BranchMenuModals";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-export default function BranchMenuPage() {
-  const { branchId } = useParams<{ branchId: string }>();
+export default function BranchMenuPage({ params }: { params: { branchId: string } }) {
   const router = useRouter();
-  
-  const [items, setItems] = useState<BranchMenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const branchId = params.branchId;
   
   const [upsertModal, setUpsertModal] = useState(false);
   const [editItem, setEditItem] = useState<BranchMenuItem | null>(null);
@@ -27,27 +26,23 @@ export default function BranchMenuPage() {
     isActive: true 
   });
 
-  const load = async () => {
-    try {
-      const data = await api.get<BranchMenuItem[]>(`/branches/${branchId}/menu`);
-      setItems(data);
-    } catch (e: any) { 
-      toast.error(e.message); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["branchMenu", branchId],
+    queryFn: () => api.get<BranchMenuItem[]>(`/branches/${branchId}/menu`)
+  });
 
-  useEffect(() => { load(); }, [branchId]);
-
-  const handlePatch = async (item: BranchMenuItem, patch: Record<string, unknown>) => {
-    try {
-      await api.patch(`/branches/${branchId}/menu/${item.id}`, patch);
+  const patchMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: number, patch: Record<string, unknown> }) => 
+      api.patch(`/branches/${branchId}/menu/${id}`, patch),
+    onSuccess: () => {
       toast.success("Updated!"); 
-      load();
-    } catch (e: any) { 
-      toast.error(e.message); 
-    }
+      queryClient.invalidateQueries({ queryKey: ["branchMenu", branchId] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handlePatch = (item: BranchMenuItem, patch: Record<string, unknown>) => {
+    patchMutation.mutate({ id: item.id, patch });
   };
 
   const handleEditClick = (item: BranchMenuItem) => {
@@ -82,20 +77,20 @@ export default function BranchMenuPage() {
 
       <BranchMenuTable 
         items={items}
-        loading={loading}
+        loading={isLoading}
         onEdit={handleEditClick}
         onPatch={handlePatch}
       />
 
       <BranchMenuModals 
-        branchId={branchId}
+        branchId={branchId as string}
         upsertModal={upsertModal}
         setUpsertModal={setUpsertModal}
         editItem={editItem}
         setEditItem={setEditItem}
         form={form}
         setForm={setForm}
-        onSuccess={load}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["branchMenu", branchId] })}
       />
     </div>
   );

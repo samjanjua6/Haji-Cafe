@@ -5,6 +5,7 @@ import Modal from "@/components/Modal";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Cafe } from "@/types/cafe";
+import { useMutation } from "@tanstack/react-query";
 
 interface CafeModalsProps {
   createOpen: boolean;
@@ -22,43 +23,38 @@ export default function CafeModals({
   onSuccess,
 }: CafeModalsProps) {
   const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  // Sync editCafe name when modal opens
-  // A cleaner way is to handle it in the parent or use useEffect, 
-  // but for simplicity, we'll keep the input controlled locally.
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.post("/cafes", { name });
+  const createMutation = useMutation({
+    mutationFn: (newName: string) => api.post("/cafes", { name: newName }),
+    onSuccess: () => {
       toast.success("Café created!");
       setCreateOpen(false);
       setName("");
       onSuccess();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
 
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editCafe) return;
-    setSaving(true);
-    try {
-      await api.put(`/cafes/${editCafe.id}`, { name });
+  const editMutation = useMutation({
+    mutationFn: ({ id, newName }: { id: number; newName: string }) => api.put(`/cafes/${id}`, { name: newName }),
+    onSuccess: () => {
       toast.success("Café updated!");
       setEditCafe(null);
       setName("");
       onSuccess();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(name);
+  };
+
+  const handleEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCafe) return;
+    editMutation.mutate({ id: editCafe.id, newName: name });
   };
 
   return (
@@ -74,8 +70,8 @@ export default function CafeModals({
               required 
             />
           </div>
-          <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-            {saving ? "Creating..." : "Create Café"}
+          <button className="btn btn-primary" type="submit" disabled={createMutation.isPending} style={{ justifyContent: "center" }}>
+            {createMutation.isPending ? "Creating..." : "Create Café"}
           </button>
         </form>
       </Modal>
@@ -91,8 +87,8 @@ export default function CafeModals({
               required 
             />
           </div>
-          <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-            {saving ? "Saving..." : "Save Changes"}
+          <button className="btn btn-primary" type="submit" disabled={editMutation.isPending} style={{ justifyContent: "center" }}>
+            {editMutation.isPending ? "Saving..." : "Save Changes"}
           </button>
         </form>
       </Modal>

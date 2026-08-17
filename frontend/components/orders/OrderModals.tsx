@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Order } from "@/types/order";
 import { BranchMenuItem } from "@/types/menu";
+import { useMutation } from "@tanstack/react-query";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["IN_PREPARATION", "CANCELLED"],
@@ -43,32 +44,31 @@ export default function OrderModals({
   onSuccess,
   onStatusChange,
 }: OrderModalsProps) {
-  const [saving, setSaving] = useState(false);
   const [orderLines, setOrderLines] = useState<OrderLineState[]>([
     { branchMenuItemId: "", quantity: 1, notes: "" }
   ]);
 
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    setSaving(true);
-    try {
-      const items = orderLines
-        .filter(l => l.branchMenuItemId)
-        .map(l => ({ 
-          branch_menu_item_id: parseInt(l.branchMenuItemId), 
-          quantity: l.quantity, 
-          notes: l.notes || null 
-        }));
-      await api.post(`/branches/${branchId}/orders`, { items });
-      toast.success("Order placed!"); 
-      setPlaceModal(false); 
-      setOrderLines([{ branchMenuItemId: "", quantity: 1, notes: "" }]); 
+  const placeMutation = useMutation({
+    mutationFn: (items: any[]) => api.post(`/branches/${branchId}/orders`, { items }),
+    onSuccess: () => {
+      toast.success("Order placed!");
+      setPlaceModal(false);
+      setOrderLines([{ branchMenuItemId: "", quantity: 1, notes: "" }]);
       onSuccess();
-    } catch (e: any) { 
-      toast.error(e.message); 
-    } finally { 
-      setSaving(false); 
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handlePlaceOrder = (e: React.FormEvent) => {
+    e.preventDefault(); 
+    const items = orderLines
+      .filter(l => l.branchMenuItemId)
+      .map(l => ({ 
+        branch_menu_item_id: parseInt(l.branchMenuItemId), 
+        quantity: l.quantity, 
+        notes: l.notes || null 
+      }));
+    placeMutation.mutate(items);
   };
 
   const addLine = () => setOrderLines([...orderLines, { branchMenuItemId: "", quantity: 1, notes: "" }]);
@@ -162,8 +162,8 @@ export default function OrderModals({
               <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18 }}>${calcOrderTotal().toFixed(2)}</span>
             </div>
           )}
-          <button className="btn btn-primary" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-            {saving ? "Placing Order..." : "Place Order"}
+          <button className="btn btn-primary" type="submit" disabled={placeMutation.isPending} style={{ justifyContent: "center" }}>
+            {placeMutation.isPending ? "Placing Order..." : "Place Order"}
           </button>
         </form>
       </Modal>

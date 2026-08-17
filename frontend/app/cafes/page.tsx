@@ -1,41 +1,38 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { api } from "@/lib/api";
-import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import { Cafe } from "@/types/cafe";
 import CafeTable from "@/components/cafes/CafeTable";
 import CafeModals from "@/components/cafes/CafeModals";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function CafesPage() {
   const router = useRouter();
-  const [cafes, setCafes] = useState<Cafe[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   
   const [createOpen, setCreateOpen] = useState(false);
   const [editCafe, setEditCafe] = useState<Cafe | null>(null);
 
-  const load = () => {
-    api.get<Cafe[]>("/cafes")
-      .then(setCafes)
-      .catch(e => toast.error(e.message))
-      .finally(() => setLoading(false));
-  };
+  const { data: cafes = [], isLoading: loading } = useQuery({
+    queryKey: ["cafes"],
+    queryFn: () => api.get<Cafe[]>("/cafes")
+  });
 
-  useEffect(() => {
-    if (!auth.isLoggedIn()) { router.push("/"); return; }
-    load();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/cafes/${id}`),
+    onSuccess: () => {
+      toast.success("Café deleted!");
+      queryClient.invalidateQueries({ queryKey: ["cafes"] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
 
   const handleDelete = async (cafe: Cafe) => {
     if (!confirm(`Delete "${cafe.name}"? This cannot be undone.`)) return;
-    try {
-      await api.delete(`/cafes/${cafe.id}`);
-      toast.success("Café deleted!"); 
-      load();
-    } catch (e: any) { toast.error(e.message); }
+    deleteMutation.mutate(cafe.id);
   };
 
   return (
@@ -62,7 +59,7 @@ export default function CafesPage() {
         setCreateOpen={setCreateOpen}
         editCafe={editCafe}
         setEditCafe={setEditCafe}
-        onSuccess={load}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["cafes"] })}
       />
     </div>
   );
