@@ -43,6 +43,11 @@ export default function ChatbotWidget() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const ttsEnabledRef = useRef(ttsEnabled);
+
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled;
+  }, [ttsEnabled]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
@@ -92,8 +97,8 @@ export default function ChatbotWidget() {
         if (data.done) {
           setProgressMsg(null);
           setIsLoading(false);
-          // Auto-play TTS for the full response
-          if (ttsEnabled && currentResponseRef.current.trim()) {
+          // Auto-play TTS for the full response only if enabled
+          if (ttsEnabledRef.current && currentResponseRef.current.trim()) {
             playTTS(currentResponseRef.current);
           }
           currentResponseRef.current = "";
@@ -111,7 +116,7 @@ export default function ChatbotWidget() {
       ws.current?.close();
       ws.current = null;
     };
-  }, [isOpen, ttsEnabled]);
+  }, [isOpen]);
 
   // Auto scroll
   useEffect(() => {
