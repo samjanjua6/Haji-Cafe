@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Plus, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -9,8 +9,9 @@ import BranchMenuModals, { BranchMenuFormState } from "@/components/menu/BranchM
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-export default function BranchMenuPage({ params }: { params: { branchId: string } }) {
+export default function BranchMenuPage() {
   const router = useRouter();
+  const params = useParams<{ branchId: string }>();
   const queryClient = useQueryClient();
   const branchId = params.branchId;
   
