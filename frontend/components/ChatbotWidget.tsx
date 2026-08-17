@@ -1,22 +1,24 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX, Activity } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { auth } from "@/lib/auth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  BarVisualizer,
   useVoiceAssistant,
-  useLocalParticipant,
-  useChat,
-  useRoomContext,
-  TrackToggle,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
 import "@livekit/components-styles";
+
+type Message = {
+  role: "user" | "model";
+  content: string;
+};
 
 const btnBase: React.CSSProperties = {
   border: "none",
@@ -31,187 +33,82 @@ const btnBase: React.CSSProperties = {
   transition: "background 0.2s, transform 0.15s",
 };
 
-// Inner component that actually uses LiveKit hooks
-function InnerChat({ onClose }: { onClose: () => void }) {
-  const { chatMessages, send, isSending } = useChat();
-  const { state } = useVoiceAssistant(); 
-  const { isMicrophoneEnabled } = useLocalParticipant();
-  const room = useRoomContext();
-  
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto scroll
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
-
-  const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || isSending) return;
-    await send(input);
-    setInput("");
-  };
-
-  const isSpeaking = state === "speaking";
-  const isThinking = state === "thinking";
+// --- LiveKit UI Component ---
+function LiveModeUI({ onEndLive }: { onEndLive: () => void }) {
+  const { state, audioTrack } = useVoiceAssistant();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-      {/* Header */}
-      <div style={{
-        padding: "16px", backgroundColor: "var(--bg-surface)",
-        color: "var(--text-primary)", borderBottom: "1px solid var(--border)",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Bot size={20} />
-          <strong style={{ fontSize: "16px" }}>Assistant</strong>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", fontStyle: "italic" }}>
-            {state === "speaking" && "🔊 Speaking..."}
-            {state === "listening" && "👂 Listening..."}
-            {state === "thinking" && "🤔 Thinking..."}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          {/* We can use LiveKit's TrackToggle to mute/unmute audio output, but RoomAudioRenderer handles it.
-              For simplicity, we just provide a disconnect/close button. */}
-          <button onClick={onClose} style={{ ...btnBase, backgroundColor: "transparent", color: "var(--text-muted)" }}>
-            <X size={20} />
-          </button>
-        </div>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg-base)", zIndex: 5 }}>
+      <div style={{ marginBottom: 32, fontSize: "16px", color: "var(--text-primary)", fontWeight: 500 }}>
+        {state === "speaking" && "Assistant is speaking..."}
+        {state === "listening" && "Listening..."}
+        {state === "thinking" && "Assistant is thinking..."}
+        {(state === "connecting" || state === "disconnected" || state === "initializing") && "Connecting to LiveKit..."}
+      </div>
+      
+      <div style={{ height: 80, width: "100%", padding: "0 60px", display: "flex", justifyContent: "center" }}>
+        <BarVisualizer
+          state={state}
+          barCount={7}
+          trackRef={audioTrack}
+          style={{ width: "200px", height: "100%" }}
+          options={{ minHeight: 10 }}
+        />
       </div>
 
-      {/* Messages Area */}
-      <div style={{
-        flex: 1, padding: "16px", overflowY: "auto",
-        display: "flex", flexDirection: "column", gap: "12px",
-        backgroundColor: "var(--bg-base)",
-      }}>
-        {chatMessages.map((msg: any, i: number) => {
-          const isUser = msg.from?.identity !== "assistant"; // Assuming agent uses "assistant" or similar
-          // LiveKit's useChat stores local user messages with our own identity
-          
-          return (
-            <div
-              key={msg.id || i}
-              style={{
-                alignSelf: isUser ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-                backgroundColor: isUser ? "var(--accent)" : "var(--bg-surface)",
-                color: isUser ? "#0f172a" : "var(--text-primary)",
-                padding: "10px 14px", borderRadius: "12px",
-                borderBottomRightRadius: isUser ? "2px" : "12px",
-                borderBottomLeftRadius: !isUser ? "2px" : "12px",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-                border: !isUser ? "1px solid var(--border)" : "none",
-                fontSize: "14px", lineHeight: "1.5",
-              }}
-            >
-              {!isUser ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
-                    a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
-                    ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                    ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                    li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
-                  }}
-                >
-                  {msg.message}
-                </ReactMarkdown>
-              ) : (
-                <span style={{ whiteSpace: "pre-wrap" }}>{msg.message}</span>
-              )}
-            </div>
-          );
-        })}
-        {isThinking && (
-          <div style={{
-            alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
-            fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
-            padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
-            border: "1px solid var(--border)", maxWidth: "85%",
-          }}>
-            <span style={{
-              display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-              backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
-            }} />
-            Assistant is thinking...
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div style={{
-        padding: "12px", borderTop: "1px solid var(--border)",
-        display: "flex", gap: "8px", alignItems: "center",
-        backgroundColor: "var(--bg-card)",
-      }}>
-        {/* LiveKit Mic Toggle */}
-        <TrackToggle 
-          source={Track.Source.Microphone} 
-          style={{
-            ...btnBase,
-            backgroundColor: isMicrophoneEnabled ? "#ef4444" : "var(--bg-surface)",
-            color: isMicrophoneEnabled ? "#fff" : "var(--text-muted)",
-            border: isMicrophoneEnabled ? "none" : "1px solid var(--border)",
-            animation: state === "listening" && isMicrophoneEnabled ? "pulse 1s ease-in-out infinite" : "none",
-          }}
-        >
-          {isMicrophoneEnabled ? <MicOff size={16} /> : <Mic size={16} />}
-        </TrackToggle>
-
-        <form onSubmit={handleSend} style={{ flex: 1, display: "flex", gap: "8px" }}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={isMicrophoneEnabled ? "Mic is on! You can speak directly..." : "Ask me anything..."}
-            style={{
-              flex: 1, padding: "8px 12px", borderRadius: "20px",
-              border: "1px solid var(--border)", backgroundColor: "var(--bg-surface)",
-              color: "var(--text-primary)", outline: "none", fontSize: "14px",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isSending}
-            style={{
-              ...btnBase,
-              backgroundColor: input.trim() && !isSending ? "var(--accent)" : "var(--bg-surface)",
-              color: input.trim() && !isSending ? "#0f172a" : "var(--text-muted)",
-              border: input.trim() && !isSending ? "none" : "1px solid var(--border)",
-              cursor: input.trim() && !isSending ? "pointer" : "not-allowed",
-            }}
-          >
-            <Send size={16} style={{ marginLeft: "2px" }} />
-          </button>
-        </form>
-      </div>
+      <button
+        onClick={onEndLive}
+        style={{
+          marginTop: 48, padding: "10px 24px", borderRadius: "24px",
+          backgroundColor: "#ef4444", color: "#fff", border: "none",
+          cursor: "pointer", fontWeight: 600, boxShadow: "0 4px 6px rgba(239, 68, 68, 0.2)"
+        }}
+      >
+        End Live Session
+      </button>
     </div>
   );
 }
 
-
+// --- Main Chatbot Widget ---
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [token, setToken] = useState("");
   const { data: user } = useCurrentUser();
   const isLoggedIn = !!user;
 
-  // Auto-close chatbot on logout to ensure state is clean for next user
-  useEffect(() => {
-    if (!isLoggedIn && isOpen) {
-      setIsOpen(false);
-      setToken("");
-    }
-  }, [isLoggedIn, isOpen]);
+  // Standard Mode State
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "model", content: "Hi there! I am your AI assistant. How can I help you today?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string | null>(null);
+
+  // Live Mode State
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [livekitToken, setLivekitToken] = useState("");
+
+  // Voice state (Standard Mode)
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const ttsEnabledRef = useRef(ttsEnabled);
 
   useEffect(() => {
-    if (isOpen && isLoggedIn && !token) {
+    ttsEnabledRef.current = ttsEnabled;
+  }, [ttsEnabled]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const ws = useRef<WebSocket | null>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+  const currentResponseRef = useRef<string>("");
+  const currentAudio = useRef<HTMLAudioElement | null>(null);
+
+  // Fetch LiveKit token when Live Mode is activated
+  useEffect(() => {
+    if (isLiveMode && !livekitToken) {
       const accessToken = auth.getAccess();
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       fetch(`${base}/chatbot/livekit-token`, {
@@ -219,15 +116,247 @@ export default function ChatbotWidget() {
       })
         .then((res) => res.json())
         .then((data) => {
-          if (data.token) {
-            setToken(data.token);
-          }
+          if (data.token) setLivekitToken(data.token);
         })
         .catch(console.error);
     }
-  }, [isOpen, isLoggedIn, token]);
+  }, [isLiveMode, livekitToken]);
+
+  // --- WebSocket Setup (Standard Mode) ---
+  useEffect(() => {
+    if (!isOpen) {
+      ws.current?.close();
+      ws.current = null;
+      return;
+    }
+
+    const token = auth.getAccess();
+    if (!token) return;
+
+    let base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    base = base.replace("http://", "ws://").replace("https://", "wss://");
+    const websocket = new WebSocket(`${base}/chatbot/ws?token=${token}`);
+
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.progress) {
+          setProgressMsg(data.progress);
+        }
+
+        if (data.chunk) {
+          setProgressMsg(null);
+          currentResponseRef.current += data.chunk;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg && lastMsg.role === "model" && lastMsg.content !== undefined) {
+              lastMsg.content += data.chunk;
+            } else {
+              newMessages.push({ role: "model", content: data.chunk });
+            }
+            return newMessages;
+          });
+        }
+
+        if (data.done) {
+          setProgressMsg(null);
+          setIsLoading(false);
+          // Auto-play TTS for the full response only if enabled
+          if (ttsEnabledRef.current && currentResponseRef.current.trim() && !isLiveMode) {
+            playTTS(currentResponseRef.current);
+          }
+          currentResponseRef.current = "";
+        }
+      } catch (e) {
+        console.error("Error parsing websocket message", e);
+      }
+    };
+
+    websocket.onerror = () => setIsLoading(false);
+    websocket.onclose = () => setIsLoading(false);
+    ws.current = websocket;
+
+    return () => {
+      ws.current?.close();
+      ws.current = null;
+    };
+  }, [isOpen, isLiveMode]);
+
+  // Auto scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLiveMode]);
+
+  // --- Send Message ---
+  const sendMessages = useCallback((msgs: Message[]) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+    currentResponseRef.current = "";
+    // Stop any currently playing TTS
+    if (currentAudio.current) {
+      currentAudio.current.pause();
+      currentAudio.current = null;
+      setIsSpeaking(false);
+    }
+    ws.current.send(JSON.stringify({
+      messages: msgs,
+      client_time: new Date().toString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }));
+    setMessages((prev) => [...prev, { role: "model", content: "" }]);
+  }, []);
+
+  const handleSend = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const newMsg: Message = { role: "user", content: input };
+    const currentMsgs = [...messages, newMsg];
+    setMessages(currentMsgs);
+    setInput("");
+    setIsLoading(true);
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      sendMessages(currentMsgs);
+    } else {
+      setIsLoading(false);
+      setMessages([...currentMsgs, { role: "model", content: "**Error:** Connection closed. Please try again." }]);
+    }
+  };
+
+  // --- TTS Playback ---
+  const playTTS = async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      const token = auth.getAccess();
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const resp = await fetch(`${base}/chatbot/tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (!resp.ok) { setIsSpeaking(false); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudio.current = audio;
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(url);
+        currentAudio.current = null;
+      };
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        currentAudio.current = null;
+      };
+      audio.play();
+    } catch {
+      setIsSpeaking(false);
+    }
+  };
+
+  const stopTTS = () => {
+    if (currentAudio.current) {
+      currentAudio.current.pause();
+      currentAudio.current = null;
+      setIsSpeaking(false);
+    }
+  };
+
+  // --- Microphone Recording ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunks.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunks.current, { type: "audio/webm" });
+        await transcribeAudio(blob);
+      };
+
+      recorder.start();
+      mediaRecorder.current = recorder;
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic access denied:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorder.current?.stop();
+    mediaRecorder.current = null;
+    setIsRecording(false);
+  };
+
+  const transcribeAudio = async (blob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const token = auth.getAccess();
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+
+      const resp = await fetch(`${base}/chatbot/stt`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!resp.ok) { setIsTranscribing(false); return; }
+      const data = await resp.json();
+      const transcript: string = data.transcript?.trim();
+
+      if (transcript) {
+        // Auto-send the transcript
+        const newMsg: Message = { role: "user", content: transcript };
+        const currentMsgs = [...messages, newMsg];
+        setMessages(currentMsgs);
+        setIsLoading(true);
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+          sendMessages(currentMsgs);
+        }
+      }
+    } catch (err) {
+      console.error("Transcription error:", err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      stopTTS(); // Stop any TTS before recording
+      startRecording();
+    }
+  };
+
+  const activateLiveMode = () => {
+    stopTTS();
+    if (isRecording) stopRecording();
+    setIsLiveMode(true);
+  };
+
+  // Auto-close chatbot on logout to ensure state is clean for next user
+  useEffect(() => {
+    if (!isLoggedIn && isOpen) {
+      setIsOpen(false);
+      setIsLiveMode(false);
+    }
+  }, [isLoggedIn, isOpen]);
 
   if (!isLoggedIn) return null;
+
+  const micActive = isRecording || isTranscribing;
 
   return (
     <>
@@ -260,27 +389,212 @@ export default function ChatbotWidget() {
           display: "flex", flexDirection: "column",
           zIndex: 9999, overflow: "hidden", border: "1px solid var(--border)",
         }}>
-          {token ? (
-            <LiveKitRoom
-              serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-              token={token}
-              connect={true}
-              audio={true} // Automatically subscribe to incoming audio
-              video={false}
-              style={{ display: "flex", height: "100%", width: "100%" }}
-            >
-              <RoomAudioRenderer />
-              <InnerChat onClose={() => setIsOpen(false)} />
-            </LiveKitRoom>
-          ) : (
-            <div style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
-              <span style={{
-                display: "inline-block", width: "12px", height: "12px", borderRadius: "50%",
-                backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite", marginBottom: "16px"
-              }} />
-              <br />
-              Connecting to secure voice room...
+          {/* Header */}
+          <div style={{
+            padding: "16px", backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)", borderBottom: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            zIndex: 10
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Bot size={20} />
+              <strong style={{ fontSize: "16px" }}>Assistant</strong>
+              {isSpeaking && !isLiveMode && (
+                <span style={{ fontSize: "11px", color: "var(--accent)", fontStyle: "italic" }}>
+                  🔊 Speaking...
+                </span>
+              )}
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              
+              {!isLiveMode && (
+                <button
+                  onClick={activateLiveMode}
+                  title="Enter Gemini Live Mode"
+                  style={{
+                    display: "flex", alignItems: "center", gap: "6px",
+                    padding: "6px 12px", borderRadius: "16px",
+                    backgroundColor: "var(--accent)", color: "#0f172a",
+                    border: "none", cursor: "pointer", fontWeight: 600, fontSize: "12px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  }}
+                >
+                  <Activity size={14} /> Live
+                </button>
+              )}
+
+              {!isLiveMode && (
+                <button
+                  onClick={() => { setTtsEnabled((v) => !v); if (!ttsEnabled === false) stopTTS(); }}
+                  title={ttsEnabled ? "Disable auto-speak" : "Enable auto-speak"}
+                  style={{ ...btnBase, backgroundColor: "transparent", color: ttsEnabled ? "var(--text-primary)" : "var(--text-muted)" }}
+                >
+                  {ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                </button>
+              )}
+
+              <button
+                onClick={() => { setIsOpen(false); setIsLiveMode(false); }}
+                style={{ ...btnBase, backgroundColor: "transparent", color: "var(--text-muted)", marginLeft: "4px" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Conditional Rendering: Live Mode vs Standard Mode */}
+          {isLiveMode ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {livekitToken ? (
+                <LiveKitRoom
+                  serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                  token={livekitToken}
+                  connect={true}
+                  audio={true}
+                  video={false}
+                  style={{ flex: 1, display: "flex", flexDirection: "column" }}
+                >
+                  <RoomAudioRenderer />
+                  <LiveModeUI onEndLive={() => setIsLiveMode(false)} />
+                </LiveKitRoom>
+              ) : (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px", color: "var(--text-muted)" }}>
+                  <span style={{
+                    display: "inline-block", width: "12px", height: "12px", borderRadius: "50%",
+                    backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
+                  }} />
+                  Preparing Live Session...
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Messages Area */}
+              <div style={{
+                flex: 1, padding: "16px", overflowY: "auto",
+                display: "flex", flexDirection: "column", gap: "12px",
+                backgroundColor: "var(--bg-base)",
+              }}>
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "85%",
+                      backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
+                      color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
+                      padding: "10px 14px", borderRadius: "12px",
+                      borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
+                      borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      border: msg.role === "model" ? "1px solid var(--border)" : "none",
+                      fontSize: "14px", lineHeight: "1.5",
+                    }}
+                  >
+                    {msg.role === "model" ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
+                          a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
+                          ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                          ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                          li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
+                          table: ({ node, ...props }) => (
+                            <div style={{ overflowX: "auto", width: "100%" }}>
+                              <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
+                            </div>
+                          ),
+                          th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
+                          td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div style={{
+                    alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
+                    fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
+                    padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
+                    border: "1px solid var(--border)", maxWidth: "85%",
+                  }}>
+                    <span style={{
+                      display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+                      backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
+                    }} />
+                    {progressMsg || "Assistant is thinking..."}
+                  </div>
+                )}
+                {isTranscribing && (
+                  <div style={{
+                    alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
+                    fontStyle: "italic", padding: "4px 8px",
+                  }}>
+                    🎙️ Transcribing...
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input Area */}
+              <form
+                onSubmit={handleSend}
+                style={{
+                  padding: "12px", borderTop: "1px solid var(--border)",
+                  display: "flex", gap: "8px", alignItems: "center",
+                  backgroundColor: "var(--bg-card)",
+                }}
+              >
+                {/* Mic Button */}
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  disabled={isLoading || isTranscribing}
+                  title={isRecording ? "Stop recording" : "Speak to assistant"}
+                  style={{
+                    ...btnBase,
+                    backgroundColor: micActive ? "#ef4444" : "var(--bg-surface)",
+                    color: micActive ? "#fff" : "var(--text-muted)",
+                    border: micActive ? "none" : "1px solid var(--border)",
+                    animation: isRecording ? "pulse 1s ease-in-out infinite" : "none",
+                  }}
+                >
+                  {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                </button>
+
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={isRecording ? "Recording... click mic to stop" : "Ask me anything..."}
+                  disabled={isLoading || isRecording}
+                  style={{
+                    flex: 1, padding: "8px 12px", borderRadius: "20px",
+                    border: "1px solid var(--border)", backgroundColor: "var(--bg-surface)",
+                    color: "var(--text-primary)", outline: "none", fontSize: "14px",
+                  }}
+                />
+
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isLoading}
+                  style={{
+                    ...btnBase,
+                    backgroundColor: input.trim() && !isLoading ? "var(--accent)" : "var(--bg-surface)",
+                    color: input.trim() && !isLoading ? "#0f172a" : "var(--text-muted)",
+                    border: input.trim() && !isLoading ? "none" : "1px solid var(--border)",
+                    cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
+                  }}
+                >
+                  <Send size={16} style={{ marginLeft: "2px" }} />
+                </button>
+              </form>
+            </>
           )}
         </div>
       )}
