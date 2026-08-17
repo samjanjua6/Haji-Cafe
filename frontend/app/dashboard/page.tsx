@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import { AuditLogTable } from "@/components/AuditLogTable";
+import { Skeleton } from "@/components/LoadingSkeleton";
 
 interface UserProfile {
   id: number;
@@ -48,7 +49,33 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) return <div style={{ color: "var(--text-muted)", marginTop: 80, textAlign: "center" }}>Loading...</div>;
+  if (loading) return (
+    <div style={{ display: "grid", gap: 20 }}>
+      {/* Profile skeleton */}
+      <div className="card" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <Skeleton width={64} height={64} borderRadius="50%" />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+          <Skeleton width="40%" height={20} />
+          <Skeleton width="25%" height={14} />
+          <Skeleton width="20%" height={12} />
+        </div>
+      </div>
+      {/* Quick links skeleton */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+        {[1, 2].map(i => (
+          <div key={i} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <Skeleton width={52} height={52} borderRadius={12} />
+            <Skeleton width="70%" height={14} />
+          </div>
+        ))}
+      </div>
+      {/* API info skeleton */}
+      <div className="card">
+        <Skeleton width="30%" height={18} style={{ marginBottom: 16 }} />
+        <Skeleton width="50%" height={14} />
+      </div>
+    </div>
+  );
 
   const renderQuickLinks = () => {
     if (user?.role === "SUPER_ADMIN") {

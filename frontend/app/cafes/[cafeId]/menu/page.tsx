@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, ArrowLeft, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Tag, UtensilsCrossed } from "lucide-react";
 import { api } from "@/lib/api";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
+import { TableSkeleton } from "@/components/LoadingSkeleton";
+import EmptyState from "@/components/EmptyState";
 
 interface MenuItem { id: number; name: string; description: string | null; basePrice: number; isDeleted: boolean; category: { name: string } | null; }
 interface Category { id: number; name: string; }
@@ -64,7 +66,6 @@ export default function MasterMenuPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading...</div>;
 
   return (
     <div>
@@ -82,8 +83,14 @@ export default function MasterMenuPage() {
       </div>
 
       <div className="card table-wrap">
-        {items.length === 0 ? (
-          <div style={{ padding: 60, textAlign: "center", color: "var(--text-muted)" }}>No menu items yet.</div>
+        {loading ? (
+          <TableSkeleton rows={5} cols={6} />
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={UtensilsCrossed}
+            title="No menu items yet"
+            subtitle="Add items to this café's master menu. Branch overrides can be set per branch."
+          />
         ) : (
           <table>
             <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Base Price</th><th>Status</th><th>Actions</th></tr></thead>
@@ -104,7 +111,12 @@ export default function MasterMenuPage() {
                   </td>
                   <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(item.basePrice).toFixed(2)}</td>
                   <td>
-                    <span style={{ background: item.isDeleted ? "#fee2e2" : "#dcfce7", color: item.isDeleted ? "#991b1b" : "#166534", padding: "3px 10px", borderRadius: 999, fontSize: 12 }}>
+                    <span style={{
+                      background: item.isDeleted ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
+                      color: item.isDeleted ? "#f87171" : "#4ade80",
+                      border: `1px solid ${item.isDeleted ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`,
+                      padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                    }}>
                       {item.isDeleted ? "Deleted" : "Active"}
                     </span>
                   </td>

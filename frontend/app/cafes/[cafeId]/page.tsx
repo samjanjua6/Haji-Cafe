@@ -7,6 +7,9 @@ import { auth } from "@/lib/auth";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { Skeleton } from "@/components/LoadingSkeleton";
+import StatusBadge from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
 
 interface Cafe { id: number; name: string; createdAt: string; }
 interface Branch { id: number; name: string; location: string | null; }
@@ -108,7 +111,48 @@ export default function CafeDetailPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading...</div>;
+  if (loading) return (
+    <div style={{ display: "grid", gap: 24 }}>
+      {/* Header skeleton */}
+      <div className="page-header">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <Skeleton width={60} height={12} />
+          <Skeleton width={200} height={26} />
+          <Skeleton width={100} height={13} />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Skeleton width={120} height={38} borderRadius={10} />
+          <Skeleton width={120} height={38} borderRadius={10} />
+        </div>
+      </div>
+      {/* Branches skeleton */}
+      <Skeleton width={160} height={20} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Skeleton width="60%" height={18} />
+            <Skeleton width="40%" height={13} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <Skeleton width={90} height={30} borderRadius={8} />
+              <Skeleton width={80} height={30} borderRadius={8} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Orders skeleton */}
+      <Skeleton width={140} height={20} />
+      <div className="card">
+        {[1,2,3,4].map(i => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr 1fr", gap: 16, padding: "14px 0", borderBottom: "1px solid var(--border-subtle)" }}>
+            <Skeleton width="60%" height={14} />
+            <Skeleton width="50%" height={22} borderRadius={99} />
+            <Skeleton width="70%" height={14} />
+            <Skeleton width="80%" height={14} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -169,17 +213,21 @@ export default function CafeDetailPage() {
       </h3>
       <div className="card table-wrap">
         {orders.length === 0 ? (
-          <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>No orders found.</div>
+          <EmptyState
+            icon={ShoppingCart}
+            title="No orders yet"
+            subtitle="Orders placed across all branches of this café will appear here."
+          />
         ) : (
           <table>
             <thead><tr><th>Order ID</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
             <tbody>
               {orders.map(o => (
                 <tr key={o.id}>
-                  <td style={{ color: "var(--text-muted)" }}>#{o.id}</td>
-                  <td><span style={{ background: "var(--bg-surface)", padding: "3px 10px", borderRadius: 999, fontSize: 12 }}>{o.status}</span></td>
-                  <td style={{ fontWeight: 600, color: "var(--accent)" }}>${Number(o.totalAmount).toFixed(2)}</td>
-                  <td style={{ color: "var(--text-muted)" }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>#{o.id}</td>
+                  <td><StatusBadge status={o.status} /></td>
+                  <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(o.totalAmount).toFixed(2)}</td>
+                  <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(o.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
