@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Coffee, LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
@@ -14,16 +14,26 @@ function AuthContent() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Prefetch the dashboard JS bundle immediately so navigation is instant
   useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/cafes");
+
     const accessToken = searchParams.get("access_token");
     const refreshToken = searchParams.get("refresh_token");
-
     if (accessToken && refreshToken) {
       auth.setTokens(accessToken, refreshToken);
       toast.success("Successfully logged in with Google!");
       router.push("/dashboard");
     }
   }, [searchParams, router]);
+
+  // If user is already logged in, redirect immediately
+  useEffect(() => {
+    if (auth.isLoggedIn()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +43,13 @@ function AuthContent() {
       const data: any = await api.post(endpoint, { email, password });
       auth.setTokens(data.access_token, data.refresh_token);
       toast.success(tab === "login" ? "Welcome back!" : "Account created!");
+      // Navigate immediately — don't wait for anything else
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("Auth Error:", err);
       toast.error(err.message || "An unexpected error occurred");
-    } finally {
       setLoading(false);
     }
+    // Note: don't setLoading(false) on success — keep spinner showing during navigation
   };
 
   const handleGoogle = () => {
@@ -88,14 +98,17 @@ function AuthContent() {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
             </div>
             <div>
               <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
             </div>
             <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center", marginTop: 4 }}>
-              {tab === "login" ? <><LogIn size={16} /> {loading ? "Signing in..." : "Sign In"}</> : <><UserPlus size={16} /> {loading ? "Creating..." : "Create Account"}</>}
+              {loading
+                ? <><span className="spinner" /> {tab === "login" ? "Signing in..." : "Creating..."}</>
+                : tab === "login" ? <><LogIn size={16} /> Sign In</> : <><UserPlus size={16} /> Create Account</>
+              }
             </button>
           </form>
 
@@ -122,7 +135,11 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>}>
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span className="spinner spinner-light" style={{ width: 28, height: 28, borderWidth: 3 }} />
+      </div>
+    }>
       <AuthContent />
     </Suspense>
   );

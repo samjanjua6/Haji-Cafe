@@ -2,28 +2,24 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Coffee, LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed
 } from "lucide-react";
-import { useState, useEffect } from "react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
-interface UserProfile {
-  id: number;
-  email: string;
-  role: string;
-  scopes: { cafeId: number | null; branchId: number | null; cafeName: string | null; branchName: string | null }[];
-}
-
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: any; active: boolean }) {
   return (
     <Link
       href={href}
+      prefetch={true}
       style={{
         display: "flex",
         alignItems: "center",
@@ -38,7 +34,6 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
         background: active ? "var(--accent-muted)" : "transparent",
         borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
         transition: "all 0.15s ease",
-        position: "relative",
       }}
       onMouseEnter={e => {
         if (!active) {
@@ -64,14 +59,11 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(true);
-  const [user, setUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    if (auth.isLoggedIn()) {
-      api.get<UserProfile>("/auth/me").then(setUser).catch(() => {});
-    }
-  }, []);
+  // Share the user profile with Dashboard — no duplicate network call
+  const { data: user } = useCurrentUser();
 
   const handleLogout = async () => {
     try {
@@ -81,6 +73,8 @@ export default function Sidebar() {
       }
     } catch {}
     auth.clear();
+    // Clear all cached queries so no stale data shows on next login
+    queryClient.clear();
     toast.success("Logged out");
     router.push("/");
   };
@@ -88,6 +82,7 @@ export default function Sidebar() {
   const dynamicLinks = [...navItems];
   if (user?.role === "SUPER_ADMIN") {
     dynamicLinks.push({ href: "/cafes", label: "All Cafés", icon: Store });
+    dynamicLinks.push({ href: "/admin/users", label: "User Management", icon: LayoutDashboard });
   } else if (user?.role === "CAFE_OWNER") {
     user.scopes.forEach((scope) => {
       dynamicLinks.push({ href: `/cafes/${scope.cafeId}`, label: scope.cafeName || `Café #${scope.cafeId}`, icon: Store });
@@ -130,7 +125,7 @@ export default function Sidebar() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", color: "var(--text-primary)" }}>Haji Cafe</div>
               <div style={{ fontSize: 10, color: "var(--accent)", whiteSpace: "nowrap", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                {user?.role ? user.role.replace(/_/g, " ") : "Dashboard"}
+                {user?.role ? user.role.replace(/_/g, " ") : "Loading..."}
               </div>
             </div>
           </div>
@@ -173,37 +168,37 @@ export default function Sidebar() {
         </nav>
 
         {/* User footer */}
-        {user && (
-          <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)" }}>
+        <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)" }}>
+          {user && (
             <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {user.email}
             </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "9px 14px",
-                borderRadius: "var(--radius-md)",
-                fontSize: 14,
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-                color: "var(--danger)",
-                background: "transparent",
-                border: "none",
-                width: "100%",
-                transition: "background 0.15s",
-                fontWeight: 500,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--danger-glow)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={handleLogout}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 14px",
+              borderRadius: "var(--radius-md)",
+              fontSize: 14,
+              whiteSpace: "nowrap",
+              cursor: "pointer",
+              color: "var(--danger)",
+              background: "transparent",
+              border: "none",
+              width: "100%",
+              transition: "background 0.15s",
+              fontWeight: 500,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--danger-glow)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
       </aside>
 
       {/* Spacer */}
