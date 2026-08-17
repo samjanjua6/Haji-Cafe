@@ -71,7 +71,7 @@ export default function CafeModals({
             />
           </div>
           <button className="btn btn-primary" type="submit" disabled={createMutation.isPending} style={{ justifyContent: "center" }}>
-            {createMutation.isPending ? "Creating..." : "Create Café"}
+            {createMutation.isPending ? <><span className="spinner" /> Creating...</> : "Create Café"}
           </button>
         </form>
       </Modal>
@@ -88,7 +88,7 @@ export default function CafeModals({
             />
           </div>
           <button className="btn btn-primary" type="submit" disabled={editMutation.isPending} style={{ justifyContent: "center" }}>
-            {editMutation.isPending ? "Saving..." : "Save Changes"}
+            {editMutation.isPending ? <><span className="spinner" /> Saving...</> : "Save Changes"}
           </button>
         </form>
       </Modal>

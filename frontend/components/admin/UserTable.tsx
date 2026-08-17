@@ -1,6 +1,9 @@
 "use client";
 
+import { Users } from "lucide-react";
 import { User } from "@/types/auth";
+import { TableSkeleton } from "@/components/LoadingSkeleton";
+import EmptyState from "@/components/EmptyState";
 
 interface UserTableProps {
   users: User[];
@@ -10,60 +13,105 @@ interface UserTableProps {
   onRemoveScope: (userId: number, scopeId: number) => void;
 }
 
-export default function UserTable({ users, loading, onRoleChange, onAssignScope, onRemoveScope }: UserTableProps) {
-  if (loading) return <div style={{ padding: 20 }}>Loading users...</div>;
+const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
+  SUPER_ADMIN: { bg: "rgba(239, 68, 68, 0.1)", color: "#f87171" },
+  CAFE_OWNER: { bg: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" },
+  BRANCH_MANAGER: { bg: "rgba(59, 130, 246, 0.1)", color: "#60a5fa" },
+  STAFF: { bg: "rgba(34, 197, 94, 0.1)", color: "#4ade80" },
+};
 
+export default function UserTable({ users, loading, onRoleChange, onAssignScope, onRemoveScope }: UserTableProps) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--bg-surface)", borderRadius: 8, overflow: "hidden" }}>
-      <thead>
-        <tr style={{ background: "rgba(255,255,255,0.05)", textAlign: "left" }}>
-          <th style={{ padding: 12 }}>ID</th>
-          <th style={{ padding: 12 }}>Email</th>
-          <th style={{ padding: 12 }}>Role</th>
-          <th style={{ padding: 12 }}>Assignments</th>
-          <th style={{ padding: 12 }}>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {users.map(u => (
-          <tr key={u.id} style={{ borderTop: "1px solid var(--border)" }}>
-            <td style={{ padding: 12 }}>{u.id}</td>
-            <td style={{ padding: 12 }}>{u.email}</td>
-            <td style={{ padding: 12 }}>
-              <select 
-                value={u.role.name} 
-                onChange={e => onRoleChange(u.id, e.target.value)}
-                style={{ background: "transparent", color: "inherit", border: "1px solid var(--border)", borderRadius: 4, padding: "4px 8px" }}
-              >
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                <option value="CAFE_OWNER">CAFE_OWNER</option>
-                <option value="BRANCH_MANAGER">BRANCH_MANAGER</option>
-                <option value="STAFF">STAFF</option>
-              </select>
-            </td>
-            <td style={{ padding: 12 }}>
-              {u.userScopes.length === 0 ? <span style={{ color: "var(--text-muted)", fontSize: 12 }}>None</span> : null}
-              {u.userScopes.map(s => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 4 }}>
-                  <span style={{ background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4 }}>
-                    {s.cafe ? `Cafe: ${s.cafe.name}` : ""}
-                    {s.branch ? `Branch: ${s.branch.name}` : ""}
-                  </span>
-                  <button 
-                    onClick={() => onRemoveScope(u.id, s.id)}
-                    style={{ background: "transparent", border: "none", color: "red", cursor: "pointer", fontSize: 12 }}
-                  >×</button>
-                </div>
-              ))}
-            </td>
-            <td style={{ padding: 12 }}>
-              <button className="btn btn-sm" style={{ background: "var(--bg-base)" }} onClick={() => onAssignScope(u.id)}>
-                Assign
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="card table-wrap">
+      {loading ? (
+        <TableSkeleton rows={5} cols={5} />
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No users found"
+          subtitle="Users who register on the platform will appear here."
+        />
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Assignments</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => {
+              const roleStyle = ROLE_COLORS[u.role.name] || { bg: "rgba(148,163,184,0.1)", color: "#94a3b8" };
+              return (
+                <tr key={u.id}>
+                  <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>{u.id}</td>
+                  <td style={{ fontWeight: 500 }}>{u.email}</td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{
+                        background: roleStyle.bg,
+                        color: roleStyle.color,
+                        padding: "3px 10px",
+                        borderRadius: 99,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}>
+                        {u.role.name.replace("_", " ")}
+                      </span>
+                      <select
+                        value={u.role.name}
+                        onChange={e => onRoleChange(u.id, e.target.value)}
+                        style={{ width: "auto", padding: "4px 8px", fontSize: 12 }}
+                      >
+                        <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                        <option value="CAFE_OWNER">CAFE_OWNER</option>
+                        <option value="BRANCH_MANAGER">BRANCH_MANAGER</option>
+                        <option value="STAFF">STAFF</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td>
+                    {u.userScopes.length === 0 ? (
+                      <span style={{ color: "var(--text-faint)", fontSize: 12 }}>None</span>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {u.userScopes.map(s => (
+                          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{
+                              background: "var(--bg-surface)",
+                              border: "1px solid var(--border)",
+                              padding: "2px 8px",
+                              borderRadius: 6,
+                              fontSize: 12,
+                              color: "var(--text-muted)"
+                            }}>
+                              {s.cafe ? `☕ ${s.cafe.name}` : ""}
+                              {s.branch ? `🏪 ${s.branch.name}` : ""}
+                            </span>
+                            <button
+                              onClick={() => onRemoveScope(u.id, s.id)}
+                              style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 14, lineHeight: 1 }}
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <button className="btn btn-ghost btn-sm" onClick={() => onAssignScope(u.id)}>
+                      Assign
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }

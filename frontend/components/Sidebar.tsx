@@ -2,8 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Coffee, LayoutDashboard, Store, GitBranch,
-  ShoppingCart, LogOut, Menu, X
+  Coffee, LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/auth";
@@ -19,6 +18,47 @@ interface UserProfile {
   email: string;
   role: string;
   scopes: { cafeId: number | null; branchId: number | null; cafeName: string | null; branchName: string | null }[];
+}
+
+function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: any; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderRadius: "var(--radius-md)",
+        fontWeight: active ? 600 : 400,
+        fontSize: 14,
+        whiteSpace: "nowrap",
+        textDecoration: "none",
+        color: active ? "var(--accent)" : "var(--text-muted)",
+        background: active ? "var(--accent-muted)" : "transparent",
+        borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
+        transition: "all 0.15s ease",
+        position: "relative",
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.04)";
+          (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(2px)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)";
+          (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+          (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(0)";
+        }
+      }}
+    >
+      <Icon size={17} />
+      {label}
+    </Link>
+  );
 }
 
 export default function Sidebar() {
@@ -84,103 +124,86 @@ export default function Sidebar() {
         {/* Logo */}
         <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: 10, overflow: "hidden", background: "var(--bg-surface)", flexShrink: 0 }}>
               <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>Haji Cafe</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{user?.role ? user.role.replace("_", " ") : "Dashboard"}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", color: "var(--text-primary)" }}>Haji Cafe</div>
+              <div style={{ fontSize: 10, color: "var(--accent)", whiteSpace: "nowrap", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                {user?.role ? user.role.replace(/_/g, " ") : "Dashboard"}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-          {dynamicLinks.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  fontWeight: active ? 600 : 400,
-                  fontSize: 14,
-                  whiteSpace: "nowrap",
-                  textDecoration: "none",
-                  color: active ? "#0f172a" : "var(--text-muted)",
-                  background: active ? "var(--accent)" : "transparent",
-                  transition: "all 0.15s",
-                }}
-              >
-                <Icon size={18} />
-                {label}
-              </Link>
-            );
-          })}
+        <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+          {dynamicLinks.map(({ href, label, icon }) => (
+            <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
+          ))}
 
-          {/* Scoped Branch Links for Branch Managers */}
+          {/* Scoped Branch Links */}
           {user?.role === "BRANCH_MANAGER" && user.scopes.map((scope, idx) => (
             <div key={idx} style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.5, padding: "0 14px", marginBottom: 8 }}>
+              <div style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: "var(--text-faint)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                padding: "0 14px",
+                marginBottom: 6,
+              }}>
                 {scope.branchName || `Branch #${scope.branchId}`}
               </div>
-              <Link
+              <NavLink
                 href={`/branches/${scope.branchId}/orders`}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
-                  fontWeight: pathname.includes(`/branches/${scope.branchId}/orders`) ? 600 : 400,
-                  fontSize: 14, textDecoration: "none",
-                  color: pathname.includes(`/branches/${scope.branchId}/orders`) ? "#0f172a" : "var(--text-muted)",
-                  background: pathname.includes(`/branches/${scope.branchId}/orders`) ? "var(--accent)" : "transparent",
-                }}
-              >
-                <ShoppingCart size={18} /> Orders
-              </Link>
-              <Link
+                label="Orders"
+                icon={ShoppingCart}
+                active={pathname.includes(`/branches/${scope.branchId}/orders`)}
+              />
+              <NavLink
                 href={`/branches/${scope.branchId}/menu`}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
-                  fontWeight: pathname.includes(`/branches/${scope.branchId}/menu`) ? 600 : 400,
-                  fontSize: 14, textDecoration: "none",
-                  color: pathname.includes(`/branches/${scope.branchId}/menu`) ? "#0f172a" : "var(--text-muted)",
-                  background: pathname.includes(`/branches/${scope.branchId}/menu`) ? "var(--accent)" : "transparent",
-                }}
-              >
-                <Store size={18} /> Branch Menu
-              </Link>
+                label="Branch Menu"
+                icon={UtensilsCrossed}
+                active={pathname.includes(`/branches/${scope.branchId}/menu`)}
+              />
             </div>
           ))}
         </nav>
 
-        {/* Logout */}
-        <div style={{ padding: "16px 12px", borderTop: "1px solid var(--border)" }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "10px 14px",
-              borderRadius: 8,
-              fontSize: 14,
-              whiteSpace: "nowrap",
-              cursor: "pointer",
-              color: "#ef4444",
-              background: "transparent",
-              border: "none",
-              width: "100%",
-              transition: "background 0.15s",
-            }}
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </div>
+        {/* User footer */}
+        {user && (
+          <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {user.email}
+            </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 14px",
+                borderRadius: "var(--radius-md)",
+                fontSize: 14,
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+                color: "var(--danger)",
+                background: "transparent",
+                border: "none",
+                width: "100%",
+                transition: "background 0.15s",
+                fontWeight: 500,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--danger-glow)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Spacer */}

@@ -163,7 +163,7 @@ export default function OrderModals({
             </div>
           )}
           <button className="btn btn-primary" type="submit" disabled={placeMutation.isPending} style={{ justifyContent: "center" }}>
-            {placeMutation.isPending ? "Placing Order..." : "Place Order"}
+            {placeMutation.isPending ? <><span className="spinner" /> Placing Order...</> : "Place Order"}
           </button>
         </form>
       </Modal>
