@@ -12,9 +12,12 @@ logger = logging.getLogger("livekit-agent")
 
 async def entrypoint(ctx: JobContext):
     # Initial context for the AI
-    initial_ctx = llm.ChatContext().append(
-        role="system",
-        text="You are a helpful AI assistant for Haji Cafe. Keep your responses conversational, warm, and concise.",
+    initial_ctx = llm.ChatContext()
+    initial_ctx.messages.append(
+        llm.ChatMessage(
+            role="system",
+            content="You are a helpful AI assistant for Haji Cafe. Keep your responses conversational, warm, and concise."
+        )
     )
 
     # Connect to the LiveKit room, subscribing only to audio tracks (microphone)

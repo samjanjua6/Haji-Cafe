@@ -152,7 +152,8 @@ export default function ChatbotWidget() {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
             if (lastMsg && lastMsg.role === "model" && lastMsg.content !== undefined) {
-              lastMsg.content += data.chunk;
+              const updatedMsg = { ...lastMsg, content: lastMsg.content + data.chunk };
+              newMessages[newMessages.length - 1] = updatedMsg;
             } else {
               newMessages.push({ role: "model", content: data.chunk });
             }
