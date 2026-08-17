@@ -1,9 +1,12 @@
 import asyncio
 import logging
+import os
+from dotenv import load_dotenv
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
 from livekit.agents.voice import Agent
 from livekit.plugins import groq, deepgram, elevenlabs
-import os
+
+load_dotenv()
 
 logger = logging.getLogger("livekit-agent")
 
