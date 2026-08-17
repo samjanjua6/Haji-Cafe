@@ -3,9 +3,11 @@
 import Modal from "@/components/Modal";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
-import { BranchMenuItem } from "@/types/menu";
+import { BranchMenuItem, MasterMenuItem } from "@/types/menu";
+import { Cafe } from "@/types/cafe";
 import { Dispatch, SetStateAction } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export interface BranchMenuFormState {
   masterItemId: string;
@@ -37,6 +39,23 @@ export default function BranchMenuModals({
   setForm,
   onSuccess,
 }: BranchMenuModalsProps) {
+  const { data: user } = useCurrentUser();
+  const branchScope = user?.scopes?.find((s) => String(s.branchId) === String(branchId));
+
+  // If SUPER_ADMIN without specific scope, fetch all cafes to deduce the cafeId
+  const { data: cafes } = useQuery({
+    queryKey: ["all-cafes-for-branch-deduction"],
+    queryFn: () => api.get<Cafe[]>("/cafes"),
+    enabled: user?.role === "SUPER_ADMIN" && !branchScope,
+  });
+
+  const cafeId = branchScope?.cafeId || cafes?.find((c) => c.branches?.some((b) => String(b.id) === String(branchId)))?.id;
+
+  const { data: masterMenu = [], isLoading: loadingMaster } = useQuery({
+    queryKey: ["masterMenu", cafeId],
+    queryFn: () => api.get<MasterMenuItem[]>(`/cafes/${cafeId}/menu`),
+    enabled: !!cafeId,
+  });
 
   const upsertMutation = useMutation({
     mutationFn: (data: any) => api.post(`/branches/${branchId}/menu`, data),
@@ -85,8 +104,21 @@ export default function BranchMenuModals({
       <Modal open={upsertModal} onClose={() => setUpsertModal(false)} title="Upsert Branch Menu Item">
         <form onSubmit={handleUpsert} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label>Master Item ID</label>
-            <input type="number" value={form.masterItemId} onChange={e => setForm({ ...form, masterItemId: e.target.value })} placeholder="e.g. 1" required />
+            <label>Master Item</label>
+            <select
+              value={form.masterItemId}
+              onChange={(e) => setForm({ ...form, masterItemId: e.target.value })}
+              required
+              style={{ width: "100%", padding: 10, background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)" }}
+              disabled={loadingMaster}
+            >
+              <option value="">Select an item from the Master Menu...</option>
+              {masterMenu.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} (${item.basePrice.toFixed(2)})
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label>Price Override ($) — leave blank to use base price</label>
