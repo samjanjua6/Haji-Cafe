@@ -32,6 +32,8 @@ from livekit.plugins import groq, deepgram, elevenlabs, silero
 
 load_dotenv()
 
+# Enable debug logging for LiveKit to see exactly why tools or TTS are failing
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("livekit-agent")
 
 # Pre-load Silero VAD model once at startup — avoids the download delay per job
@@ -175,16 +177,31 @@ async def _run_session(ctx: JobContext):
     logger.info(f"Voice agent ready with {len(tools)} tools for role {current_user.role.name}")
 
     # ------------------------------------------------------------------
-    # 4. Start the voice session
+    # 4. Determine TTS Provider (fallback to avoid silent failures if out of credits)
+    # ------------------------------------------------------------------
+    if os.environ.get("ELEVENLABS_API_KEY"):
+        logger.info("Using ElevenLabs TTS")
+        tts_provider = elevenlabs.TTS(
+            voice_id=os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+            api_key=os.environ.get("ELEVENLABS_API_KEY"),
+        )
+    elif os.environ.get("OPENAI_API_KEY"):
+        logger.info("Using OpenAI TTS (fallback)")
+        from livekit.plugins import openai
+        tts_provider = openai.TTS()
+    else:
+        logger.error("NO TTS API KEY FOUND! Agent will not be able to speak.")
+        # We will still instantiate with elevenlabs but it will fail when called
+        tts_provider = elevenlabs.TTS()
+
+    # ------------------------------------------------------------------
+    # 5. Start the voice session
     # ------------------------------------------------------------------
     session = AgentSession(
         vad=_vad,
         stt=deepgram.STT(),
         llm=groq.LLM(model="openai/gpt-oss-120b"),
-        tts=elevenlabs.TTS(
-            voice_id=os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
-            api_key=os.environ.get("ELEVENLABS_API_KEY"),
-        ),
+        tts=tts_provider,
     )
 
     await session.start(
