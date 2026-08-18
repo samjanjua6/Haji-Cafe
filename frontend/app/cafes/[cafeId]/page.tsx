@@ -130,14 +130,6 @@ export default function CafeDetailPage() {
           <div className="page-subtitle">Café ID: #{cafeId}</div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          {currentUser?.role === "CAFE_OWNER" && (
-            <Link href={`/cafes/${cafeId}/staff`} className="btn btn-ghost" style={{ color: "#3b82f6", background: "#3b82f611" }}>
-              <Users size={15} /> Staff & Meetings
-            </Link>
-          )}
-          <Link href={`/cafes/${cafeId}/menu`} className="btn btn-ghost">
-            <UtensilsCrossed size={15} /> Master Menu
-          </Link>
           <button className="btn btn-primary" onClick={() => { setBranchName(""); setBranchLocation(""); setCreateBranch(true); }}>
             <Plus size={15} /> Add Branch
           </button>

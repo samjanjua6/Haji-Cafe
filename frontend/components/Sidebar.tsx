@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -83,10 +83,6 @@ export default function Sidebar() {
   if (user?.role === "SUPER_ADMIN") {
     dynamicLinks.push({ href: "/cafes", label: "All Cafés", icon: Store });
     dynamicLinks.push({ href: "/admin/users", label: "User Management", icon: LayoutDashboard });
-  } else if (user?.role === "CAFE_OWNER") {
-    user.scopes.forEach((scope) => {
-      dynamicLinks.push({ href: `/cafes/${scope.cafeId}`, label: scope.cafeName || `Café #${scope.cafeId}`, icon: Store });
-    });
   }
 
   return (
@@ -135,6 +131,41 @@ export default function Sidebar() {
         <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
           {dynamicLinks.map(({ href, label, icon }) => (
             <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
+          ))}
+
+          {/* Scoped Cafe Links */}
+          {user?.role === "CAFE_OWNER" && user.scopes.map((scope, idx) => (
+            <div key={`cafe-${idx}`} style={{ marginTop: 16 }}>
+              <div style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: "var(--text-faint)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                padding: "0 14px",
+                marginBottom: 6,
+              }}>
+                {scope.cafeName || `Café #${scope.cafeId}`}
+              </div>
+              <NavLink
+                href={`/cafes/${scope.cafeId}`}
+                label="Overview"
+                icon={Store}
+                active={pathname === `/cafes/${scope.cafeId}`}
+              />
+              <NavLink
+                href={`/cafes/${scope.cafeId}/menu`}
+                label="Master Menu"
+                icon={UtensilsCrossed}
+                active={pathname.includes(`/cafes/${scope.cafeId}/menu`)}
+              />
+              <NavLink
+                href={`/cafes/${scope.cafeId}/staff`}
+                label="Staff & Meetings"
+                icon={Users}
+                active={pathname.includes(`/cafes/${scope.cafeId}/staff`)}
+              />
+            </div>
           ))}
 
           {/* Scoped Branch Links */}
