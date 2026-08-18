@@ -139,7 +139,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 4 }}>
-                Member since {new Date(user.createdAt).toLocaleDateString()}
+                Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
               </div>
             </div>
           </div>
