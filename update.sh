@@ -20,6 +20,9 @@ pip install -r requirements.txt --quiet
 echo "==> Regenerating Prisma client..."
 prisma generate
 
+echo "==> Pushing database schema changes..."
+prisma db push --accept-data-loss
+
 echo "==> Rebuilding frontend..."
 cd frontend
 npm install --silent
