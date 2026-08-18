@@ -62,6 +62,7 @@ async def me(current_user=Depends(get_current_user)):
         "id": current_user.id,
         "email": current_user.email,
         "role": current_user.role.name,
+        "createdAt": current_user.createdAt.isoformat() if current_user.createdAt else None,
         "auth_provider": current_user.authProvider,
         "has_google_calendar": bool(getattr(current_user, "googleAccessToken", None)),
         "scopes": [

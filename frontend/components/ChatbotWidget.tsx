@@ -6,13 +6,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { auth } from "@/lib/auth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLayoutStore } from "@/lib/store";
 
 import {
   LiveKitRoom,
   RoomAudioRenderer,
   BarVisualizer,
   useVoiceAssistant,
+  useRoomContext,
 } from "@livekit/components-react";
+import { RoomEvent, TranscriptionSegment } from "livekit-client";
 import "@livekit/components-styles";
 
 type Message = {
@@ -37,59 +40,99 @@ const btnBase: React.CSSProperties = {
 function LiveModeUI({ onEndLive }: { onEndLive: () => void }) {
   const { state, audioTrack } = useVoiceAssistant();
 
-  return (
-    <div style={{ padding: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", backgroundColor: "var(--bg-card)" }}>
-      <div style={{ marginBottom: 8, fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>
-        {state === "speaking" && "Assistant is speaking..."}
-        {state === "listening" && "Listening..."}
-        {state === "thinking" && "Assistant is thinking..."}
-        {(state === "connecting" || state === "disconnected" || state === "initializing") && "Connecting..."}
-      </div>
-      
-      <div style={{ height: 40, width: "100%", display: "flex", justifyContent: "center", marginBottom: 12 }}>
-        <BarVisualizer
-          state={state}
-          barCount={5}
-          trackRef={audioTrack}
-          style={{ width: "100px", height: "100%" }}
-          options={{ minHeight: 4 }}
-        />
-      </div>
+  let statusText = "Connecting...";
+  if (state === "speaking") statusText = "Assistant is speaking...";
+  else if (state === "listening") statusText = "Listening...";
+  else if (state === "thinking") statusText = "Assistant is thinking...";
 
+  return (
+    <div style={{
+      padding: "12px", borderTop: "1px solid var(--border)",
+      display: "flex", alignItems: "center", gap: "12px",
+      backgroundColor: "var(--bg-card)",
+    }}>
+      {/* End Session Button */}
       <button
         onClick={onEndLive}
+        title="End Live Session"
         style={{
-          padding: "6px 16px", borderRadius: "16px", fontSize: "13px",
-          backgroundColor: "#ef4444", color: "#fff", border: "none",
-          cursor: "pointer", fontWeight: 600
+          ...btnBase,
+          backgroundColor: "#ef4444",
+          color: "#fff",
+          animation: state === "listening" ? "pulse 1.5s ease-in-out infinite" : "none",
         }}
       >
-        End Live Session
+        <MicOff size={16} />
       </button>
+
+      {/* Status & Visualizer */}
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 16px", borderRadius: "20px",
+        backgroundColor: "var(--bg-surface)", border: "1px solid var(--border)"
+      }}>
+        <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 500 }}>
+          {statusText}
+        </span>
+        
+        <div style={{ height: "20px", width: "60px", display: "flex", alignItems: "center" }}>
+          <BarVisualizer
+            state={state}
+            barCount={5}
+            trackRef={audioTrack}
+            style={{ width: "100%", height: "100%" }}
+            options={{ minHeight: 3 }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
-// Sub-component to sync LiveKit Chat to the parent state
-import { useChat } from "@livekit/components-react";
+// Sub-component to sync LiveKit Transcriptions to the parent chat state
 function LiveChatSync({ setLiveMessages }: { setLiveMessages: (msgs: Message[]) => void }) {
-  const { chatMessages } = useChat();
+  const room = useRoomContext();
+  const [transcripts, setTranscripts] = useState<Record<string, { role: "user" | "model", text: string, timestamp: number }>>({});
 
   useEffect(() => {
-    const newMsgs: Message[] = chatMessages.map((msg) => ({
-      // If from identity is undefined or not user, assume model
-      role: msg.from?.identity === auth.getUser()?.id?.toString() || msg.from?.identity === "user" ? "user" : "model",
-      content: msg.message,
-    }));
-    setLiveMessages(newMsgs);
-  }, [chatMessages, setLiveMessages]);
+    if (!room) return;
+    const onTranscription = (segments: TranscriptionSegment[], participant?: any) => {
+      setTranscripts(prev => {
+        const next = { ...prev };
+        let changed = false;
+        segments.forEach(seg => {
+          const role = participant?.isLocal ? "user" : "model";
+          if (seg.text.trim()) {
+            const existing = prev[seg.id];
+            const ts = existing ? existing.timestamp : Date.now();
+            next[seg.id] = { role, text: seg.text, timestamp: ts };
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    };
+    room.on(RoomEvent.TranscriptionReceived, onTranscription);
+    return () => {
+      room.off(RoomEvent.TranscriptionReceived, onTranscription);
+    };
+  }, [room]);
+
+  useEffect(() => {
+    const sorted = Object.values(transcripts).sort((a, b) => a.timestamp - b.timestamp);
+    const msgs: Message[] = sorted.map(s => ({ role: s.role, content: s.text }));
+    setLiveMessages(msgs);
+  }, [transcripts, setLiveMessages]);
 
   return null;
 }
 
 // --- Main Chatbot Widget ---
 export default function ChatbotWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+  const isChatbotOpen = useLayoutStore((s) => s.isChatbotOpen);
+  const setChatbotOpen = useLayoutStore((s) => s.setChatbotOpen);
+  const isOpen = isChatbotOpen;
+  const setIsOpen = setChatbotOpen;
   const { data: user } = useCurrentUser();
   const isLoggedIn = !!user;
 
@@ -390,38 +433,21 @@ export default function ChatbotWidget() {
 
   return (
     <>
-      {/* Floating Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          style={{
-            position: "fixed", bottom: "24px", right: "24px",
-            width: "56px", height: "56px", borderRadius: "50%",
-            backgroundColor: "var(--accent)", color: "#0f172a", border: "none",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 9999, transition: "transform 0.2s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          <MessageCircle size={28} />
-        </button>
-      )}
-
       {/* Chat Window */}
-      {isOpen && (
-        <div style={{
-          position: "fixed", bottom: "24px", right: "24px",
-          width: "420px", height: "600px",
-          backgroundColor: "var(--bg-card)", borderRadius: "12px",
-          boxShadow: "0 20px 25px -5px rgba(0,0,0,0.5), 0 10px 10px -5px rgba(0,0,0,0.2)",
-          display: "flex", flexDirection: "column",
-          zIndex: 9999, overflow: "hidden", border: "1px solid var(--border)",
-        }}>
+      <div style={{
+        width: isOpen ? "400px" : "0px", 
+        height: "100%",
+        opacity: isOpen ? 1 : 0,
+        backgroundColor: "var(--bg-card)",
+        borderLeft: isOpen ? "1px solid var(--border)" : "none",
+        display: "flex", flexDirection: "column",
+        flexShrink: 0, overflow: "hidden", zIndex: 40,
+        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-left 0.3s",
+      }}>
           {/* Header */}
           <div style={{
-            padding: "16px", backgroundColor: "var(--bg-surface)",
+            height: "var(--topbar-height, 60px)", padding: "0 16px",
+            backgroundColor: "var(--bg-surface)", flexShrink: 0,
             color: "var(--text-primary)", borderBottom: "1px solid var(--border)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
             zIndex: 10
@@ -554,6 +580,8 @@ export default function ChatbotWidget() {
                 audio={true}
                 video={false}
                 onDisconnected={() => { setIsLiveMode(false); setLivekitToken(""); }}
+                style={{ display: "contents" }}
+                data-lk-theme="none"
               >
                 <RoomAudioRenderer />
                 <LiveChatSync setLiveMessages={setLiveMessages} />
@@ -623,7 +651,6 @@ export default function ChatbotWidget() {
               </form>
           )}
         </div>
-      )}
     </>
   );
 }

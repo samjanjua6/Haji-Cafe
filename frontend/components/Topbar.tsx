@@ -1,8 +1,9 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, PanelRight } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLayoutStore } from "@/lib/store";
 
 // Converts a URL segment to a readable label
 function segmentToLabel(segment: string): string {
@@ -82,6 +83,7 @@ function UserAvatar({ email, role }: { email: string; role: string }) {
 export default function Topbar() {
   const crumbs = useBreadcrumbs();
   const { data: user } = useCurrentUser();
+  const toggleChatbot = useLayoutStore((s) => s.toggleChatbot);
 
   return (
     <header className="topbar">
@@ -138,10 +140,32 @@ export default function Topbar() {
         })}
       </nav>
 
-      {/* Right side — user identity */}
-      {user && (
-        <UserAvatar email={user.email} role={user.role} />
-      )}
+      {/* Right side — user identity & chatbot toggle */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <button
+          onClick={toggleChatbot}
+          style={{
+            padding: "6px",
+            borderRadius: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: "none",
+            color: "var(--text-muted)",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.background = "var(--bg-surface)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
+          title="Toggle Assistant"
+        >
+          <PanelRight size={18} />
+        </button>
+        {user && (
+          <UserAvatar email={user.email} role={user.role} />
+        )}
+      </div>
     </header>
   );
 }
