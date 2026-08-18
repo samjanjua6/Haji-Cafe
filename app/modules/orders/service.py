@@ -69,7 +69,7 @@ async def get_order_detail(branch_id: int, order_id: int):
     return order
 
 
-async def transition_status(branch_id: int, order_id: int, new_status: OrderStatusEnum):
+async def transition_status(branch_id: int, order_id: int, new_status: OrderStatusEnum, user_id: Optional[int] = None):
     """
     Enforce the strict state machine:
       PENDING → IN_PREPARATION
@@ -86,7 +86,7 @@ async def transition_status(branch_id: int, order_id: int, new_status: OrderStat
             f"Allowed: {[s.value for s in allowed_transitions] or 'none (terminal state)'}"
         )
 
-    return await repository.update_order_status(order_id, new_status.value)
+    return await repository.update_order_status(order_id, new_status.value, user_id)
 
 
 async def get_cafe_orders(cafe_id: int):

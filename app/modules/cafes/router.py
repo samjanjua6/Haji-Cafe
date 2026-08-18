@@ -142,3 +142,31 @@ async def schedule_meeting(
         end_time=body.end_time,
         attendee_user_ids=body.attendee_user_ids,
     )
+
+# ── Dashboard Alerts Endpoints ────────────────────────────────────────
+
+@router.get("/{cafe_id}/low-stock-alerts")
+async def get_low_stock_alerts(
+    cafe_id: int,
+    _=Depends(require_cafe_access()),
+):
+    """[CAFE_OWNER, SUPER_ADMIN] Get low stock alerts for a café's dashboard widget."""
+    from app.modules.menu.repository import get_all_branch_items_by_cafe
+    items = await get_all_branch_items_by_cafe(cafe_id)
+    alerts = []
+    for item in items:
+        # A manual override to false immediately triggers a sold-out alert
+        if item.isInStock is False or (item.availableQuantity is not None and item.availableQuantity <= item.lowStockThreshold):
+            status_text = "Sold Out" if item.availableQuantity == 0 or not item.isInStock else "Low Stock"
+            if not item.isInStock:
+                status_text = "Sold Out (Manual Override)"
+            alerts.append({
+                "id": item.id,
+                "branchId": item.branchId,
+                "branchName": item.branch.name,
+                "masterItemName": item.masterItem.name,
+                "availableQuantity": item.availableQuantity,
+                "lowStockThreshold": item.lowStockThreshold,
+                "status": status_text
+            })
+    return alerts

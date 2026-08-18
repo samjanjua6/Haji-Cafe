@@ -132,3 +132,55 @@ async def patch_branch_menu_item(branch_id: int, item_id: int, data: dict, user_
     await log_action(user_id, "UPDATE_MENU_ITEM", details, item.masterItem.cafeId, branch_id)
     
     return result
+
+# --- Stock Management Service ---
+
+async def get_cafe_stock_rollup(cafe_id: int):
+    items = await repository.get_all_branch_items_by_cafe(cafe_id)
+    result = []
+    for item in items:
+        master = item.masterItem
+        effective = item.priceOverride if item.priceOverride is not None else master.basePrice
+        result.append({
+            "id": item.id,
+            "branchId": item.branchId,
+            "masterItemId": item.masterItemId,
+            "priceOverride": float(item.priceOverride) if item.priceOverride is not None else None,
+            "availableQuantity": item.availableQuantity,
+            "isInStock": item.isInStock,
+            "isActive": item.isActive,
+            "lowStockThreshold": item.lowStockThreshold,
+            "effectivePrice": float(effective),
+            "masterItem": {
+                "id": master.id,
+                "name": master.name,
+                "basePrice": float(master.basePrice),
+                "description": master.description,
+            },
+            "branch": {
+                "id": item.branch.id,
+                "name": item.branch.name,
+            }
+        })
+    return result
+
+async def update_item_stock(branch_id: int, item_id: int, new_qty: Optional[int], new_in_stock: Optional[bool], reason: str, note: Optional[str], user_id: int):
+    item = await repository.get_branch_menu_item_by_id(item_id)
+    if not item or item.branchId != branch_id:
+        raise NotFoundException("Branch menu item not found.")
+        
+    return await repository.update_stock_and_log(item_id, item, new_qty, new_in_stock, reason, note, user_id)
+
+async def update_item_threshold(branch_id: int, item_id: int, new_threshold: int):
+    item = await repository.get_branch_menu_item_by_id(item_id)
+    if not item or item.branchId != branch_id:
+        raise NotFoundException("Branch menu item not found.")
+        
+    return await repository.patch_branch_menu_item(item_id, {"lowStockThreshold": new_threshold})
+
+async def get_item_stock_history(branch_id: int, item_id: int):
+    item = await repository.get_branch_menu_item_by_id(item_id)
+    if not item or item.branchId != branch_id:
+        raise NotFoundException("Branch menu item not found.")
+    
+    return await repository.get_stock_history_logs(item_id)

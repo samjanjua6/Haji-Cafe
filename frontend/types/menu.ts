@@ -23,6 +23,7 @@ export interface BranchMenuItem {
   availableQuantity: number | null;
   isInStock: boolean;
   isActive: boolean;
+  lowStockThreshold: number;
   effectivePrice: number;
   masterItem: {
     id: number;

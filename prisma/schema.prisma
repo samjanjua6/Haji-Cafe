@@ -19,29 +19,30 @@ model Role {
 }
 
 model User {
-  id                  Int      @id @default(autoincrement())
-  roleId              Int      @map("role_id")
-  email               String   @unique
-  passwordHash        String?  @map("password_hash")
-  authProvider        String   @default("LOCAL") @map("auth_provider")
-  authProviderId      String?  @map("auth_provider_id")
-  googleAccessToken   String?  @map("google_access_token")
-  googleRefreshToken  String?  @map("google_refresh_token")
-  displayName         String?  @map("display_name")
-  avatarUrl           String?  @map("avatar_url")
-  timezone            String   @default("UTC")
-  defaultCafeId       Int?     @map("default_cafe_id")
-  defaultBranchId     Int?     @map("default_branch_id")
-  preferences         Json?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                 Int      @id @default(autoincrement())
+  roleId             Int      @map("role_id")
+  email              String   @unique
+  passwordHash       String?  @map("password_hash")
+  authProvider       String   @default("LOCAL") @map("auth_provider")
+  authProviderId     String?  @map("auth_provider_id")
+  googleAccessToken  String?  @map("google_access_token")
+  googleRefreshToken String?  @map("google_refresh_token")
+  displayName        String?  @map("display_name")
+  avatarUrl          String?  @map("avatar_url")
+  timezone           String   @default("UTC")
+  defaultCafeId      Int?     @map("default_cafe_id")
+  defaultBranchId    Int?     @map("default_branch_id")
+  preferences        Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  role          Role           @relation(fields: [roleId], references: [id])
-  userScopes    UserScope[]
-  ownedCafes    Cafe[]
-  orders        Order[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
+  role             Role              @relation(fields: [roleId], references: [id])
+  userScopes       UserScope[]
+  ownedCafes       Cafe[]
+  orders           Order[]
+  refreshTokens    RefreshToken[]
+  auditLogs        AuditLog[]
+  stockHistoryLogs StockHistoryLog[]
 
   @@map("users")
 }
@@ -66,12 +67,12 @@ model Cafe {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  owner          User?            @relation(fields: [ownerId], references: [id])
-  branches       Branch[]
-  categories     Category[]
+  owner           User?            @relation(fields: [ownerId], references: [id])
+  branches        Branch[]
+  categories      Category[]
   masterMenuItems MasterMenuItem[]
-  userScopes     UserScope[]
-  auditLogs      AuditLog[]
+  userScopes      UserScope[]
+  auditLogs       AuditLog[]
 
   @@map("cafes")
 }
@@ -94,8 +95,8 @@ model Branch {
 }
 
 model Category {
-  id          Int    @id @default(autoincrement())
-  cafeId      Int    @map("cafe_id")
+  id          Int     @id @default(autoincrement())
+  cafeId      Int     @map("cafe_id")
   name        String
   description String?
 
@@ -124,19 +125,21 @@ model MasterMenuItem {
 }
 
 model BranchMenuItem {
-  id            Int      @id @default(autoincrement())
-  branchId      Int      @map("branch_id")
+  id                Int      @id @default(autoincrement())
+  branchId          Int      @map("branch_id")
   masterItemId      Int      @map("master_item_id")
   priceOverride     Decimal? @map("price_override") @db.Decimal(10, 2)
   availableQuantity Int?     @map("available_quantity")
   isInStock         Boolean  @default(true) @map("is_in_stock")
   isActive          Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  lowStockThreshold Int      @default(5) @map("low_stock_threshold")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  branch     Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  masterItem MasterMenuItem @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  branch           Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  masterItem       MasterMenuItem    @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
+  orderItems       OrderItem[]
+  stockHistoryLogs StockHistoryLog[]
 
   @@unique([branchId, masterItemId])
   @@map("branch_menu_items")
@@ -152,28 +155,28 @@ enum OrderStatus {
 }
 
 model Order {
-  id                Int         @id @default(autoincrement())
-  branchId          Int         @map("branch_id")
-  createdByUserId   Int?        @map("created_by_user_id")
-  status            OrderStatus @default(PENDING)
-  totalAmount       Decimal     @map("total_amount") @db.Decimal(10, 2)
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  id              Int         @id @default(autoincrement())
+  branchId        Int         @map("branch_id")
+  createdByUserId Int?        @map("created_by_user_id")
+  status          OrderStatus @default(PENDING)
+  totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  branch      Branch      @relation(fields: [branchId], references: [id])
-  createdBy   User?       @relation(fields: [createdByUserId], references: [id])
-  orderItems  OrderItem[]
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  createdBy  User?       @relation(fields: [createdByUserId], references: [id])
+  orderItems OrderItem[]
 
   @@map("orders")
 }
 
 model OrderItem {
-  id                Int     @id @default(autoincrement())
-  orderId           Int     @map("order_id")
-  branchMenuItemId  Int     @map("branch_menu_item_id")
-  quantity          Int
-  priceAtPurchase   Decimal @map("price_at_purchase") @db.Decimal(10, 2)
-  notes             String?
+  id               Int     @id @default(autoincrement())
+  orderId          Int     @map("order_id")
+  branchMenuItemId Int     @map("branch_menu_item_id")
+  quantity         Int
+  priceAtPurchase  Decimal @map("price_at_purchase") @db.Decimal(10, 2)
+  notes            String?
 
   order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   branchMenuItem BranchMenuItem @relation(fields: [branchMenuItemId], references: [id])
@@ -208,4 +211,22 @@ model AuditLog {
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@map("audit_logs")
+}
+
+model StockHistoryLog {
+  id               Int      @id @default(autoincrement())
+  branchMenuItemId Int      @map("branch_menu_item_id")
+  changeType       String   @map("change_type")
+  amountChanged    Int      @map("amount_changed")
+  previousQuantity Int?     @map("previous_quantity")
+  newQuantity      Int?     @map("new_quantity")
+  reason           String?
+  note             String?
+  userId           Int?     @map("user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  branchMenuItem BranchMenuItem @relation(fields: [branchMenuItemId], references: [id], onDelete: Cascade)
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("stock_history_logs")
 }

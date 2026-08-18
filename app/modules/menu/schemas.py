@@ -56,7 +56,6 @@ class BranchMenuItemPatch(BaseModel):
     is_in_stock: Optional[bool] = None
     is_active: Optional[bool] = None
 
-
 class BranchMenuItemResponse(BaseModel):
     id: int
     branch_id: int = Field(alias="branchId")
@@ -65,7 +64,17 @@ class BranchMenuItemResponse(BaseModel):
     available_quantity: Optional[int] = Field(None, alias="availableQuantity")
     is_in_stock: bool = Field(alias="isInStock")
     is_active: bool = Field(alias="isActive")
+    low_stock_threshold: int = Field(alias="lowStockThreshold")
     effective_price: Optional[Decimal] = None  # Computed: override ?? base_price
     masterItem: Optional[MasterItemSubset] = None
 
     model_config = {"from_attributes": True, "populate_by_name": True}
+
+class StockUpdateRequest(BaseModel):
+    available_quantity: Optional[int] = Field(None, alias="availableQuantity", ge=0)
+    is_in_stock: Optional[bool] = Field(None, alias="isInStock")
+    reason: str
+    note: Optional[str] = None
+
+class ThresholdUpdateRequest(BaseModel):
+    low_stock_threshold: int = Field(..., alias="lowStockThreshold", ge=0)

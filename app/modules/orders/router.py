@@ -47,7 +47,7 @@ async def update_order_status(
     _=Depends(require_branch_access()),
 ):
     """[STAFF, BRANCH_MANAGER, SUPER_ADMIN] Transition an order's status (enforces state machine)."""
-    return prisma_to_dict(await service.transition_status(branch_id, order_id, body.status))
+    return prisma_to_dict(await service.transition_status(branch_id, order_id, body.status, user.id))
 
 
 # ── Cafe-level Aggregate Order Endpoint ─────────────────────────────

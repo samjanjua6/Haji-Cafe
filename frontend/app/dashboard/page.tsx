@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/LoadingSkeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
+import { LowStockAlerts } from "@/components/LowStockAlerts";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -170,6 +171,11 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+
+          {/* Low Stock Alerts */}
+          {user.role === "CAFE_OWNER" && user.scopes.map((scope, idx) => (
+            scope.cafeId ? <LowStockAlerts key={`alert-${idx}`} cafeId={scope.cafeId} cafeName={scope.cafeName || ""} /> : null
+          ))}
 
           {/* Audit Logs */}
           {user.role === "CAFE_OWNER" && user.scopes.map((scope, idx) => (

@@ -27,25 +27,46 @@ async def create_order(branch_id: int, user_id: Optional[int], total_amount, ite
             include={"orderItems": True},
         )
         
-        # Deduct inventory
+        # Deduct inventory atomically with gte guard
         for data in items_data:
             item_id = data["branchMenuItemId"]
             qty = data["quantity"]
             
             branch_item = await transaction.branchmenuitem.find_unique(where={"id": item_id})
             if branch_item.availableQuantity is not None:
-                new_qty = branch_item.availableQuantity - qty
-                if new_qty < 0:
-                    # Should be caught by validation in service, but this is a DB-level safeguard
-                    raise ValueError(f"Insufficient stock for item ID {item_id}")
-                    
-                update_data = {"availableQuantity": new_qty}
-                if new_qty == 0:
-                    update_data["isInStock"] = False
-                    
-                await transaction.branchmenuitem.update(
-                    where={"id": item_id},
-                    data=update_data
+                # Use update_many for the atomic guard: where availableQuantity >= qty
+                affected = await transaction.branchmenuitem.update_many(
+                    where={
+                        "id": item_id,
+                        "availableQuantity": {"gte": qty}
+                    },
+                    data={
+                        "availableQuantity": {"decrement": qty}
+                    }
+                )
+                if affected == 0:
+                    raise ValueError(f"Race condition: Insufficient stock for item ID {item_id}")
+                
+                # Fetch the updated item to calculate isInStock and log
+                updated_item = await transaction.branchmenuitem.find_unique(where={"id": item_id})
+                if updated_item.availableQuantity == 0:
+                    await transaction.branchmenuitem.update(
+                        where={"id": item_id},
+                        data={"isInStock": False}
+                    )
+                
+                # Insert StockHistoryLog for the decrement
+                await transaction.stockhistorylog.create(
+                    data={
+                        "branchMenuItemId": item_id,
+                        "changeType": "ORDER_DECREMENT",
+                        "amountChanged": -qty,
+                        "previousQuantity": branch_item.availableQuantity,
+                        "newQuantity": updated_item.availableQuantity,
+                        "reason": "Order Placed",
+                        "note": f"Order #{order.id}",
+                        "userId": user_id
+                    }
                 )
                 
         return order
@@ -75,12 +96,43 @@ async def get_order_by_id(order_id: int):
     )
 
 
-async def update_order_status(order_id: int, new_status: str):
-    return await db.order.update(
-        where={"id": order_id},
-        data={"status": new_status},
-        include={"orderItems": True},
-    )
+async def update_order_status(order_id: int, new_status: str, user_id: Optional[int] = None):
+    async with db.tx() as transaction:
+        order = await transaction.order.update(
+            where={"id": order_id},
+            data={"status": new_status},
+            include={"orderItems": True},
+        )
+        
+        # If cancelled, restore stock
+        if new_status == "CANCELLED":
+            for item in order.orderItems:
+                branch_item = await transaction.branchmenuitem.find_unique(where={"id": item.branchMenuItemId})
+                if branch_item.availableQuantity is not None:
+                    # Atomic increment
+                    await transaction.branchmenuitem.update(
+                        where={"id": item.branchMenuItemId},
+                        data={
+                            "availableQuantity": {"increment": item.quantity},
+                            "isInStock": True # Auto-clear out of stock when restoring
+                        }
+                    )
+                    updated_item = await transaction.branchmenuitem.find_unique(where={"id": item.branchMenuItemId})
+                    
+                    await transaction.stockhistorylog.create(
+                        data={
+                            "branchMenuItemId": item.branchMenuItemId,
+                            "changeType": "ORDER_RESTORE",
+                            "amountChanged": item.quantity,
+                            "previousQuantity": branch_item.availableQuantity,
+                            "newQuantity": updated_item.availableQuantity,
+                            "reason": "Order Cancelled",
+                            "note": f"Order #{order.id}",
+                            "userId": user_id
+                        }
+                    )
+                    
+        return order
 
 
 async def get_orders_by_cafe(cafe_id: int):

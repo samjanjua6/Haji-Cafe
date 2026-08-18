@@ -23,6 +23,7 @@ export default function CafeDetailPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [stockRollup, setStockRollup] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Branch modals
@@ -37,14 +38,15 @@ export default function CafeDetailPage() {
 
   const load = async () => {
     try {
-      const [c, b, o, s, user] = await Promise.all([
+      const [c, b, o, s, st, user] = await Promise.all([
         api.get<Cafe>(`/cafes/${cafeId}`),
         api.get<Branch[]>(`/cafes/${cafeId}/branches`),
         api.get<Order[]>(`/cafes/${cafeId}/orders`),
         api.get<Staff[]>(`/cafes/${cafeId}/staff`),
+        api.get<any[]>(`/cafes/${cafeId}/stock-rollup`),
         api.get<any>("/auth/me"),
       ]);
-      setCafe(c); setBranches(b); setOrders(o); setStaffList(s); setCurrentUser(user);
+      setCafe(c); setBranches(b); setOrders(o); setStaffList(s); setStockRollup(st); setCurrentUser(user);
     } catch (e: any) { toast.error(e.message); } finally { setLoading(false); }
   };
 
@@ -151,6 +153,7 @@ export default function CafeDetailPage() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
               <Link href={`/branches/${b.id}/menu?cafeId=${cafeId}`} className="btn btn-ghost btn-sm"><UtensilsCrossed size={12} /> Branch Menu</Link>
               <Link href={`/branches/${b.id}/orders?cafeId=${cafeId}`} className="btn btn-ghost btn-sm"><ShoppingCart size={12} /> Orders</Link>
+              <Link href={`/branches/${b.id}/stock?cafeId=${cafeId}`} className="btn btn-ghost btn-sm"><GitBranch size={12} /> Stock</Link>
               <button className="btn btn-ghost btn-sm" onClick={() => { setEditBranch(b); setBranchName(b.name); setBranchLocation(b.location || ""); }}>
                 <Pencil size={12} /> Edit
               </button>
@@ -191,6 +194,43 @@ export default function CafeDetailPage() {
           </table>
         )}
       </div>
+
+      {/* Stock Rollup */}
+      {currentUser?.role === "CAFE_OWNER" || currentUser?.role === "SUPER_ADMIN" ? (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, marginTop: 40 }}>
+            <GitBranch size={16} style={{ marginRight: 8, display: "inline" }} />
+            All Branches Stock Rollup
+          </h3>
+          <div className="card table-wrap" style={{ marginBottom: 40 }}>
+            {stockRollup.length === 0 ? (
+              <EmptyState icon={GitBranch} title="No items in stock" subtitle="Add items to branch menus to track stock." />
+            ) : (
+              <table>
+                <thead><tr><th>Item</th><th>Branch</th><th>Qty</th><th>Status</th></tr></thead>
+                <tbody>
+                  {stockRollup.map(item => {
+                    let statusText = "In Stock";
+                    let color = "var(--success)";
+                    if (item.isInStock === false) { statusText = "Sold Out (Manual Override)"; color = "var(--danger)"; }
+                    else if (item.availableQuantity === 0) { statusText = "Sold Out"; color = "var(--danger)"; }
+                    else if (item.availableQuantity !== null && item.availableQuantity <= item.lowStockThreshold) { statusText = "Low Stock"; color = "var(--warning)"; }
+                    
+                    return (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 600 }}>{item.masterItem.name}</td>
+                        <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{item.branch.name}</td>
+                        <td style={{ fontFamily: "monospace" }}>{item.availableQuantity ?? '∞'}</td>
+                        <td style={{ color, fontSize: 13, fontWeight: 600 }}>{statusText}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      ) : null}
 
       {/* Create Branch Modal */}
       <Modal open={createBranch} onClose={() => setCreateBranch(false)} title="Add Branch">
