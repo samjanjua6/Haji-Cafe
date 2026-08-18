@@ -140,18 +140,40 @@ export default function StaffAndSchedulingPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-light)" }}>
-                  <th style={{ padding: "14px 20px", color: "var(--text-muted)", fontWeight: 600 }}>Staff Member</th>
+                  <th style={{ padding: "14px 20px", width: 40 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={staffList.length > 0 && selectedStaff.length === staffList.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStaff(staffList.map(s => s.id));
+                        } else {
+                          setSelectedStaff([]);
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </th>
+                  <th style={{ padding: "14px 0", color: "var(--text-muted)", fontWeight: 600 }}>Staff Member</th>
                   <th style={{ padding: "14px 20px", color: "var(--text-muted)", fontWeight: 600 }}>Role</th>
                 </tr>
               </thead>
               <tbody>
                 {staffList.map(s => (
-                  <tr key={s.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                    <td style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <tr key={s.id} style={{ borderBottom: "1px solid var(--border-light)", transition: "background 0.2s", background: selectedStaff.includes(s.id) ? "var(--bg-surface)" : "transparent" }}>
+                    <td style={{ padding: "14px 20px" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedStaff.includes(s.id)} 
+                        onChange={() => toggleStaff(s.id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </td>
+                    <td style={{ padding: "14px 0", display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ background: "var(--bg-base)", padding: 8, borderRadius: "50%" }}>
                           <UserIcon size={16} color="var(--text-muted)" />
                       </div>
-                      <span style={{ fontWeight: 500 }}>{s.email}</span>
+                      <span style={{ fontWeight: 500, color: selectedStaff.includes(s.id) ? "var(--accent)" : "inherit" }}>{s.email}</span>
                     </td>
                     <td style={{ padding: "14px 20px" }}>
                       <span style={{
@@ -201,44 +223,20 @@ export default function StaffAndSchedulingPage() {
                 </div>
               </div>
 
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>
-                    <Users size={14}/> Select Attendees
-                  </label>
-                  {staffList.length > 0 && (
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: "var(--accent)" }}>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedStaff.length === staffList.length} 
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedStaff(staffList.map(s => s.id));
-                          } else {
-                            setSelectedStaff([]);
-                          }
-                        }} 
-                      />
-                      Select All
-                    </label>
-                  )}
+              <div style={{ marginTop: "auto", paddingTop: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "0 4px" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
+                    <Users size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 6 }} />
+                    Attendees Selected
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: selectedStaff.length > 0 ? "var(--accent)" : "var(--text-muted)" }}>
+                    {selectedStaff.length} / {staffList.length}
+                  </span>
                 </div>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 200, overflowY: "auto", overflowX: "hidden", padding: 12, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6 }}>
-                  {staffList.length === 0 ? <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No staff found. Please add staff first.</div> : null}
-                  {staffList.map(s => (
-                    <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, width: "100%", justifyContent: "flex-start", padding: "4px 0" }}>
-                      <input type="checkbox" checked={selectedStaff.includes(s.id)} onChange={() => toggleStaff(s.id)} style={{ width: "auto", margin: 0, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.email}</span>
-                      <span style={{ fontSize: 11, background: "var(--bg-surface)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", flexShrink: 0 }}>{s.role.replace("_", " ")}</span>
-                    </label>
-                  ))}
-                </div>
+                <button className="btn btn-primary" type="submit" disabled={saving || selectedStaff.length === 0} style={{ width: "100%", justifyContent: "center", background: "#22c55e", color: "white", padding: "12px 16px", fontSize: 15 }}>
+                  <CalendarPlus size={18} /> {saving ? "Scheduling..." : "Create Calendar Invites"}
+                </button>
               </div>
-
-              <button className="btn btn-primary" type="submit" disabled={saving || selectedStaff.length === 0} style={{ justifyContent: "center", background: "#22c55e", color: "white", marginTop: 8, padding: "12px 16px", fontSize: 15 }}>
-                <CalendarPlus size={18} /> {saving ? "Scheduling..." : "Create Calendar Invites"}
-              </button>
             </form>
           </div>
         )}
