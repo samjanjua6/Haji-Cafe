@@ -36,39 +36,39 @@ export default function IntegrationsTab({ user }: IntegrationsTabProps) {
   };
 
   return (
-    <div className="card p-6 flex flex-col gap-6">
+    <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
-        <h2 className="text-xl font-bold mb-1">Integrations</h2>
-        <p className="text-[var(--text-color)] text-sm opacity-80">
+        <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Integrations</h2>
+        <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, margin: 0 }}>
           Connect third-party apps to enhance your workflow.
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-[var(--sidebar-hover)] rounded-xl gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
-              <Calendar className="text-blue-500" size={24} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", padding: "16px", border: "1px solid var(--sidebar-hover)", borderRadius: "12px", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", background: "#fff", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+              <Calendar color="#3b82f6" size={24} />
             </div>
             <div>
-              <div className="font-bold text-lg flex items-center gap-2">
+              <div style={{ fontWeight: 700, fontSize: "18px", display: "flex", alignItems: "center", gap: "8px" }}>
                 Google Calendar
                 {user.has_google_calendar && (
-                  <span className="badge badge-success badge-sm">Connected</span>
+                  <span className="badge badge-success badge-sm" style={{ padding: "4px 8px", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" }}>Connected</span>
                 )}
               </div>
-              <div className="text-sm opacity-70">
+              <div style={{ fontSize: "14px", opacity: 0.7, marginTop: "2px" }}>
                 Sync staff meetings and schedules directly to your calendar.
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: "flex", gap: "8px" }}>
             {user.has_google_calendar ? (
               <>
-                <button className="btn btn-ghost btn-sm" onClick={handleConnect}>
+                <button className="btn btn-ghost" onClick={handleConnect} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <RefreshCw size={14} /> Reconnect
                 </button>
-                <button className="btn btn-danger btn-sm" onClick={handleDisconnect}>
+                <button className="btn" style={{ background: "var(--danger)", color: "#fff" }} onClick={handleDisconnect}>
                   Disconnect
                 </button>
               </>

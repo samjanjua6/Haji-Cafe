@@ -34,22 +34,23 @@ export default function ProfileTab({ user }: ProfileTabProps) {
   };
 
   return (
-    <div className="card p-6 flex flex-col gap-6">
+    <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
-        <h2 className="text-xl font-bold mb-1">Profile</h2>
-        <p className="text-[var(--text-color)] text-sm opacity-80">
+        <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Profile</h2>
+        <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, margin: 0 }}>
           Manage your personal information and avatar.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "24px" }}>
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Display Name</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Display Name</span>
           </label>
           <input
             type="text"
             className="input input-bordered"
+            style={{ width: "100%" }}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="John Doe"
@@ -58,25 +59,26 @@ export default function ProfileTab({ user }: ProfileTabProps) {
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Email Address</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Email Address</span>
           </label>
           <input
             type="email"
-            className="input input-bordered opacity-70"
+            className="input input-bordered"
+            style={{ width: "100%", opacity: 0.7 }}
             value={user.email}
             disabled
           />
-          <span className="text-xs text-[var(--text-color)] opacity-70 mt-1">
+          <span style={{ fontSize: "12px", color: "var(--text-color)", opacity: 0.7, marginTop: "4px", display: "block" }}>
             To change your email address, please contact platform support.
           </span>
         </div>
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Role</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Role</span>
           </label>
-          <div>
-            <span className="px-3 py-1 bg-[var(--sidebar-hover)] rounded-md font-semibold text-sm">
+          <div style={{ marginTop: "4px" }}>
+            <span style={{ padding: "4px 12px", background: "var(--sidebar-hover)", borderRadius: "6px", fontWeight: 600, fontSize: "14px" }}>
               {user.role.replace("_", " ")}
             </span>
           </div>
@@ -84,15 +86,15 @@ export default function ProfileTab({ user }: ProfileTabProps) {
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Member Since</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Member Since</span>
           </label>
-          <div className="pt-2 font-medium">
+          <div style={{ paddingTop: "8px", fontWeight: 500 }}>
             {memberSince}
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end mt-4">
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
         <button 
           className="btn btn-primary" 
           onClick={handleSave} 

@@ -28,30 +28,46 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
+    <div style={{ padding: "32px", maxWidth: "1152px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "32px" }}>
         <h1 className="page-title">Settings</h1>
         <p className="page-subtitle">Manage your account and preferences</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div style={{ display: "flex", gap: "32px", flexDirection: "row", flexWrap: "wrap" }}>
         {/* Sidebar */}
-        <div className="w-full md:w-64 flex-shrink-0">
-          <div className="card p-4 flex flex-col gap-2">
+        <div style={{ width: "256px", flexShrink: 0 }}>
+          <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-[var(--accent-color)] text-white"
-                      : "text-[var(--text-color)] hover:bg-[var(--sidebar-hover)]"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    textAlign: "left",
+                    background: isActive ? "var(--accent)" : "transparent",
+                    color: isActive ? "#0f172a" : "var(--text-primary)",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: isActive ? 600 : 500,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = "var(--bg-surface)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = "transparent";
+                  }}
                 >
                   <Icon size={18} />
-                  <span className="font-medium">{tab.label}</span>
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
@@ -59,7 +75,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content Panel */}
-        <div className="flex-1">
+        <div style={{ flex: 1, minWidth: "300px" }}>
           {activeTab === "profile" && <ProfileTab user={user} />}
           {activeTab === "security" && <SecurityTab user={user} />}
           {activeTab === "notifications" && <NotificationsTab user={user} />}

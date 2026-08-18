@@ -62,46 +62,49 @@ export default function SecurityTab({ user }: SecurityTabProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Password Change */}
-      <div className="card p-6">
-        <h2 className="text-xl font-bold mb-1">Change Password</h2>
-        <p className="text-[var(--text-color)] text-sm opacity-80 mb-6">
+      <div className="card" style={{ padding: "24px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Change Password</h2>
+        <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, marginBottom: "24px" }}>
           Update your password to keep your account secure.
         </p>
 
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+        {error && <div style={{ color: "var(--danger)", fontSize: "14px", marginBottom: "16px" }}>{error}</div>}
 
-        <div className="flex flex-col gap-4 max-w-md">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "400px" }}>
           <div className="form-control">
-            <label className="label"><span className="label-text">Current Password</span></label>
+            <label className="label"><span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Current Password</span></label>
             <input
               type="password"
               className="input input-bordered"
+              style={{ width: "100%" }}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
           </div>
           <div className="form-control">
-            <label className="label"><span className="label-text">New Password</span></label>
+            <label className="label"><span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>New Password</span></label>
             <input
               type="password"
               className="input input-bordered"
+              style={{ width: "100%" }}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </div>
           <div className="form-control">
-            <label className="label"><span className="label-text">Confirm New Password</span></label>
+            <label className="label"><span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Confirm New Password</span></label>
             <input
               type="password"
               className="input input-bordered"
+              style={{ width: "100%" }}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
 
-          <div className="flex justify-end mt-2">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
             <button 
               className="btn btn-primary" 
               onClick={handleChangePassword}
@@ -114,30 +117,34 @@ export default function SecurityTab({ user }: SecurityTabProps) {
       </div>
 
       {/* Sessions */}
-      <div className="card p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="card" style={{ padding: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <div>
-            <h2 className="text-xl font-bold mb-1">Active Sessions</h2>
-            <p className="text-[var(--text-color)] text-sm opacity-80">
+            <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Active Sessions</h2>
+            <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, margin: 0 }}>
               Manage devices currently logged into your account.
             </p>
           </div>
-          <button className="btn btn-ghost text-red-500" onClick={handleLogoutAll}>
+          <button 
+            className="btn btn-ghost" 
+            style={{ color: "var(--danger)" }} 
+            onClick={handleLogoutAll}
+          >
             Log out all
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {!sessions ? (
-            <div className="text-sm opacity-70">Loading sessions...</div>
+            <div style={{ fontSize: "14px", opacity: 0.7 }}>Loading sessions...</div>
           ) : sessions.length === 0 ? (
-            <div className="text-sm opacity-70">No active sessions found.</div>
+            <div style={{ fontSize: "14px", opacity: 0.7 }}>No active sessions found.</div>
           ) : (
             sessions.map((s) => (
-              <div key={s.id} className="flex justify-between items-center p-4 bg-[var(--sidebar-hover)] rounded-lg">
+              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "var(--sidebar-hover)", borderRadius: "8px" }}>
                 <div>
-                  <div className="font-semibold">Logged in session</div>
-                  <div className="text-sm opacity-70">
+                  <div style={{ fontWeight: 600 }}>Logged in session</div>
+                  <div style={{ fontSize: "14px", opacity: 0.7 }}>
                     Created: {new Date(s.createdAt).toLocaleString()}
                   </div>
                 </div>

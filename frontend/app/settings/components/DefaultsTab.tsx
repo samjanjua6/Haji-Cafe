@@ -42,21 +42,22 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
   };
 
   return (
-    <div className="card p-6 flex flex-col gap-6">
+    <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
-        <h2 className="text-xl font-bold mb-1">Workspace Defaults</h2>
-        <p className="text-[var(--text-color)] text-sm opacity-80">
+        <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Workspace Defaults</h2>
+        <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, margin: 0 }}>
           Set default locations and timezones for your dashboard.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "24px" }}>
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Default Café</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Default Café</span>
           </label>
           <select 
-            className="select select-bordered w-full"
+            className="select select-bordered"
+            style={{ width: "100%" }}
             value={defaultCafeId}
             onChange={(e) => {
               setDefaultCafeId(e.target.value);
@@ -72,10 +73,11 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Default Branch</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Default Branch</span>
           </label>
           <select 
-            className="select select-bordered w-full"
+            className="select select-bordered"
+            style={{ width: "100%" }}
             value={defaultBranchId}
             onChange={(e) => setDefaultBranchId(e.target.value)}
             disabled={!defaultCafeId}
@@ -89,10 +91,11 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Timezone</span>
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Timezone</span>
           </label>
           <select 
-            className="select select-bordered w-full"
+            className="select select-bordered"
+            style={{ width: "100%" }}
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
           >
@@ -109,7 +112,7 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
         </div>
       </div>
 
-      <div className="flex justify-end mt-4">
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
         <button 
           className="btn btn-primary" 
           onClick={handleSave} 

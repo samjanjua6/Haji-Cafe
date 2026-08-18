@@ -42,12 +42,12 @@ export default function NotificationsTab({ user }: NotificationsTabProps) {
   };
 
   const NotificationToggle = ({ label, description, checked, onChange }: any) => (
-    <div className="flex justify-between items-center py-4 border-b border-[var(--sidebar-hover)] last:border-0">
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderBottom: "1px solid var(--sidebar-hover)" }}>
       <div>
-        <div className="font-semibold">{label}</div>
-        <div className="text-sm opacity-70">{description}</div>
+        <div style={{ fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: "14px", opacity: 0.7 }}>{description}</div>
       </div>
-      <label className="cursor-pointer">
+      <label style={{ cursor: "pointer" }}>
         <input 
           type="checkbox" 
           className="toggle toggle-primary" 
@@ -59,15 +59,15 @@ export default function NotificationsTab({ user }: NotificationsTabProps) {
   );
 
   return (
-    <div className="card p-6 flex flex-col gap-6">
+    <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
-        <h2 className="text-xl font-bold mb-1">Notifications</h2>
-        <p className="text-[var(--text-color)] text-sm opacity-80">
+        <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px" }}>Notifications</h2>
+        <p style={{ color: "var(--text-color)", fontSize: "14px", opacity: 0.8, margin: 0 }}>
           Manage how and when you receive alerts.
         </p>
       </div>
 
-      <div className="flex flex-col">
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <NotificationToggle 
           label="New Orders" 
           description="Get notified when a new order is placed."
@@ -100,7 +100,7 @@ export default function NotificationsTab({ user }: NotificationsTabProps) {
         />
       </div>
 
-      <div className="flex justify-end mt-4">
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
         <button 
           className="btn btn-primary" 
           onClick={handleSave} 
