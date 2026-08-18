@@ -16,10 +16,31 @@ async def get_all_cafes():
 
 
 async def get_cafes_by_owner(owner_id: int):
-    return await db.cafe.find_many(
-        where={"ownerId": owner_id},
-        include={"branches": True},
+    # Find all cafes where the user has a UserScope
+    scopes = await db.userscope.find_many(
+        where={"userId": owner_id},
+        include={"cafe": {"include": {"branches": True}}}
     )
+    
+    seen = set()
+    cafes = []
+    for s in scopes:
+        if s.cafe and s.cafe.id not in seen:
+            seen.add(s.cafe.id)
+            cafes.append(s.cafe)
+            
+    # Also check ownerId as a fallback
+    owned_cafes = await db.cafe.find_many(
+        where={"ownerId": owner_id},
+        include={"branches": True}
+    )
+    
+    for c in owned_cafes:
+        if c.id not in seen:
+            seen.add(c.id)
+            cafes.append(c)
+            
+    return cafes
 
 
 async def get_cafe_by_id(cafe_id: int):
