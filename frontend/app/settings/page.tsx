@@ -28,10 +28,12 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div style={{ padding: "32px", maxWidth: "1152px", margin: "0 auto" }}>
-      <div style={{ marginBottom: "32px" }}>
-        <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Manage your account and preferences</p>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Manage your account and preferences</p>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: "32px", flexDirection: "row", flexWrap: "wrap" }}>
