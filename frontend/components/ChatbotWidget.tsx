@@ -38,36 +38,53 @@ function LiveModeUI({ onEndLive }: { onEndLive: () => void }) {
   const { state, audioTrack } = useVoiceAssistant();
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg-base)", zIndex: 5 }}>
-      <div style={{ marginBottom: 32, fontSize: "16px", color: "var(--text-primary)", fontWeight: 500 }}>
+    <div style={{ padding: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", backgroundColor: "var(--bg-card)" }}>
+      <div style={{ marginBottom: 8, fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>
         {state === "speaking" && "Assistant is speaking..."}
         {state === "listening" && "Listening..."}
         {state === "thinking" && "Assistant is thinking..."}
-        {(state === "connecting" || state === "disconnected" || state === "initializing") && "Connecting to LiveKit..."}
+        {(state === "connecting" || state === "disconnected" || state === "initializing") && "Connecting..."}
       </div>
       
-      <div style={{ height: 80, width: "100%", padding: "0 60px", display: "flex", justifyContent: "center" }}>
+      <div style={{ height: 40, width: "100%", display: "flex", justifyContent: "center", marginBottom: 12 }}>
         <BarVisualizer
           state={state}
-          barCount={7}
+          barCount={5}
           trackRef={audioTrack}
-          style={{ width: "200px", height: "100%" }}
-          options={{ minHeight: 10 }}
+          style={{ width: "100px", height: "100%" }}
+          options={{ minHeight: 4 }}
         />
       </div>
 
       <button
         onClick={onEndLive}
         style={{
-          marginTop: 48, padding: "10px 24px", borderRadius: "24px",
+          padding: "6px 16px", borderRadius: "16px", fontSize: "13px",
           backgroundColor: "#ef4444", color: "#fff", border: "none",
-          cursor: "pointer", fontWeight: 600, boxShadow: "0 4px 6px rgba(239, 68, 68, 0.2)"
+          cursor: "pointer", fontWeight: 600
         }}
       >
         End Live Session
       </button>
     </div>
   );
+}
+
+// Sub-component to sync LiveKit Chat to the parent state
+import { useChat } from "@livekit/components-react";
+function LiveChatSync({ setLiveMessages }: { setLiveMessages: (msgs: Message[]) => void }) {
+  const { chatMessages } = useChat();
+
+  useEffect(() => {
+    const newMsgs: Message[] = chatMessages.map((msg) => ({
+      // If from identity is undefined or not user, assume model
+      role: msg.from?.identity === auth.getUser()?.id?.toString() || msg.from?.identity === "user" ? "user" : "model",
+      content: msg.message,
+    }));
+    setLiveMessages(newMsgs);
+  }, [chatMessages, setLiveMessages]);
+
+  return null;
 }
 
 // --- Main Chatbot Widget ---
@@ -87,6 +104,7 @@ export default function ChatbotWidget() {
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [livekitToken, setLivekitToken] = useState("");
+  const [liveMessages, setLiveMessages] = useState<Message[]>([]);
 
   // Voice state (Standard Mode)
   const [isRecording, setIsRecording] = useState(false);
@@ -351,6 +369,11 @@ export default function ChatbotWidget() {
   const deactivateLiveMode = () => {
     setIsLiveMode(false);
     setLivekitToken(""); // Clear token so next session gets a fresh one
+    // Optionally append live messages to the permanent transcript when ending
+    if (liveMessages.length > 0) {
+      setMessages((prev) => [...prev, ...liveMessages]);
+      setLiveMessages([]);
+    }
   };
 
   // Auto-close chatbot on logout to ensure state is clean for next user
@@ -449,108 +472,104 @@ export default function ChatbotWidget() {
             </div>
           </div>
 
-          {/* Conditional Rendering: Live Mode vs Standard Mode */}
-          {isLiveMode ? (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              {livekitToken ? (
-                  <LiveKitRoom
-                    serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-                    token={livekitToken}
-                    connect={true}
-                    audio={true}
-                    video={false}
-                    onDisconnected={() => { setIsLiveMode(false); setLivekitToken(""); }}
-                    style={{ flex: 1, display: "flex", flexDirection: "column" }}
-                  >
-                  <RoomAudioRenderer />
-                  <LiveModeUI onEndLive={deactivateLiveMode} />
-                </LiveKitRoom>
-              ) : (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px", color: "var(--text-muted)" }}>
-                  <span style={{
-                    display: "inline-block", width: "12px", height: "12px", borderRadius: "50%",
-                    backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
-                  }} />
-                  Preparing Live Session...
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Messages Area */}
-              <div style={{
-                flex: 1, padding: "16px", overflowY: "auto",
-                display: "flex", flexDirection: "column", gap: "12px",
-                backgroundColor: "var(--bg-base)",
-              }}>
-                {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                      maxWidth: "85%",
-                      backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
-                      color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
-                      padding: "10px 14px", borderRadius: "12px",
-                      borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
-                      borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-                      border: msg.role === "model" ? "1px solid var(--border)" : "none",
-                      fontSize: "14px", lineHeight: "1.5",
+          {/* Messages Area - Always Visible */}
+          <div style={{
+            flex: 1, padding: "16px", overflowY: "auto",
+            display: "flex", flexDirection: "column", gap: "12px",
+            backgroundColor: "var(--bg-base)",
+          }}>
+            {[...messages, ...liveMessages].map((msg, i) => (
+              <div
+                key={i}
+                style={{
+                  alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "85%",
+                  backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
+                  color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
+                  padding: "10px 14px", borderRadius: "12px",
+                  borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
+                  borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                  border: msg.role === "model" ? "1px solid var(--border)" : "none",
+                  fontSize: "14px", lineHeight: "1.5",
+                }}
+              >
+                {msg.role === "model" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
+                      a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
+                      ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                      ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                      li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
+                      table: ({ node, ...props }) => (
+                        <div style={{ overflowX: "auto", width: "100%" }}>
+                          <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
+                        </div>
+                      ),
+                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
+                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
                     }}
                   >
-                    {msg.role === "model" ? (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
-                          a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
-                          ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                          ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                          li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
-                          table: ({ node, ...props }) => (
-                            <div style={{ overflowX: "auto", width: "100%" }}>
-                              <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
-                            </div>
-                          ),
-                          th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
-                          td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
-                    ) : (
-                      <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div style={{
-                    alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
-                    fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
-                    padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
-                    border: "1px solid var(--border)", maxWidth: "85%",
-                  }}>
-                    <span style={{
-                      display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-                      backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
-                    }} />
-                    {progressMsg || "Assistant is thinking..."}
-                  </div>
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
                 )}
-                {isTranscribing && (
-                  <div style={{
-                    alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
-                    fontStyle: "italic", padding: "4px 8px",
-                  }}>
-                    🎙️ Transcribing...
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
               </div>
+            ))}
+            {isLoading && (
+              <div style={{
+                alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
+                fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
+                padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
+                border: "1px solid var(--border)", maxWidth: "85%",
+              }}>
+                <span style={{
+                  display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+                  backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
+                }} />
+                {progressMsg || "Assistant is thinking..."}
+              </div>
+            )}
+            {isTranscribing && (
+              <div style={{
+                alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
+                fontStyle: "italic", padding: "4px 8px",
+              }}>
+                🎙️ Transcribing...
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-              {/* Input Area */}
-              <form
+          {/* Conditional Input Area vs Live Mode UI */}
+          {isLiveMode ? (
+            livekitToken ? (
+              <LiveKitRoom
+                serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                token={livekitToken}
+                connect={true}
+                audio={true}
+                video={false}
+                onDisconnected={() => { setIsLiveMode(false); setLivekitToken(""); }}
+              >
+                <RoomAudioRenderer />
+                <LiveChatSync setLiveMessages={setLiveMessages} />
+                <LiveModeUI onEndLive={deactivateLiveMode} />
+              </LiveKitRoom>
+            ) : (
+              <div style={{ padding: "16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg-card)", color: "var(--text-muted)", fontSize: "13px" }}>
+                <span style={{
+                  display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+                  backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite", marginRight: "8px"
+                }} />
+                Preparing Live Session...
+              </div>
+            )
+          ) : (
+            <form
                 onSubmit={handleSend}
                 style={{
                   padding: "12px", borderTop: "1px solid var(--border)",
@@ -602,7 +621,6 @@ export default function ChatbotWidget() {
                   <Send size={16} style={{ marginLeft: "2px" }} />
                 </button>
               </form>
-            </>
           )}
         </div>
       )}
