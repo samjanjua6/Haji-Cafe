@@ -32,13 +32,7 @@ export default function CafeDetailPage() {
   const [branchLocation, setBranchLocation] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Meeting modal
-  const [scheduleMeeting, setScheduleMeeting] = useState(false);
-  const [meetingSummary, setMeetingSummary] = useState("");
-  const [meetingDesc, setMeetingDesc] = useState("");
-  const [meetingStart, setMeetingStart] = useState("");
-  const [meetingEnd, setMeetingEnd] = useState("");
-  const [selectedStaff, setSelectedStaff] = useState<number[]>([]);
+
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const load = async () => {
@@ -80,36 +74,7 @@ export default function CafeDetailPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const handleScheduleMeeting = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedStaff.length === 0) return toast.error("Select at least one staff member.");
-    
-    setSaving(true);
-    try {
-      await api.post(`/cafes/${cafeId}/meetings`, {
-        summary: meetingSummary,
-        description: meetingDesc || null,
-        start_time: new Date(meetingStart).toISOString(),
-        end_time: new Date(meetingEnd).toISOString(),
-        attendee_user_ids: selectedStaff,
-      });
-      toast.success("Meeting scheduled & invites sent!");
-      setScheduleMeeting(false);
-      setMeetingSummary(""); setMeetingDesc(""); setMeetingStart(""); setMeetingEnd(""); setSelectedStaff([]);
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const toggleStaff = (id: number) => {
-    if (selectedStaff.includes(id)) {
-      setSelectedStaff(selectedStaff.filter(s => s !== id));
-    } else {
-      setSelectedStaff([...selectedStaff, id]);
-    }
-  };
 
   if (loading) return (
     <div style={{ display: "grid", gap: 24 }}>
@@ -166,9 +131,9 @@ export default function CafeDetailPage() {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           {currentUser?.role === "CAFE_OWNER" && (
-            <button className="btn btn-ghost" onClick={() => setScheduleMeeting(true)} style={{ color: "#22c55e", background: "#22c55e11" }}>
-              <CalendarPlus size={15} /> Schedule Meeting
-            </button>
+            <Link href={`/cafes/${cafeId}/staff`} className="btn btn-ghost" style={{ color: "#3b82f6", background: "#3b82f611" }}>
+              <Users size={15} /> Staff & Meetings
+            </Link>
           )}
           <Link href={`/cafes/${cafeId}/menu`} className="btn btn-ghost">
             <UtensilsCrossed size={15} /> Master Menu
@@ -253,51 +218,7 @@ export default function CafeDetailPage() {
         </form>
       </Modal>
 
-      {/* Schedule Meeting Modal */}
-      <Modal open={scheduleMeeting} onClose={() => setScheduleMeeting(false)} title="Schedule Staff Meeting">
-        <form onSubmit={handleScheduleMeeting} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div><label>Meeting Subject</label><input value={meetingSummary} onChange={e => setMeetingSummary(e.target.value)} required placeholder="e.g. Weekly Branch Manager Sync" /></div>
-          <div><label>Description (optional)</label><textarea value={meetingDesc} onChange={e => setMeetingDesc(e.target.value)} style={{ width: "100%", padding: 10, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-main)", resize: "vertical" }} /></div>
-          <div style={{ display: "flex", gap: 16, width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 200px" }}><label>Start Time</label><input type="datetime-local" value={meetingStart} onChange={e => setMeetingStart(e.target.value)} required style={{ width: "100%", boxSizing: "border-box" }} /></div>
-            <div style={{ flex: "1 1 200px" }}><label>End Time</label><input type="datetime-local" value={meetingEnd} onChange={e => setMeetingEnd(e.target.value)} required style={{ width: "100%", boxSizing: "border-box" }} /></div>
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}><Users size={14}/> Invite Staff Members</label>
-              {staffList.length > 0 && (
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: "var(--accent)" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedStaff.length === staffList.length} 
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedStaff(staffList.map(s => s.id));
-                      } else {
-                        setSelectedStaff([]);
-                      }
-                    }} 
-                  />
-                  Select All
-                </label>
-              )}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 150, overflowY: "auto", overflowX: "hidden", padding: 10, background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: 6 }}>
-              {staffList.length === 0 ? <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No staff found for this café. Use Super Admin to assign staff.</div> : null}
-              {staffList.map(s => (
-                <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, width: "100%", justifyContent: "flex-start" }}>
-                  <input type="checkbox" checked={selectedStaff.includes(s.id)} onChange={() => toggleStaff(s.id)} style={{ width: "auto", margin: 0, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.email}</span>
-                  <span style={{ fontSize: 11, background: "var(--bg-surface)", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", flexShrink: 0 }}>{s.role.replace("_", " ")}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <button className="btn btn-primary" type="submit" disabled={saving || selectedStaff.length === 0} style={{ justifyContent: "center", background: "#22c55e", color: "white", marginTop: 8 }}>
-            <CalendarPlus size={16} /> {saving ? "Scheduling..." : "Create Calendar Invites"}
-          </button>
-        </form>
-      </Modal>
+
     </div>
   );
 }
