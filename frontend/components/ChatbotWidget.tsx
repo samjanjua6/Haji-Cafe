@@ -344,7 +344,13 @@ export default function ChatbotWidget() {
   const activateLiveMode = () => {
     stopTTS();
     if (isRecording) stopRecording();
+    setLivekitToken(""); // Always reset token so a fresh room is created
     setIsLiveMode(true);
+  };
+
+  const deactivateLiveMode = () => {
+    setIsLiveMode(false);
+    setLivekitToken(""); // Clear token so next session gets a fresh one
   };
 
   // Auto-close chatbot on logout to ensure state is clean for next user
@@ -435,7 +441,7 @@ export default function ChatbotWidget() {
               )}
 
               <button
-                onClick={() => { setIsOpen(false); setIsLiveMode(false); }}
+                onClick={() => { setIsOpen(false); deactivateLiveMode(); }}
                 style={{ ...btnBase, backgroundColor: "transparent", color: "var(--text-muted)", marginLeft: "4px" }}
               >
                 <X size={20} />
@@ -447,16 +453,17 @@ export default function ChatbotWidget() {
           {isLiveMode ? (
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               {livekitToken ? (
-                <LiveKitRoom
-                  serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-                  token={livekitToken}
-                  connect={true}
-                  audio={true}
-                  video={false}
-                  style={{ flex: 1, display: "flex", flexDirection: "column" }}
-                >
+                  <LiveKitRoom
+                    serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                    token={livekitToken}
+                    connect={true}
+                    audio={true}
+                    video={false}
+                    onDisconnected={() => { setIsLiveMode(false); setLivekitToken(""); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column" }}
+                  >
                   <RoomAudioRenderer />
-                  <LiveModeUI onEndLive={() => setIsLiveMode(false)} />
+                  <LiveModeUI onEndLive={deactivateLiveMode} />
                 </LiveKitRoom>
               ) : (
                 <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px", color: "var(--text-muted)" }}>

@@ -37,10 +37,13 @@ async def get_livekit_token(current_user=Depends(get_current_user)):
         can_subscribe=True
     )
     
-    token = AccessToken(
-        api_key,
-        api_secret,
-    ).with_grants(grant).with_identity(f"user-{current_user.id}").with_name(current_user.email)
+    token = (
+        AccessToken(api_key, api_secret)
+        .with_grants(grant)
+        .with_identity(f"user-{current_user.id}")
+        .with_name(current_user.email)
+        .with_metadata(str(current_user.id))  # agent reads this to load user context
+    )
     
     return {"token": token.to_jwt(), "room": room_name}
 
