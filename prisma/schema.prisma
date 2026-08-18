@@ -167,6 +167,9 @@ model Order {
   createdBy  User?       @relation(fields: [createdByUserId], references: [id])
   orderItems OrderItem[]
 
+  @@index([branchId, status, createdAt])
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("orders")
 }
 

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from typing import Optional
+from fastapi import APIRouter, Depends, Query, status
 
 from app.middleware.rbac import require_branch_access, require_cafe_access
 from app.modules.orders import service
@@ -23,10 +24,20 @@ async def place_order(
 @router.get("/branches/{branch_id}/orders")
 async def list_branch_orders(
     branch_id: int,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    dateFrom: Optional[str] = None,
+    dateTo: Optional[str] = None,
+    sortBy: str = Query("createdAt"),
+    sortDir: str = Query("desc"),
     _=Depends(require_branch_access()),
 ):
     """[BRANCH_MANAGER, SUPER_ADMIN] List all orders for a branch."""
-    return prisma_to_dict(await service.get_branch_orders(branch_id))
+    return prisma_to_dict(await service.get_branch_orders(
+        branch_id, page, limit, search, status, dateFrom, dateTo, sortBy, sortDir
+    ))
 
 
 @router.get("/branches/{branch_id}/orders/{order_id}")
@@ -55,7 +66,18 @@ async def update_order_status(
 @router.get("/cafes/{cafe_id}/orders")
 async def list_cafe_orders(
     cafe_id: int,
+    branchId: Optional[int] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    dateFrom: Optional[str] = None,
+    dateTo: Optional[str] = None,
+    sortBy: str = Query("createdAt"),
+    sortDir: str = Query("desc"),
     _=Depends(require_cafe_access()),
 ):
     """[CAFE_OWNER, SUPER_ADMIN] Aggregate order history across all branches of a café."""
-    return prisma_to_dict(await service.get_cafe_orders(cafe_id))
+    return prisma_to_dict(await service.get_cafe_orders(
+        cafe_id, branchId, page, limit, search, status, dateFrom, dateTo, sortBy, sortDir
+    ))

@@ -72,12 +72,22 @@ async def create_order(branch_id: int, user_id: Optional[int], total_amount, ite
         return order
 
 
-async def get_orders_by_branch(branch_id: int):
-    return await db.order.find_many(
-        where={"branchId": branch_id},
-        order={"createdAt": "desc"},
+async def get_orders_by_branch(branch_id: int, skip: int = 0, take: int = 25, where: dict = None, order_by: dict = None):
+    query_where = {"branchId": branch_id}
+    if where:
+        query_where.update(where)
+        
+    query_order = order_by if order_by else {"createdAt": "desc"}
+    
+    total = await db.order.count(where=query_where)
+    data = await db.order.find_many(
+        where=query_where,
+        order=query_order,
+        skip=skip,
+        take=take,
     )
-
+    
+    return {"data": data, "meta": {"total": total, "skip": skip, "take": take}}
 
 async def get_order_by_id(order_id: int):
     return await db.order.find_unique(
@@ -135,10 +145,21 @@ async def update_order_status(order_id: int, new_status: str, user_id: Optional[
         return order
 
 
-async def get_orders_by_cafe(cafe_id: int):
+async def get_orders_by_cafe(cafe_id: int, skip: int = 0, take: int = 25, where: dict = None, order_by: dict = None):
     """Fetch all orders across all branches of a café."""
-    return await db.order.find_many(
-        where={"branch": {"cafeId": cafe_id}},
+    query_where = {"branch": {"cafeId": cafe_id}}
+    if where:
+        query_where.update(where)
+        
+    query_order = order_by if order_by else {"createdAt": "desc"}
+    
+    total = await db.order.count(where=query_where)
+    data = await db.order.find_many(
+        where=query_where,
         include={"branch": True},
-        order={"createdAt": "desc"},
+        order=query_order,
+        skip=skip,
+        take=take,
     )
+    
+    return {"data": data, "meta": {"total": total, "skip": skip, "take": take}}

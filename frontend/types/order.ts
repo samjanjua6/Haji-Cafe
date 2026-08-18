@@ -27,3 +27,14 @@ export interface OrderLine {
     };
   };
 }
+
+export interface OrderMeta {
+  total: number;
+  skip: number;
+  take: number;
+}
+
+export interface OrdersResponse {
+  data: Order[];
+  meta: OrderMeta;
+}

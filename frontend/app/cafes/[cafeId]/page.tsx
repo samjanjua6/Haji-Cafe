@@ -10,10 +10,15 @@ import Link from "next/link";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
+import OrderTable from "@/components/orders/OrderTable";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams, usePathname } from "next/navigation";
+import { OrdersResponse } from "@/types/order";
 
 interface Cafe { id: number; name: string; createdAt: string; }
 interface Branch { id: number; name: string; location: string | null; }
-interface Order { id: number; status: string; totalAmount: number; createdAt: string; }
+interface Order { id: number; status: string; totalAmount: number; createdAt: string; branchId: number; }
 interface Staff { id: number; email: string; role: string; }
 
 export default function CafeDetailPage() {
@@ -34,23 +39,84 @@ export default function CafeDetailPage() {
   const [saving, setSaving] = useState(false);
 
 
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const search = searchParams.get("search") || "";
+  const statusFilter = searchParams.get("status") || "";
+  const dateFrom = searchParams.get("dateFrom") || "";
+  const dateTo = searchParams.get("dateTo") || "";
+  const filterBranchId = searchParams.get("branchId") || "";
+  const sortBy = searchParams.get("sortBy") || "createdAt";
+  const sortDir = (searchParams.get("sortDir") as "asc" | "desc") || "desc";
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = 25;
+
+  const updateQueryParam = (key: string, value: string) => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    if (value) current.set(key, value);
+    else current.delete(key);
+    
+    if (key !== "page" && key !== "sortBy" && key !== "sortDir") {
+      current.set("page", "1");
+    }
+    router.push(`${pathname}?${current.toString()}`, { scroll: false });
+  };
+
+  const clearFilters = () => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    current.delete("search"); current.delete("status"); current.delete("dateFrom"); current.delete("dateTo"); current.delete("branchId");
+    current.set("page", "1");
+    router.push(`${pathname}?${current.toString()}`, { scroll: false });
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      updateQueryParam("sortDir", sortDir === "asc" ? "desc" : "asc");
+    } else {
+      updateQueryParam("sortBy", field);
+      updateQueryParam("sortDir", "desc");
+    }
+  };
+
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const load = async () => {
     try {
-      const [c, b, o, s, st, user] = await Promise.all([
+      const [c, b, s, st, user] = await Promise.all([
         api.get<Cafe>(`/cafes/${cafeId}`),
         api.get<Branch[]>(`/cafes/${cafeId}/branches`),
-        api.get<Order[]>(`/cafes/${cafeId}/orders`),
         api.get<Staff[]>(`/cafes/${cafeId}/staff`),
         api.get<any[]>(`/cafes/${cafeId}/stock-rollup`),
         api.get<any>("/auth/me"),
       ]);
-      setCafe(c); setBranches(b); setOrders(o); setStaffList(s); setStockRollup(st); setCurrentUser(user);
+      setCafe(c); setBranches(b); setStaffList(s); setStockRollup(st); setCurrentUser(user);
     } catch (e: any) { toast.error(e.message); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [cafeId]);
+
+  const { data: ordersData, isLoading: loadingOrders } = useQuery({
+    queryKey: ["cafe-orders", cafeId, search, statusFilter, dateFrom, dateTo, filterBranchId, sortBy, sortDir, page],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      q.set("page", page.toString());
+      q.set("limit", limit.toString());
+      if (search) q.set("search", search);
+      if (statusFilter) q.set("status", statusFilter);
+      if (dateFrom) q.set("dateFrom", dateFrom);
+      if (dateTo) q.set("dateTo", dateTo);
+      if (filterBranchId) q.set("branchId", filterBranchId);
+      q.set("sortBy", sortBy);
+      q.set("sortDir", sortDir);
+      return api.get<OrdersResponse>(`/cafes/${cafeId}/orders?${q.toString()}`);
+    }
+  });
+
+  const ordersList = ordersData?.data || [];
+  const meta = ordersData?.meta || { total: 0, skip: 0, take: 0 };
+  const hasFiltersActive = !!(search || statusFilter || dateFrom || dateTo || filterBranchId);
+  const totalPages = Math.ceil(meta.total / limit);
 
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
@@ -169,31 +235,53 @@ export default function CafeDetailPage() {
       {/* Café-wide Orders */}
       <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
         <ShoppingCart size={16} style={{ marginRight: 8, display: "inline" }} />
-        All Orders ({orders.length})
+        All Orders — Showing {ordersList.length} of {meta.total}
       </h3>
-      <div className="card table-wrap">
-        {orders.length === 0 ? (
-          <EmptyState
-            icon={ShoppingCart}
-            title="No orders yet"
-            subtitle="Orders placed across all branches of this café will appear here."
-          />
-        ) : (
-          <table>
-            <thead><tr><th>Order ID</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
-            <tbody>
-              {orders.map(o => (
-                <tr key={o.id}>
-                  <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>#{o.id}</td>
-                  <td><StatusBadge status={o.status} /></td>
-                  <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(o.totalAmount).toFixed(2)}</td>
-                  <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      
+      <OrdersFilterBar 
+        search={search}
+        status={statusFilter}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        branchId={filterBranchId}
+        onFilterChange={updateQueryParam}
+        onClearFilters={clearFilters}
+        showBranchFilter={true}
+        branches={branches}
+      />
+
+      <OrderTable 
+        orders={ordersList as any}
+        loading={loading || loadingOrders}
+        branchMode={false}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onSort={handleSort}
+        hasFiltersActive={hasFiltersActive}
+        onClearFilters={clearFilters}
+      />
+
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, marginTop: 24, marginBottom: 40 }}>
+          <button 
+            className="btn btn-secondary" 
+            disabled={page <= 1} 
+            onClick={() => updateQueryParam("page", String(page - 1))}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            Page {page} of {totalPages}
+          </span>
+          <button 
+            className="btn btn-secondary" 
+            disabled={page >= totalPages} 
+            onClick={() => updateQueryParam("page", String(page + 1))}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Stock Rollup */}
       {currentUser?.role === "CAFE_OWNER" || currentUser?.role === "SUPER_ADMIN" ? (

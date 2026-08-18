@@ -1,4 +1,5 @@
 from decimal import Decimal
+import datetime
 from typing import List, Optional
 
 from app.core.exceptions import BadRequestException, NotFoundException, UnprocessableException
@@ -58,8 +59,44 @@ async def place_order(branch_id: int, user_id: Optional[int], items: List[OrderI
     return await repository.create_order(branch_id, user_id, total, items_data)
 
 
-async def get_branch_orders(branch_id: int):
-    return await repository.get_orders_by_branch(branch_id)
+def _build_orders_query(search: str = None, statuses: str = None, date_from: str = None, date_to: str = None, sort_by: str = "createdAt", sort_dir: str = "desc"):
+    where = {}
+    if search:
+        if search.isdigit():
+            where["id"] = int(search)
+        else:
+            where["id"] = -1
+            
+    if statuses:
+        status_list = [s.strip() for s in statuses.split(",")]
+        where["status"] = {"in": status_list}
+        
+    if date_from or date_to:
+        created_at_filter = {}
+        if date_from:
+            try:
+                # Handle YYYY-MM-DD format from <input type="date">
+                date_from_dt = datetime.datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=datetime.timezone.utc)
+                created_at_filter["gte"] = date_from_dt
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                date_to_dt = datetime.datetime.strptime(date_to, "%Y-%m-%d").replace(tzinfo=datetime.timezone.utc)
+                created_at_filter["lt"] = date_to_dt + datetime.timedelta(days=1)
+            except ValueError:
+                pass
+        if created_at_filter:
+            where["createdAt"] = created_at_filter
+            
+    order_by = {sort_by: sort_dir}
+    return where, order_by
+
+
+async def get_branch_orders(branch_id: int, page: int = 1, limit: int = 25, search: str = None, statuses: str = None, date_from: str = None, date_to: str = None, sort_by: str = "createdAt", sort_dir: str = "desc"):
+    where, order_by = _build_orders_query(search, statuses, date_from, date_to, sort_by, sort_dir)
+    skip = (page - 1) * limit
+    return await repository.get_orders_by_branch(branch_id, skip, limit, where, order_by)
 
 
 async def get_order_detail(branch_id: int, order_id: int):
@@ -89,5 +126,9 @@ async def transition_status(branch_id: int, order_id: int, new_status: OrderStat
     return await repository.update_order_status(order_id, new_status.value, user_id)
 
 
-async def get_cafe_orders(cafe_id: int):
-    return await repository.get_orders_by_cafe(cafe_id)
+async def get_cafe_orders(cafe_id: int, branch_id: int = None, page: int = 1, limit: int = 25, search: str = None, statuses: str = None, date_from: str = None, date_to: str = None, sort_by: str = "createdAt", sort_dir: str = "desc"):
+    where, order_by = _build_orders_query(search, statuses, date_from, date_to, sort_by, sort_dir)
+    if branch_id:
+        where["branchId"] = branch_id
+    skip = (page - 1) * limit
+    return await repository.get_orders_by_cafe(cafe_id, skip, limit, where, order_by)
