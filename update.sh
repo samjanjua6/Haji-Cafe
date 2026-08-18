@@ -58,10 +58,11 @@ pm2 describe frontend > /dev/null 2>&1 && pm2 restart frontend || \
 
 # ── LiveKit Voice Agent ───────────────────────────────────────
 pm2 describe livekit-agent > /dev/null 2>&1 && pm2 restart livekit-agent || \
-  pm2 start "venv/bin/python app/modules/chatbot/agent.py start" \
+  pm2 start app/modules/chatbot/agent.py \
     --name livekit-agent \
     --cwd $PROJECT_DIR \
-    --interpreter none
+    --interpreter $PROJECT_DIR/venv/bin/python3 \
+    -- start
 
 # Save PM2 process list so it survives reboots
 pm2 save
