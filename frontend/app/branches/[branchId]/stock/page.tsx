@@ -6,16 +6,16 @@ import toast from "react-hot-toast";
 import { BranchMenuItem } from "@/types/menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import Modal from "@/components/ui/Modal";
-import EmptyState from "@/components/ui/EmptyState";
-import { useAuth } from "@/hooks/useAuth";
+import Modal from "@/components/Modal";
+import EmptyState from "@/components/EmptyState";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function BranchStockPage() {
   const router = useRouter();
   const params = useParams<{ branchId: string }>();
   const queryClient = useQueryClient();
   const branchId = params.branchId;
-  const { user } = useAuth();
+  const { data: user } = useCurrentUser();
   
   const [stockModal, setStockModal] = useState<BranchMenuItem | null>(null);
   const [thresholdModal, setThresholdModal] = useState<BranchMenuItem | null>(null);
