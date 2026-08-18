@@ -163,7 +163,9 @@ export default function Topbar() {
           <PanelRight size={18} />
         </button>
         {user && (
-          <UserAvatar email={user.email} role={user.role} />
+          <Link href="/settings" style={{ textDecoration: "none" }}>
+            <UserAvatar email={user.email} role={user.role} />
+          </Link>
         )}
       </div>
     </header>

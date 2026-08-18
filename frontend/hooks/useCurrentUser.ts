@@ -7,7 +7,13 @@ export interface UserProfile {
   id: number;
   email: string;
   role: string;
-  createdAt: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  timezone: string;
+  defaultCafeId: number | null;
+  defaultBranchId: number | null;
+  preferences: Record<string, any> | null;
+  createdAt: string | null;
   has_google_calendar: boolean;
   scopes: {
     cafeId: number | null;

@@ -124,3 +124,27 @@ async def _issue_tokens(user) -> dict:
         "refresh_token": raw_refresh,
         "token_type": "bearer",
     }
+
+
+async def update_me(user_id: int, data: dict):
+    # Map pydantic fields to prisma fields if they differ, but we used the same names mostly in schema, except the schema is JSON dict.
+    return await repository.update_user(user_id, data)
+
+
+async def change_password(user_id: int, current_pw: str, new_pw: str):
+    user = await repository.find_user_by_id(user_id)
+    if not user.passwordHash:
+        raise BadRequestException("You don't have a password set (likely logged in via Google).")
+    if not verify_password(current_pw, user.passwordHash):
+        raise BadRequestException("Current password is incorrect.")
+    
+    new_hash = hash_password(new_pw)
+    await repository.update_user(user_id, {"passwordHash": new_hash})
+
+
+async def get_sessions(user_id: int):
+    return await repository.get_active_sessions(user_id)
+
+
+async def disconnect_google(user_id: int):
+    await repository.update_user(user_id, {"googleAccessToken": None, "googleRefreshToken": None})

@@ -8,6 +8,8 @@ from app.modules.auth.schemas import (
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateMeRequest,
+    ChangePasswordRequest,
 )
 
 router = APIRouter()
@@ -58,10 +60,25 @@ async def google_callback(code: str):
 @router.get("/me")
 async def me(current_user=Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
+    # current_user.preferences might be a Prisma Json object, we can return it safely as dict/list or None
+    import json
+    prefs = current_user.preferences
+    if isinstance(prefs, str):
+        try:
+            prefs = json.loads(prefs)
+        except Exception:
+            pass
+            
     return {
         "id": current_user.id,
         "email": current_user.email,
         "role": current_user.role.name,
+        "displayName": current_user.displayName,
+        "avatarUrl": current_user.avatarUrl,
+        "timezone": current_user.timezone,
+        "defaultCafeId": current_user.defaultCafeId,
+        "defaultBranchId": current_user.defaultBranchId,
+        "preferences": prefs,
         "createdAt": current_user.createdAt.isoformat() if current_user.createdAt else None,
         "auth_provider": current_user.authProvider,
         "has_google_calendar": bool(getattr(current_user, "googleAccessToken", None)),
@@ -85,3 +102,42 @@ async def google_connect(current_user=Depends(get_current_user)):
     """
     url = await service.get_google_auth_url()
     return {"connect_url": url}
+
+
+@router.put("/me")
+async def update_me(body: UpdateMeRequest, current_user=Depends(get_current_user)):
+    data = body.model_dump(exclude_unset=True)
+    if data:
+        await service.update_me(current_user.id, data)
+    return {"message": "Profile updated successfully."}
+
+
+@router.put("/change-password")
+async def change_password(body: ChangePasswordRequest, current_user=Depends(get_current_user)):
+    await service.change_password(current_user.id, body.currentPassword, body.newPassword)
+    return {"message": "Password changed successfully."}
+
+
+@router.get("/sessions")
+async def get_sessions(current_user=Depends(get_current_user)):
+    sessions = await service.get_sessions(current_user.id)
+    return [
+        {
+            "id": s.id, 
+            "createdAt": s.createdAt.isoformat() if s.createdAt else None, 
+            "expiresAt": s.expiresAt.isoformat() if s.expiresAt else None
+        } 
+        for s in sessions
+    ]
+
+
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_all(current_user=Depends(get_current_user)):
+    from app.modules.auth.repository import revoke_all_user_refresh_tokens
+    await revoke_all_user_refresh_tokens(current_user.id)
+
+
+@router.post("/google/disconnect")
+async def disconnect_google(current_user=Depends(get_current_user)):
+    await service.disconnect_google(current_user.id)
+    return {"message": "Google Calendar disconnected."}

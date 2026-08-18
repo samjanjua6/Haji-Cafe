@@ -27,6 +27,12 @@ model User {
   authProviderId      String?  @map("auth_provider_id")
   googleAccessToken   String?  @map("google_access_token")
   googleRefreshToken  String?  @map("google_refresh_token")
+  displayName         String?  @map("display_name")
+  avatarUrl           String?  @map("avatar_url")
+  timezone            String   @default("UTC")
+  defaultCafeId       Int?     @map("default_cafe_id")
+  defaultBranchId     Int?     @map("default_branch_id")
+  preferences         Json?
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

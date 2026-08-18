@@ -85,3 +85,14 @@ async def link_google_account(user_id: int, google_id: str):
         data={"authProvider": "GOOGLE", "authProviderId": google_id},
         include={"role": True},
     )
+
+
+async def update_user(user_id: int, data: dict):
+    return await db.user.update(where={"id": user_id}, data=data)
+
+
+async def get_active_sessions(user_id: int):
+    return await db.refreshtoken.find_many(
+        where={"userId": user_id, "isRevoked": False},
+        order={"createdAt": "desc"}
+    )

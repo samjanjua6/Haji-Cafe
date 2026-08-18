@@ -20,6 +20,19 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class UpdateMeRequest(BaseModel):
+    displayName: Optional[str] = None
+    timezone: Optional[str] = None
+    defaultCafeId: Optional[int] = None
+    defaultBranchId: Optional[int] = None
+    preferences: Optional[dict] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+
+
 # --- Response Schemas ---
 
 class TokenResponse(BaseModel):

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -205,6 +205,14 @@ export default function Sidebar() {
               {user.email}
             </div>
           )}
+          
+          <NavLink
+            href="/settings"
+            label="Settings"
+            icon={Settings}
+            active={pathname.includes("/settings")}
+          />
+          
           <button
             onClick={handleLogout}
             style={{
