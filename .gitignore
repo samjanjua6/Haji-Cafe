@@ -4,9 +4,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 chabi.pem
-deploy.sh
 list_models.py
 test_async_tool.py
+test_assign.py
 test_models.py
 test_stream.py
-update.sh

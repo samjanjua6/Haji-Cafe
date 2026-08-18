@@ -9,12 +9,18 @@ import { AuditLogTable } from "@/components/AuditLogTable";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
+import React from "react";
 
 export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   // Shared hook — if Sidebar already fetched this, it's instant from cache
   const { data: user, isLoading: loading } = useCurrentUser();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleRefresh = async () => {
     const refreshToken = auth.getRefresh();
@@ -37,7 +43,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) return (
+  if (!mounted || loading) return (
     <div style={{ display: "grid", gap: 20 }}>
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <Skeleton width={64} height={64} borderRadius="50%" />

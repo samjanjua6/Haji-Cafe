@@ -8,7 +8,10 @@
     "start": "next start"
   },
   "dependencies": {
+    "@livekit/components-react": "^2.9.24",
+    "@livekit/components-styles": "^1.2.0",
     "@tanstack/react-query": "^5.101.4",
+    "livekit-client": "^2.21.0",
     "lucide-react": "^1.28.0",
     "next": "16.3.0",
     "react": "19.2.8",

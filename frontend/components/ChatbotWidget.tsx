@@ -1,12 +1,19 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX, Activity } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  BarVisualizer,
+  useVoiceAssistant,
+} from "@livekit/components-react";
+import "@livekit/components-styles";
 
 type Message = {
   role: "user" | "model";
@@ -26,11 +33,50 @@ const btnBase: React.CSSProperties = {
   transition: "background 0.2s, transform 0.15s",
 };
 
+// --- LiveKit UI Component ---
+function LiveModeUI({ onEndLive }: { onEndLive: () => void }) {
+  const { state, audioTrack } = useVoiceAssistant();
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "var(--bg-base)", zIndex: 5 }}>
+      <div style={{ marginBottom: 32, fontSize: "16px", color: "var(--text-primary)", fontWeight: 500 }}>
+        {state === "speaking" && "Assistant is speaking..."}
+        {state === "listening" && "Listening..."}
+        {state === "thinking" && "Assistant is thinking..."}
+        {(state === "connecting" || state === "disconnected" || state === "initializing") && "Connecting to LiveKit..."}
+      </div>
+      
+      <div style={{ height: 80, width: "100%", padding: "0 60px", display: "flex", justifyContent: "center" }}>
+        <BarVisualizer
+          state={state}
+          barCount={7}
+          trackRef={audioTrack}
+          style={{ width: "200px", height: "100%" }}
+          options={{ minHeight: 10 }}
+        />
+      </div>
+
+      <button
+        onClick={onEndLive}
+        style={{
+          marginTop: 48, padding: "10px 24px", borderRadius: "24px",
+          backgroundColor: "#ef4444", color: "#fff", border: "none",
+          cursor: "pointer", fontWeight: 600, boxShadow: "0 4px 6px rgba(239, 68, 68, 0.2)"
+        }}
+      >
+        End Live Session
+      </button>
+    </div>
+  );
+}
+
+// --- Main Chatbot Widget ---
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: user } = useCurrentUser();
   const isLoggedIn = !!user;
 
+  // Standard Mode State
   const [messages, setMessages] = useState<Message[]>([
     { role: "model", content: "Hi there! I am your AI assistant. How can I help you today?" },
   ]);
@@ -38,7 +84,11 @@ export default function ChatbotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
 
-  // Voice state
+  // Live Mode State
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [livekitToken, setLivekitToken] = useState("");
+
+  // Voice state (Standard Mode)
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -56,7 +106,23 @@ export default function ChatbotWidget() {
   const currentResponseRef = useRef<string>("");
   const currentAudio = useRef<HTMLAudioElement | null>(null);
 
-  // --- WebSocket Setup ---
+  // Fetch LiveKit token when Live Mode is activated
+  useEffect(() => {
+    if (isLiveMode && !livekitToken) {
+      const accessToken = auth.getAccess();
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      fetch(`${base}/chatbot/livekit-token`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.token) setLivekitToken(data.token);
+        })
+        .catch(console.error);
+    }
+  }, [isLiveMode, livekitToken]);
+
+  // --- WebSocket Setup (Standard Mode) ---
   useEffect(() => {
     if (!isOpen) {
       ws.current?.close();
@@ -86,7 +152,8 @@ export default function ChatbotWidget() {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
             if (lastMsg && lastMsg.role === "model" && lastMsg.content !== undefined) {
-              lastMsg.content += data.chunk;
+              const updatedMsg = { ...lastMsg, content: lastMsg.content + data.chunk };
+              newMessages[newMessages.length - 1] = updatedMsg;
             } else {
               newMessages.push({ role: "model", content: data.chunk });
             }
@@ -98,7 +165,7 @@ export default function ChatbotWidget() {
           setProgressMsg(null);
           setIsLoading(false);
           // Auto-play TTS for the full response only if enabled
-          if (ttsEnabledRef.current && currentResponseRef.current.trim()) {
+          if (ttsEnabledRef.current && currentResponseRef.current.trim() && !isLiveMode) {
             playTTS(currentResponseRef.current);
           }
           currentResponseRef.current = "";
@@ -116,12 +183,12 @@ export default function ChatbotWidget() {
       ws.current?.close();
       ws.current = null;
     };
-  }, [isOpen]);
+  }, [isOpen, isLiveMode]);
 
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isLiveMode]);
 
   // --- Send Message ---
   const sendMessages = useCallback((msgs: Message[]) => {
@@ -274,9 +341,24 @@ export default function ChatbotWidget() {
     }
   };
 
+  const activateLiveMode = () => {
+    stopTTS();
+    if (isRecording) stopRecording();
+    setLivekitToken(""); // Always reset token so a fresh room is created
+    setIsLiveMode(true);
+  };
+
+  const deactivateLiveMode = () => {
+    setIsLiveMode(false);
+    setLivekitToken(""); // Clear token so next session gets a fresh one
+  };
+
   // Auto-close chatbot on logout to ensure state is clean for next user
   useEffect(() => {
-    if (!isLoggedIn && isOpen) setIsOpen(false);
+    if (!isLoggedIn && isOpen) {
+      setIsOpen(false);
+      setIsLiveMode(false);
+    }
   }, [isLoggedIn, isOpen]);
 
   if (!isLoggedIn) return null;
@@ -319,159 +401,209 @@ export default function ChatbotWidget() {
             padding: "16px", backgroundColor: "var(--bg-surface)",
             color: "var(--text-primary)", borderBottom: "1px solid var(--border)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
+            zIndex: 10
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Bot size={20} />
               <strong style={{ fontSize: "16px" }}>Assistant</strong>
-              {isSpeaking && (
+              {isSpeaking && !isLiveMode && (
                 <span style={{ fontSize: "11px", color: "var(--accent)", fontStyle: "italic" }}>
                   🔊 Speaking...
                 </span>
               )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              {/* TTS toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              
+              {!isLiveMode && (
+                <button
+                  onClick={activateLiveMode}
+                  title="Enter Gemini Live Mode"
+                  style={{
+                    display: "flex", alignItems: "center", gap: "6px",
+                    padding: "6px 12px", borderRadius: "16px",
+                    backgroundColor: "var(--accent)", color: "#0f172a",
+                    border: "none", cursor: "pointer", fontWeight: 600, fontSize: "12px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  }}
+                >
+                  <Activity size={14} /> Live
+                </button>
+              )}
+
+              {!isLiveMode && (
+                <button
+                  onClick={() => { setTtsEnabled((v) => !v); if (!ttsEnabled === false) stopTTS(); }}
+                  title={ttsEnabled ? "Disable auto-speak" : "Enable auto-speak"}
+                  style={{ ...btnBase, backgroundColor: "transparent", color: ttsEnabled ? "var(--text-primary)" : "var(--text-muted)" }}
+                >
+                  {ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                </button>
+              )}
+
               <button
-                onClick={() => { setTtsEnabled((v) => !v); if (!ttsEnabled === false) stopTTS(); }}
-                title={ttsEnabled ? "Disable auto-speak" : "Enable auto-speak"}
-                style={{ ...btnBase, backgroundColor: "transparent", color: ttsEnabled ? "var(--accent)" : "var(--text-muted)" }}
-              >
-                {ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{ ...btnBase, backgroundColor: "transparent", color: "var(--text-muted)" }}
+                onClick={() => { setIsOpen(false); deactivateLiveMode(); }}
+                style={{ ...btnBase, backgroundColor: "transparent", color: "var(--text-muted)", marginLeft: "4px" }}
               >
                 <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div style={{
-            flex: 1, padding: "16px", overflowY: "auto",
-            display: "flex", flexDirection: "column", gap: "12px",
-            backgroundColor: "var(--bg-base)",
-          }}>
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                style={{
-                  alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "85%",
-                  backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
-                  color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
-                  padding: "10px 14px", borderRadius: "12px",
-                  borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
-                  borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-                  border: msg.role === "model" ? "1px solid var(--border)" : "none",
-                  fontSize: "14px", lineHeight: "1.5",
-                }}
-              >
-                {msg.role === "model" ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
-                      a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
-                      ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                      ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                      li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
-                      table: ({ node, ...props }) => (
-                        <div style={{ overflowX: "auto", width: "100%" }}>
-                          <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
-                        </div>
-                      ),
-                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
-                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
+          {/* Conditional Rendering: Live Mode vs Standard Mode */}
+          {isLiveMode ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {livekitToken ? (
+                  <LiveKitRoom
+                    serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                    token={livekitToken}
+                    connect={true}
+                    audio={true}
+                    video={false}
+                    onDisconnected={() => { setIsLiveMode(false); setLivekitToken(""); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column" }}
+                  >
+                  <RoomAudioRenderer />
+                  <LiveModeUI onEndLive={deactivateLiveMode} />
+                </LiveKitRoom>
+              ) : (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px", color: "var(--text-muted)" }}>
+                  <span style={{
+                    display: "inline-block", width: "12px", height: "12px", borderRadius: "50%",
+                    backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
+                  }} />
+                  Preparing Live Session...
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Messages Area */}
+              <div style={{
+                flex: 1, padding: "16px", overflowY: "auto",
+                display: "flex", flexDirection: "column", gap: "12px",
+                backgroundColor: "var(--bg-base)",
+              }}>
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "85%",
+                      backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
+                      color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
+                      padding: "10px 14px", borderRadius: "12px",
+                      borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
+                      borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      border: msg.role === "model" ? "1px solid var(--border)" : "none",
+                      fontSize: "14px", lineHeight: "1.5",
                     }}
                   >
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    {msg.role === "model" ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
+                          a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
+                          ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                          ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                          li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
+                          table: ({ node, ...props }) => (
+                            <div style={{ overflowX: "auto", width: "100%" }}>
+                              <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
+                            </div>
+                          ),
+                          th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
+                          td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div style={{
+                    alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
+                    fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
+                    padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
+                    border: "1px solid var(--border)", maxWidth: "85%",
+                  }}>
+                    <span style={{
+                      display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+                      backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
+                    }} />
+                    {progressMsg || "Assistant is thinking..."}
+                  </div>
                 )}
+                {isTranscribing && (
+                  <div style={{
+                    alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
+                    fontStyle: "italic", padding: "4px 8px",
+                  }}>
+                    🎙️ Transcribing...
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            ))}
-            {isLoading && (
-              <div style={{
-                alignSelf: "flex-start", fontSize: "13px", color: "var(--text-muted)",
-                fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px",
-                padding: "8px", backgroundColor: "var(--bg-surface)", borderRadius: "10px",
-                border: "1px solid var(--border)", maxWidth: "85%",
-              }}>
-                <span style={{
-                  display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-                  backgroundColor: "var(--accent)", animation: "pulse 1.2s ease-in-out infinite",
-                }} />
-                {progressMsg || "Assistant is thinking..."}
-              </div>
-            )}
-            {isTranscribing && (
-              <div style={{
-                alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
-                fontStyle: "italic", padding: "4px 8px",
-              }}>
-                🎙️ Transcribing...
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {/* Input Area */}
-          <form
-            onSubmit={handleSend}
-            style={{
-              padding: "12px", borderTop: "1px solid var(--border)",
-              display: "flex", gap: "8px", alignItems: "center",
-              backgroundColor: "var(--bg-card)",
-            }}
-          >
-            {/* Mic Button */}
-            <button
-              type="button"
-              onClick={handleMicClick}
-              disabled={isLoading || isTranscribing}
-              title={isRecording ? "Stop recording" : "Speak to assistant"}
-              style={{
-                ...btnBase,
-                backgroundColor: micActive ? "#ef4444" : "var(--bg-surface)",
-                color: micActive ? "#fff" : "var(--text-muted)",
-                border: micActive ? "none" : "1px solid var(--border)",
-                animation: isRecording ? "pulse 1s ease-in-out infinite" : "none",
-              }}
-            >
-              {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
+              {/* Input Area */}
+              <form
+                onSubmit={handleSend}
+                style={{
+                  padding: "12px", borderTop: "1px solid var(--border)",
+                  display: "flex", gap: "8px", alignItems: "center",
+                  backgroundColor: "var(--bg-card)",
+                }}
+              >
+                {/* Mic Button */}
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  disabled={isLoading || isTranscribing}
+                  title={isRecording ? "Stop recording" : "Speak to assistant"}
+                  style={{
+                    ...btnBase,
+                    backgroundColor: micActive ? "#ef4444" : "var(--bg-surface)",
+                    color: micActive ? "#fff" : "var(--text-muted)",
+                    border: micActive ? "none" : "1px solid var(--border)",
+                    animation: isRecording ? "pulse 1s ease-in-out infinite" : "none",
+                  }}
+                >
+                  {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                </button>
 
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={isRecording ? "Recording... click mic to stop" : "Ask me anything..."}
-              disabled={isLoading || isRecording}
-              style={{
-                flex: 1, padding: "8px 12px", borderRadius: "20px",
-                border: "1px solid var(--border)", backgroundColor: "var(--bg-surface)",
-                color: "var(--text-primary)", outline: "none", fontSize: "14px",
-              }}
-            />
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={isRecording ? "Recording... click mic to stop" : "Ask me anything..."}
+                  disabled={isLoading || isRecording}
+                  style={{
+                    flex: 1, padding: "8px 12px", borderRadius: "20px",
+                    border: "1px solid var(--border)", backgroundColor: "var(--bg-surface)",
+                    color: "var(--text-primary)", outline: "none", fontSize: "14px",
+                  }}
+                />
 
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              style={{
-                ...btnBase,
-                backgroundColor: input.trim() && !isLoading ? "var(--accent)" : "var(--bg-surface)",
-                color: input.trim() && !isLoading ? "#0f172a" : "var(--text-muted)",
-                border: input.trim() && !isLoading ? "none" : "1px solid var(--border)",
-                cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-              }}
-            >
-              <Send size={16} style={{ marginLeft: "2px" }} />
-            </button>
-          </form>
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isLoading}
+                  style={{
+                    ...btnBase,
+                    backgroundColor: input.trim() && !isLoading ? "var(--accent)" : "var(--bg-surface)",
+                    color: input.trim() && !isLoading ? "#0f172a" : "var(--text-muted)",
+                    border: input.trim() && !isLoading ? "none" : "1px solid var(--border)",
+                    cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
+                  }}
+                >
+                  <Send size={16} style={{ marginLeft: "2px" }} />
+                </button>
+              </form>
+            </>
+          )}
         </div>
       )}
     </>
