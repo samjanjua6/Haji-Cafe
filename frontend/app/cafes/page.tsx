@@ -8,10 +8,12 @@ import { Cafe } from "@/types/cafe";
 import CafeTable from "@/components/cafes/CafeTable";
 import CafeModals from "@/components/cafes/CafeModals";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function CafesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: user } = useCurrentUser();
   
   const [createOpen, setCreateOpen] = useState(false);
   const [editCafe, setEditCafe] = useState<Cafe | null>(null);
@@ -42,9 +44,11 @@ export default function CafesPage() {
           <div className="page-title">Cafés</div>
           <div className="page-subtitle">Manage your café brands</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-          <Plus size={16} /> New Café
-        </button>
+        {user?.role === "SUPER_ADMIN" && (
+          <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
+            <Plus size={16} /> New Café
+          </button>
+        )}
       </div>
 
       <CafeTable 
@@ -52,6 +56,7 @@ export default function CafesPage() {
         loading={loading} 
         onEdit={(cafe) => setEditCafe(cafe)} 
         onDelete={handleDelete} 
+        readOnly={user?.role !== "SUPER_ADMIN"}
       />
 
       <CafeModals 

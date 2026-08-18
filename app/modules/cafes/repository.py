@@ -15,6 +15,13 @@ async def get_all_cafes():
     return await db.cafe.find_many(include={"branches": True})
 
 
+async def get_cafes_by_owner(owner_id: int):
+    return await db.cafe.find_many(
+        where={"ownerId": owner_id},
+        include={"branches": True},
+    )
+
+
 async def get_cafe_by_id(cafe_id: int):
     return await db.cafe.find_unique(
         where={"id": cafe_id},

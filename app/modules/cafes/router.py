@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 
 from app.core.dependencies import get_current_user
 from app.middleware.rbac import require_cafe_access, require_role
@@ -28,10 +28,14 @@ async def create_cafe(
 
 @router.get("")
 async def list_cafes(
-    _=Depends(require_role("SUPER_ADMIN")),
+    current_user=Depends(get_current_user),
 ):
-    """[SUPER_ADMIN] List all cafés on the platform."""
-    return prisma_to_dict(await service.get_all_cafes())
+    """[SUPER_ADMIN, CAFE_OWNER] List cafés. Super Admins see all, Owners see theirs."""
+    if current_user.role.name == "SUPER_ADMIN":
+        return prisma_to_dict(await service.get_all_cafes())
+    elif current_user.role.name == "CAFE_OWNER":
+        return prisma_to_dict(await service.get_cafes_by_owner(current_user.id))
+    raise HTTPException(status_code=403, detail="Not authorized to view cafés.")
 
 
 @router.get("/{cafe_id}")

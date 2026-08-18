@@ -11,9 +11,10 @@ interface CafeTableProps {
   loading: boolean;
   onEdit: (cafe: Cafe) => void;
   onDelete: (cafe: Cafe) => void;
+  readOnly?: boolean;
 }
 
-export default function CafeTable({ cafes, loading, onEdit, onDelete }: CafeTableProps) {
+export default function CafeTable({ cafes, loading, onEdit, onDelete, readOnly }: CafeTableProps) {
   const router = useRouter();
 
   return (
@@ -47,12 +48,16 @@ export default function CafeTable({ cafes, loading, onEdit, onDelete }: CafeTabl
                     <button className="btn btn-ghost btn-sm" onClick={() => router.push(`/cafes/${cafe.id}`)}>
                       <ChevronRight size={14} /> View
                     </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => onEdit(cafe)}>
-                      <Pencil size={14} /> Edit
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => onDelete(cafe)}>
-                      <Trash2 size={14} /> Delete
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => onEdit(cafe)}>
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => onDelete(cafe)}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

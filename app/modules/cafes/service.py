@@ -14,6 +14,10 @@ async def get_all_cafes():
     return await repository.get_all_cafes()
 
 
+async def get_cafes_by_owner(owner_id: int):
+    return await repository.get_cafes_by_owner(owner_id)
+
+
 async def get_cafe(cafe_id: int):
     cafe = await repository.get_cafe_by_id(cafe_id)
     if not cafe:
