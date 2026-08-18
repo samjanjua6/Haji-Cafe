@@ -79,13 +79,6 @@ export default function DashboardPage() {
             <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}><Coffee size={24} color="#f59e0b" /></div>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
           </Link>
-          <Link href="/admin/users" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
-            onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
-            onMouseLeave={e => (e.currentTarget.style.transform = "none")}
-          >
-            <div style={{ background: "#3b82f622", borderRadius: 12, padding: 14 }}><User size={24} color="#3b82f6" /></div>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Users</span>
-          </Link>
         </>
       );
     }
