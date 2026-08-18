@@ -63,7 +63,11 @@ export function AuditLogTable({ cafeId, cafeName }: { cafeId: number, cafeName: 
                   fontSize: 12,
                   fontWeight: 600
                 }}>
-                  {log.action}
+                  {log.action
+                    .toLowerCase()
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')}
                 </span>
               </td>
               <td style={{ padding: "12px 8px", display: "flex", alignItems: "center", gap: 6 }}>
