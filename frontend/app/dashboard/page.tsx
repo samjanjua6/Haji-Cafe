@@ -72,14 +72,14 @@ export default function DashboardPage() {
     if (user?.role === "SUPER_ADMIN") {
       return (
         <>
-          <Link href="/cafes" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
+          <Link href="/cafes" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
             onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
             onMouseLeave={e => (e.currentTarget.style.transform = "none")}
           >
             <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}><Coffee size={24} color="#f59e0b" /></div>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
           </Link>
-          <Link href="/admin/users" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
+          <Link href="/admin/users" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
             onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
             onMouseLeave={e => (e.currentTarget.style.transform = "none")}
           >
@@ -91,7 +91,7 @@ export default function DashboardPage() {
     }
     if (user?.role === "CAFE_OWNER") {
       return user.scopes.map((scope, idx) => (
-        <Link key={`cafe-${idx}`} href={`/cafes/${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
+        <Link key={`cafe-${idx}`} href={`/cafes/${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
           onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
           onMouseLeave={e => (e.currentTarget.style.transform = "none")}
         >
@@ -102,7 +102,7 @@ export default function DashboardPage() {
     }
     if (user?.role === "BRANCH_MANAGER") {
       return user.scopes.map((scope, idx) => (
-        <Link key={idx} href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
+        <Link key={idx} href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
           onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
           onMouseLeave={e => (e.currentTarget.style.transform = "none")}
         >
