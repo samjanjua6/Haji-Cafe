@@ -15,9 +15,9 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         if role not in ["SUPER_ADMIN", "CAFE_OWNER"]:
             return "Error: Your role does not allow viewing cafes."
             
-        where_clause = {}
+        where_clause = {"isArchived": False}
         if role != "SUPER_ADMIN":
-            where_clause = {"id": {"in": list(authorized_cafes)}}
+            where_clause["id"] = {"in": list(authorized_cafes)}
             
         cafes = await db.cafe.find_many(where=where_clause)
         if not cafes:
@@ -66,9 +66,9 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         if role not in ["SUPER_ADMIN", "CAFE_OWNER"]:
             return "Error: Your role does not allow searching cafes."
             
-        where_clause = {}
+        where_clause = {"isArchived": False}
         if role != "SUPER_ADMIN":
-            where_clause = {"id": {"in": list(authorized_cafes)}}
+            where_clause["id"] = {"in": list(authorized_cafes)}
             
         cafes = await db.cafe.find_many(where=where_clause)
         if not cafes:

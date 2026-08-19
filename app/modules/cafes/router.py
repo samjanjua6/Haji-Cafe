@@ -28,13 +28,14 @@ async def create_cafe(
 
 @router.get("")
 async def list_cafes(
+    include_archived: bool = False,
     current_user=Depends(get_current_user),
 ):
     """[SUPER_ADMIN, CAFE_OWNER] List cafés. Super Admins see all, Owners see theirs."""
     if current_user.role.name == "SUPER_ADMIN":
-        return prisma_to_dict(await service.get_all_cafes())
+        return prisma_to_dict(await service.get_all_cafes(include_archived))
     elif current_user.role.name == "CAFE_OWNER":
-        return prisma_to_dict(await service.get_cafes_by_owner(current_user.id))
+        return prisma_to_dict(await service.get_cafes_by_owner(current_user.id, include_archived))
     raise HTTPException(status_code=403, detail="Not authorized to view cafés.")
 
 
@@ -57,13 +58,34 @@ async def update_cafe(
     return prisma_to_dict(await service.update_cafe(cafe_id, body.name))
 
 
-@router.delete("/{cafe_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cafe(
+@router.get("/{cafe_id}/impact")
+async def get_cafe_impact(
     cafe_id: int,
     _=Depends(require_role("SUPER_ADMIN")),
 ):
-    """[SUPER_ADMIN] Delete a café."""
-    await service.delete_cafe(cafe_id)
+    """[SUPER_ADMIN] Get impact counts before archiving a café."""
+    return await service.get_cafe_impact(cafe_id)
+
+
+@router.delete("/{cafe_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_cafe(
+    cafe_id: int,
+    current_user=Depends(get_current_user),
+    _=Depends(require_role("SUPER_ADMIN")),
+):
+    """[SUPER_ADMIN] Soft-delete (archive) a café."""
+    await service.archive_cafe(cafe_id, current_user.id)
+
+
+@router.post("/{cafe_id}/restore", status_code=status.HTTP_200_OK)
+async def restore_cafe(
+    cafe_id: int,
+    current_user=Depends(get_current_user),
+    _=Depends(require_role("SUPER_ADMIN")),
+):
+    """[SUPER_ADMIN] Restore an archived café."""
+    await service.restore_cafe(cafe_id, current_user.id)
+    return {"message": "Café restored successfully"}
 
 
 # ── Branch Endpoints ────────────────────────────────────────────────

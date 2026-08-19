@@ -41,4 +41,22 @@ async def get_current_user(
     if user is None:
         raise UnauthorizedException()
 
+    # Read-time RBAC filter: Exclude scopes tied to archived cafes
+    filtered_scopes = []
+    for scope in user.userScopes:
+        cafe_is_archived = False
+        
+        # If it's a cafe-level scope, check the cafe
+        if scope.cafe and scope.cafe.isArchived:
+            cafe_is_archived = True
+            
+        # If it's a branch-level scope, check the branch's cafe
+        if scope.branch and scope.branch.cafe and scope.branch.cafe.isArchived:
+            cafe_is_archived = True
+            
+        if not cafe_is_archived:
+            filtered_scopes.append(scope)
+            
+    user.userScopes = filtered_scopes
+
     return user

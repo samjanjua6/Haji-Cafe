@@ -10,12 +10,12 @@ async def create_cafe(name: str, owner_id: Optional[int]):
     return await repository.create_cafe(name, owner_id)
 
 
-async def get_all_cafes():
-    return await repository.get_all_cafes()
+async def get_all_cafes(include_archived: bool = False):
+    return await repository.get_all_cafes(include_archived)
 
 
-async def get_cafes_by_owner(owner_id: int):
-    return await repository.get_cafes_by_owner(owner_id)
+async def get_cafes_by_owner(owner_id: int, include_archived: bool = False):
+    return await repository.get_cafes_by_owner(owner_id, include_archived)
 
 
 async def get_cafe(cafe_id: int):
@@ -32,12 +32,25 @@ async def update_cafe(cafe_id: int, name: Optional[str]):
     return await repository.get_cafe_by_id(cafe_id)
 
 
-async def delete_cafe(cafe_id: int):
+async def get_cafe_impact(cafe_id: int):
     await get_cafe(cafe_id)
+    return await repository.get_cafe_impact(cafe_id)
+
+
+async def archive_cafe(cafe_id: int, user_id: int):
+    cafe = await get_cafe(cafe_id)
+    impact_counts = await repository.get_cafe_impact(cafe_id)
     try:
-        return await repository.delete_cafe(cafe_id)
-    except ForeignKeyViolationError:
-        raise BadRequestException("Cannot delete café because it has existing branches or orders.")
+        await repository.archive_cafe(cafe_id, user_id, impact_counts, cafe.name)
+    except Exception as e:
+        if "active orders" in str(e):
+            raise BadRequestException(str(e))
+        raise BadRequestException(f"Failed to archive café: {str(e)}")
+
+
+async def restore_cafe(cafe_id: int, user_id: int):
+    cafe = await get_cafe(cafe_id)
+    await repository.restore_cafe(cafe_id, user_id, cafe.name)
 
 
 # --- Branch Service ---

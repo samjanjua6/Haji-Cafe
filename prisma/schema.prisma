@@ -61,11 +61,12 @@ model UserScope {
 }
 
 model Cafe {
-  id        Int      @id @default(autoincrement())
-  name      String
-  ownerId   Int?     @map("owner_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         Int      @id @default(autoincrement())
+  name       String
+  ownerId    Int?     @map("owner_id")
+  isArchived Boolean  @default(false) @map("is_archived")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   owner           User?            @relation(fields: [ownerId], references: [id])
   branches        Branch[]

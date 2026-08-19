@@ -11,11 +11,12 @@ async def create_cafe(name: str, owner_id: Optional[int]):
     return await db.cafe.create(data=data)
 
 
-async def get_all_cafes():
-    return await db.cafe.find_many(include={"branches": True})
+async def get_all_cafes(include_archived: bool = False):
+    where_clause = {} if include_archived else {"isArchived": False}
+    return await db.cafe.find_many(where=where_clause, include={"branches": True})
 
 
-async def get_cafes_by_owner(owner_id: int):
+async def get_cafes_by_owner(owner_id: int, include_archived: bool = False):
     # Find all cafes where the user has a UserScope
     scopes = await db.userscope.find_many(
         where={"userId": owner_id},
@@ -26,12 +27,17 @@ async def get_cafes_by_owner(owner_id: int):
     cafes = []
     for s in scopes:
         if s.cafe and s.cafe.id not in seen:
+            if not include_archived and s.cafe.isArchived:
+                continue
             seen.add(s.cafe.id)
             cafes.append(s.cafe)
             
     # Also check ownerId as a fallback
+    where_clause = {"ownerId": owner_id}
+    if not include_archived:
+        where_clause["isArchived"] = False
     owned_cafes = await db.cafe.find_many(
-        where={"ownerId": owner_id},
+        where=where_clause,
         include={"branches": True}
     )
     
@@ -56,6 +62,61 @@ async def update_cafe(cafe_id: int, name: str):
 
 async def delete_cafe(cafe_id: int):
     return await db.cafe.delete(where={"id": cafe_id})
+
+
+async def get_cafe_impact(cafe_id: int):
+    branches_count = await db.branch.count(where={"cafeId": cafe_id})
+    staff = await get_staff_by_cafe(cafe_id)
+    staff_count = len(staff)
+    menu_items_count = await db.mastermenuitem.count(where={"cafeId": cafe_id})
+    
+    branches = await db.branch.find_many(where={"cafeId": cafe_id})
+    branch_ids = [b.id for b in branches]
+    if branch_ids:
+        orders_count = await db.order.count(where={"branchId": {"in": branch_ids}})
+        active_orders_count = await db.order.count(where={"branchId": {"in": branch_ids}, "status": {"in": ["PENDING", "IN_PREPARATION"]}})
+    else:
+        orders_count = 0
+        active_orders_count = 0
+
+    return {
+        "branches": branches_count,
+        "staff": staff_count,
+        "menuItems": menu_items_count,
+        "orders": orders_count,
+        "activeOrders": active_orders_count
+    }
+
+
+async def archive_cafe(cafe_id: int, user_id: int, impact_counts: dict, cafe_name: str):
+    async with db.tx() as transaction:
+        branches = await transaction.branch.find_many(where={"cafeId": cafe_id})
+        branch_ids = [b.id for b in branches]
+        if branch_ids:
+            active_orders = await transaction.order.count(
+                where={"branchId": {"in": branch_ids}, "status": {"in": ["PENDING", "IN_PREPARATION"]}}
+            )
+            if active_orders > 0:
+                raise Exception("Cannot archive cafe while there are active orders in progress.")
+                
+        await transaction.cafe.update(where={"id": cafe_id}, data={"isArchived": True})
+        
+        details = f"Archived cafe '{cafe_name}'. Impact: {impact_counts['branches']} branches, {impact_counts['staff']} staff, {impact_counts['menuItems']} menu items, {impact_counts['orders']} historical orders."
+        await transaction.auditlog.create(data={
+            "userId": user_id,
+            "action": "CAFE_ARCHIVED",
+            "details": details
+        })
+
+
+async def restore_cafe(cafe_id: int, user_id: int, cafe_name: str):
+    async with db.tx() as transaction:
+        await transaction.cafe.update(where={"id": cafe_id}, data={"isArchived": False})
+        await transaction.auditlog.create(data={
+            "userId": user_id,
+            "action": "CAFE_RESTORED",
+            "details": f"Restored cafe '{cafe_name}'."
+        })
 
 
 # --- Branch Repository ---

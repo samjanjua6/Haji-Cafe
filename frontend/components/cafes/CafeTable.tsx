@@ -10,11 +10,12 @@ interface CafeTableProps {
   cafes: Cafe[];
   loading: boolean;
   onEdit: (cafe: Cafe) => void;
-  onDelete: (cafe: Cafe) => void;
+  onArchive: (cafe: Cafe) => void;
+  onRestore: (cafe: Cafe) => void;
   readOnly?: boolean;
 }
 
-export default function CafeTable({ cafes, loading, onEdit, onDelete, readOnly }: CafeTableProps) {
+export default function CafeTable({ cafes, loading, onEdit, onArchive, onRestore, readOnly }: CafeTableProps) {
   const router = useRouter();
 
   return (
@@ -39,23 +40,38 @@ export default function CafeTable({ cafes, loading, onEdit, onDelete, readOnly }
           </thead>
           <tbody>
             {cafes.map((cafe) => (
-              <tr key={cafe.id}>
+              <tr key={cafe.id} style={{ opacity: cafe.isArchived ? 0.6 : 1 }}>
                 <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13, width: 60 }}>#{cafe.id}</td>
-                <td style={{ fontWeight: 600 }}>{cafe.name}</td>
+                <td style={{ fontWeight: 600 }}>
+                  {cafe.name}
+                  {cafe.isArchived && (
+                    <span style={{ marginLeft: 8, fontSize: 11, padding: "2px 6px", background: "rgba(100,116,139,0.1)", color: "var(--text-muted)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>Archived</span>
+                  )}
+                </td>
                 <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(cafe.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => router.push(`/cafes/${cafe.id}`)}>
-                      <ChevronRight size={14} /> View
-                    </button>
+                    {!cafe.isArchived && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => router.push(`/cafes/${cafe.id}`)}>
+                        <ChevronRight size={14} /> View
+                      </button>
+                    )}
                     {!readOnly && (
                       <>
-                        <button className="btn btn-ghost btn-sm" onClick={() => onEdit(cafe)}>
-                          <Pencil size={14} /> Edit
-                        </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => onDelete(cafe)}>
-                          <Trash2 size={14} /> Delete
-                        </button>
+                        {cafe.isArchived ? (
+                          <button className="btn btn-primary btn-sm" onClick={() => onRestore(cafe)}>
+                            Restore
+                          </button>
+                        ) : (
+                          <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => onEdit(cafe)}>
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button className="btn btn-danger btn-sm" onClick={() => onArchive(cafe)}>
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>

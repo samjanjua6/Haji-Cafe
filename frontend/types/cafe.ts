@@ -1,7 +1,10 @@
 export interface Cafe {
   id: number;
   name: string;
+  ownerId: number | null;
+  isArchived?: boolean;
   createdAt: string;
+  updatedAt: string;
   branches?: Branch[];
 }
 
