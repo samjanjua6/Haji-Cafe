@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UserProfile } from "@/hooks/useCurrentUser";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface DefaultsTabProps {
   user: UserProfile;
@@ -14,6 +15,7 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
   const [defaultBranchId, setDefaultBranchId] = useState<string>(user.defaultBranchId ? String(user.defaultBranchId) : "");
   const [timezone, setTimezone] = useState<string>(user.timezone || "UTC");
   const [saving, setSaving] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // Derive unique cafes from scopes for the dropdown
   const uniqueCafes = Array.from(new Map(
@@ -108,6 +110,21 @@ export default function DefaultsTab({ user }: DefaultsTabProps) {
             <option value="Asia/Dubai">Dubai (GST)</option>
             <option value="Asia/Tokyo">Tokyo (JST)</option>
             <option value="Australia/Sydney">Sydney (AEST)</option>
+          </select>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text" style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-faint)" }}>Theme Preference</span>
+          </label>
+          <select 
+            className="select select-bordered"
+            style={{ width: "100%" }}
+            value={theme}
+            onChange={toggleTheme}
+          >
+            <option value="dark">Dark Mode</option>
+            <option value="light">Light Mode</option>
           </select>
         </div>
       </div>

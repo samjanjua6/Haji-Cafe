@@ -7,10 +7,26 @@ import ChatbotWidget from "@/components/ChatbotWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export const metadata: Metadata = {
-  title: "Haji Cafe — Admin Dashboard",
-  description: "Multi-Branch Café Management System",
+  title: "Haji Cafe Management",
+  description: "Advanced POS & Cafe Management System",
 };
+
+const themeScript = `
+  (function() {
+    try {
+      var savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+        document.documentElement.setAttribute('data-theme', prefersLight ? 'light' : 'dark');
+      }
+    } catch (e) {}
+  })();
+`;
 
 export default function RootLayout({
   children,
@@ -19,25 +35,40 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <QueryProvider>
-          <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-              {children}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body
+        className={inter.className}
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--bg-base)",
+          color: "var(--text-primary)"
+        }}
+        suppressHydrationWarning
+      >
+        <ThemeProvider>
+          <QueryProvider>
+            <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
+              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+                {children}
+              </div>
+              <ChatbotWidget />
             </div>
-            <ChatbotWidget />
-          </div>
           <Toaster
             position="top-right"
             toastOptions={{
               style: {
-                background: "#1e293b",
-                color: "#f1f5f9",
-                border: "1px solid #334155",
+                background: "var(--bg-base)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border)",
               },
             }}
           />
-        </QueryProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

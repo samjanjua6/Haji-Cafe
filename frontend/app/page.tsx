@@ -86,7 +86,7 @@ function AuthContent() {
                   flex: 1, padding: "8px 0", border: "none", cursor: "pointer",
                   borderRadius: 8, fontWeight: 600, fontSize: 14,
                   background: tab === t ? "var(--accent)" : "transparent",
-                  color: tab === t ? "#0f172a" : "var(--text-muted)",
+                  color: tab === t ? "var(--text-primary)" : "var(--text-muted)",
                   transition: "all 0.2s",
                 }}
               >

@@ -13,11 +13,11 @@ interface UserTableProps {
   onRemoveScope: (userId: number, scopeId: number) => void;
 }
 
-const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
-  SUPER_ADMIN: { bg: "rgba(239, 68, 68, 0.1)", color: "#f87171" },
-  CAFE_OWNER: { bg: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" },
-  BRANCH_MANAGER: { bg: "rgba(59, 130, 246, 0.1)", color: "#60a5fa" },
-  STAFF: { bg: "rgba(34, 197, 94, 0.1)", color: "#4ade80" },
+const ROLE_COLORS: Record<string, { bg: string, color: string }> = {
+  SUPER_ADMIN: { bg: "var(--danger-glow)", color: "var(--danger)" },
+  CAFE_OWNER: { bg: "var(--warning-glow)", color: "var(--warning)" },
+  BRANCH_MANAGER: { bg: "var(--info-glow)", color: "var(--info)" },
+  STAFF: { bg: "var(--success-glow)", color: "var(--success)" }
 };
 
 export default function UserTable({ users, loading, onRoleChange, onAssignScope, onRemoveScope }: UserTableProps) {
@@ -44,7 +44,7 @@ export default function UserTable({ users, loading, onRoleChange, onAssignScope,
           </thead>
           <tbody>
             {users.map(u => {
-              const roleStyle = ROLE_COLORS[u.role.name] || { bg: "rgba(148,163,184,0.1)", color: "#94a3b8" };
+              const roleStyle = ROLE_COLORS[u.role.name] || { bg: "var(--accent-muted)", color: "var(--text-muted)" };
               return (
                 <tr key={u.id}>
                   <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>{u.id}</td>

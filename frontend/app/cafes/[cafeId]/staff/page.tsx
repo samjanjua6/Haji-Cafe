@@ -198,7 +198,7 @@ export default function StaffAndSchedulingPage() {
         {currentUser?.role === "CAFE_OWNER" && (
           <div className="card" style={{ padding: 0 }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
-              <CalendarPlus size={18} color="#22c55e" />
+              <CalendarPlus size={18} color="var(--success)" />
               <h3 style={{ fontSize: 16, margin: 0 }}>Schedule a Meeting</h3>
             </div>
             <form onSubmit={handleScheduleMeeting} style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20 }}>
@@ -233,7 +233,7 @@ export default function StaffAndSchedulingPage() {
                     {selectedStaff.length} / {staffList.length}
                   </span>
                 </div>
-                <button className="btn btn-primary" type="submit" disabled={saving || selectedStaff.length === 0} style={{ width: "100%", justifyContent: "center", background: "#22c55e", color: "white", padding: "12px 16px", fontSize: 15 }}>
+                <button className="btn btn-primary" type="submit" disabled={saving || selectedStaff.length === 0} style={{ width: "100%", justifyContent: "center", background: "var(--success)", color: "var(--text-primary)", padding: "12px 16px", fontSize: 15 }}>
                   <CalendarPlus size={18} /> {saving ? "Scheduling..." : "Create Calendar Invites"}
                 </button>
               </div>

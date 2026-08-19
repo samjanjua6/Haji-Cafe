@@ -55,7 +55,7 @@ export default function SettingsPage() {
                     borderRadius: "8px",
                     textAlign: "left",
                     background: isActive ? "var(--accent)" : "transparent",
-                    color: isActive ? "#0f172a" : "var(--text-primary)",
+                    color: isActive ? "var(--text-primary)" : "var(--text-primary)",
                     border: "none",
                     cursor: "pointer",
                     fontWeight: isActive ? 600 : 500,

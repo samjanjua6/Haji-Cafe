@@ -113,7 +113,7 @@ export default function MasterMenuPage() {
                   <td>
                     <span style={{
                       background: item.isDeleted ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
-                      color: item.isDeleted ? "#f87171" : "#4ade80",
+                      color: item.isDeleted ? "var(--danger)" : "var(--success)",
                       border: `1px solid ${item.isDeleted ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`,
                       padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
                     }}>

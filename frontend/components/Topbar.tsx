@@ -1,9 +1,10 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, PanelRight } from "lucide-react";
+import { ChevronRight, PanelRight, Sun, Moon } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useLayoutStore } from "@/lib/store";
+import { useTheme } from "@/components/ThemeProvider";
 
 // Converts a URL segment to a readable label
 function segmentToLabel(segment: string): string {
@@ -32,12 +33,12 @@ function UserAvatar({ email, role }: { email: string; role: string }) {
   const initials = email.slice(0, 2).toUpperCase();
 
   const roleColors: Record<string, { bg: string; color: string }> = {
-    SUPER_ADMIN: { bg: "rgba(239,68,68,0.15)", color: "#f87171" },
-    CAFE_OWNER: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
-    BRANCH_MANAGER: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa" },
-    STAFF: { bg: "rgba(34,197,94,0.15)", color: "#4ade80" },
+    SUPER_ADMIN: { bg: "var(--danger-glow)", color: "var(--danger)" },
+    CAFE_OWNER: { bg: "var(--warning-glow)", color: "var(--warning)" },
+    BRANCH_MANAGER: { bg: "var(--info-glow)", color: "var(--info)" },
+    STAFF: { bg: "var(--success-glow)", color: "var(--success)" },
   };
-  const roleStyle = roleColors[role] || { bg: "rgba(148,163,184,0.15)", color: "#94a3b8" };
+  const roleStyle = roleColors[role] || { bg: "var(--accent-muted)", color: "var(--text-muted)" };
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -84,6 +85,7 @@ export default function Topbar() {
   const crumbs = useBreadcrumbs();
   const { data: user } = useCurrentUser();
   const toggleChatbot = useLayoutStore((s) => s.toggleChatbot);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="topbar">
@@ -140,8 +142,28 @@ export default function Topbar() {
         })}
       </nav>
 
-      {/* Right side — user identity & chatbot toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      {/* Right side — user identity & toggles */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          onClick={toggleTheme}
+          style={{
+            padding: "6px",
+            borderRadius: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: "none",
+            color: "var(--text-muted)",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.background = "var(--bg-surface)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
+          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
         <button
           onClick={toggleChatbot}
           style={{

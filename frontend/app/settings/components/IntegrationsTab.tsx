@@ -47,7 +47,7 @@ export default function IntegrationsTab({ user }: IntegrationsTabProps) {
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", padding: "16px", border: "1px solid var(--sidebar-hover)", borderRadius: "12px", gap: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ width: "48px", height: "48px", background: "#fff", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+            <div style={{ width: "48px", height: "48px", background: "var(--bg-card)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
               <Calendar color="#3b82f6" size={24} />
             </div>
             <div>
@@ -68,7 +68,7 @@ export default function IntegrationsTab({ user }: IntegrationsTabProps) {
                 <button className="btn btn-ghost" onClick={handleConnect} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <RefreshCw size={14} /> Reconnect
                 </button>
-                <button className="btn" style={{ background: "var(--danger)", color: "#fff" }} onClick={handleDisconnect}>
+                <button className="btn" style={{ background: "var(--danger)", color: "var(--text-primary)" }} onClick={handleDisconnect}>
                   Disconnect
                 </button>
               </>

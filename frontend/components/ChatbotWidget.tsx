@@ -57,8 +57,8 @@ function LiveModeUI({ onEndLive }: { onEndLive: () => void }) {
         title="End Live Session"
         style={{
           ...btnBase,
-          backgroundColor: "#ef4444",
-          color: "#fff",
+          backgroundColor: "var(--danger)",
+          color: "var(--text-primary)",
           animation: state === "listening" ? "pulse 1.5s ease-in-out infinite" : "none",
         }}
       >
@@ -470,7 +470,7 @@ export default function ChatbotWidget() {
                   style={{
                     display: "flex", alignItems: "center", gap: "6px",
                     padding: "6px 12px", borderRadius: "16px",
-                    backgroundColor: "var(--accent)", color: "#0f172a",
+                    backgroundColor: "var(--accent)", color: "var(--text-primary)",
                     border: "none", cursor: "pointer", fontWeight: 600, fontSize: "12px",
                     boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
                   }}
@@ -511,7 +511,7 @@ export default function ChatbotWidget() {
                   alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                   maxWidth: "85%",
                   backgroundColor: msg.role === "user" ? "var(--accent)" : "var(--bg-surface)",
-                  color: msg.role === "user" ? "#0f172a" : "var(--text-primary)",
+                  color: msg.role === "user" ? "var(--text-primary)" : "var(--text-primary)",
                   padding: "10px 14px", borderRadius: "12px",
                   borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
                   borderBottomLeftRadius: msg.role === "model" ? "2px" : "12px",
@@ -613,8 +613,8 @@ export default function ChatbotWidget() {
                   title={isRecording ? "Stop recording" : "Speak to assistant"}
                   style={{
                     ...btnBase,
-                    backgroundColor: micActive ? "#ef4444" : "var(--bg-surface)",
-                    color: micActive ? "#fff" : "var(--text-muted)",
+                    backgroundColor: micActive ? "var(--danger)" : "var(--bg-surface)",
+                    color: micActive ? "var(--text-primary)" : "var(--text-muted)",
                     border: micActive ? "none" : "1px solid var(--border)",
                     animation: isRecording ? "pulse 1s ease-in-out infinite" : "none",
                   }}
@@ -641,7 +641,7 @@ export default function ChatbotWidget() {
                   style={{
                     ...btnBase,
                     backgroundColor: input.trim() && !isLoading ? "var(--accent)" : "var(--bg-surface)",
-                    color: input.trim() && !isLoading ? "#0f172a" : "var(--text-muted)",
+                    color: input.trim() && !isLoading ? "var(--text-primary)" : "var(--text-muted)",
                     border: input.trim() && !isLoading ? "none" : "1px solid var(--border)",
                     cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
                   }}
