@@ -12,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
 
+import { Card } from "@/components/Card";
+
 export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -46,26 +48,26 @@ export default function DashboardPage() {
 
   if (!mounted || loading) return (
     <div style={{ display: "grid", gap: 20 }}>
-      <div className="card" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+      <Card style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <Skeleton width={64} height={64} borderRadius="50%" />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
           <Skeleton width="40%" height={20} />
           <Skeleton width="25%" height={14} />
           <Skeleton width="20%" height={12} />
         </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, alignItems: "start" }}>
         {[1, 2].map(i => (
-          <div key={i} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <Card key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
             <Skeleton width={52} height={52} borderRadius={12} />
             <Skeleton width="70%" height={14} />
-          </div>
+          </Card>
         ))}
       </div>
-      <div className="card">
+      <Card>
         <Skeleton width="30%" height={18} style={{ marginBottom: 16 }} />
         <Skeleton width="50%" height={14} />
-      </div>
+      </Card>
     </div>
   );
 
@@ -73,35 +75,32 @@ export default function DashboardPage() {
     if (user?.role === "SUPER_ADMIN") {
       return (
         <>
-          <Link href="/cafes" className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s, border-color 0.2s", textAlign: "center" }}
-            onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
-            onMouseLeave={e => (e.currentTarget.style.transform = "none")}
-          >
-            <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}><Coffee size={24} color="#f59e0b" /></div>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
+          <Link href="/cafes" style={{ textDecoration: "none" }}>
+            <Card interactive style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", height: "100%" }}>
+              <div style={{ background: "var(--warning-glow)", borderRadius: 12, padding: 14 }}><Coffee size={24} color="var(--warning)" /></div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Manage All Cafés</span>
+            </Card>
           </Link>
         </>
       );
     }
     if (user?.role === "CAFE_OWNER") {
       return user.scopes.map((scope, idx) => (
-        <Link key={`cafe-${idx}`} href={`/cafes/${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
-        >
-          <div style={{ background: "#f59e0b22", borderRadius: 12, padding: 14 }}><Coffee size={24} color="#f59e0b" /></div>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Manage {scope.cafeName || `Café #${scope.cafeId}`}</span>
+        <Link key={`cafe-${idx}`} href={`/cafes/${scope.cafeId}`} style={{ textDecoration: "none" }}>
+          <Card interactive style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", height: "100%" }}>
+            <div style={{ background: "var(--warning-glow)", borderRadius: 12, padding: 14 }}><Coffee size={24} color="var(--warning)" /></div>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Manage {scope.cafeName || `Café #${scope.cafeId}`}</span>
+          </Card>
         </Link>
       ));
     }
     if (user?.role === "BRANCH_MANAGER") {
       return user.scopes.map((scope, idx) => (
-        <Link key={idx} href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text-primary)", cursor: "pointer", transition: "transform 0.2s", textAlign: "center" }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-4px)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "none")}
-        >
-          <div style={{ background: "#3b82f622", borderRadius: 12, padding: 14 }}><ShoppingCart size={24} color="#3b82f6" /></div>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{scope.branchName || `Branch #${scope.branchId}`} Orders</span>
+        <Link key={idx} href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`} style={{ textDecoration: "none" }}>
+          <Card interactive style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", height: "100%" }}>
+            <div style={{ background: "var(--info-glow)", borderRadius: 12, padding: 14 }}><ShoppingCart size={24} color="var(--info)" /></div>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{scope.branchName || `Branch #${scope.branchId}`} Orders</span>
+          </Card>
         </Link>
       ));
     }
@@ -123,14 +122,14 @@ export default function DashboardPage() {
       {user && (
         <div style={{ display: "grid", gap: 20 }}>
           {/* Profile card */}
-          <div className="card" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <Card style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <User size={28} color="#0f172a" />
+              <User size={28} color="var(--bg-base)" />
             </div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{user.email}</div>
               <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
-                <span style={{ background: "var(--accent)", color: "#0f172a", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "var(--accent)", color: "var(--bg-base)", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   <Shield size={10} style={{ marginRight: 4, display: "inline" }} />
                   {user.role.replace("_", " ")}
                 </span>
@@ -143,19 +142,19 @@ export default function DashboardPage() {
                 Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Quick links */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, alignItems: "start" }}>
             {renderQuickLinks()}
           </div>
 
           {/* Google Calendar Connect Banner */}
           {user.role === "CAFE_OWNER" && (
-            <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, borderColor: user.has_google_calendar ? "#22c55e44" : "#f59e0b44", background: user.has_google_calendar ? "#22c55e08" : "#f59e0b08", flexWrap: "wrap" }}>
+            <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, borderColor: user.has_google_calendar ? "var(--success-glow)" : "var(--warning-glow)", background: user.has_google_calendar ? "rgba(34, 197, 94, 0.05)" : "rgba(245, 158, 11, 0.05)", flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ background: user.has_google_calendar ? "#22c55e22" : "#f59e0b22", borderRadius: 12, padding: 12, flexShrink: 0 }}>
-                  {user.has_google_calendar ? <CheckCircle size={24} color="#22c55e" /> : <Calendar size={24} color="#f59e0b" />}
+                <div style={{ background: user.has_google_calendar ? "var(--success-glow)" : "var(--warning-glow)", borderRadius: 12, padding: 12, flexShrink: 0 }}>
+                  {user.has_google_calendar ? <CheckCircle size={24} color="var(--success)" /> : <Calendar size={24} color="var(--warning)" />}
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{user.has_google_calendar ? "Google Calendar Connected" : "Connect Google Calendar"}</div>
@@ -169,7 +168,7 @@ export default function DashboardPage() {
                   <Calendar size={14} style={{ marginRight: 6 }} /> Connect Now
                 </button>
               )}
-            </div>
+            </Card>
           )}
 
           {/* Low Stock Alerts */}
@@ -183,18 +182,18 @@ export default function DashboardPage() {
           ))}
 
           {/* API Info */}
-          <div className="card">
+          <Card>
             <h3 style={{ margin: "0 0 16px", fontSize: 16 }}>API Connection</h3>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)" }} />
               <span style={{ fontSize: 14, color: "var(--text-muted)" }}>
                 Connected to {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}
               </span>
             </div>
             <div style={{ marginTop: 12, fontSize: 13, color: "var(--text-muted)" }}>
-              Swagger Docs: <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" style={{ color: "var(--accent)" }}>Open API Docs ↗</a>
+              Swagger Docs: <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" style={{ color: "var(--accent)", textDecoration: "underline" }}>Open API Docs ↗</a>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

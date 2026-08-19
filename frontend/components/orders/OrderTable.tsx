@@ -8,6 +8,9 @@ import { TableSkeleton } from "@/components/LoadingSkeleton";
 import EmptyState from "@/components/EmptyState";
 import { Order } from "@/types/order";
 
+import { Card } from "@/components/Card";
+import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
+
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["IN_PREPARATION", "CANCELLED"],
   IN_PREPARATION: ["COMPLETED", "CANCELLED"],
@@ -28,10 +31,12 @@ interface OrderTableProps {
   branchMode?: boolean; // If false, shows branch column (for cafe-level view)
 }
 
-function SortableHeader({ label, field, currentSortBy, currentSortDir, onSort }: { label: string; field: string; currentSortBy?: string; currentSortDir?: "asc" | "desc"; onSort?: (field: string) => void }) {
+function SortableHeader({ label, field, currentSortBy, currentSortDir, onSort, sticky }: { label: string; field: string; currentSortBy?: string; currentSortDir?: "asc" | "desc"; onSort?: (field: string) => void; sticky?: boolean }) {
   const isActive = currentSortBy === field;
   return (
-    <th 
+    <TableCell 
+      isHeader 
+      sticky={sticky}
       onClick={() => onSort && onSort(field)} 
       style={{ cursor: onSort ? "pointer" : "default", userSelect: "none" }}
     >
@@ -41,7 +46,7 @@ function SortableHeader({ label, field, currentSortBy, currentSortDir, onSort }:
           currentSortDir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
         )}
       </div>
-    </th>
+    </TableCell>
   );
 }
 
@@ -58,7 +63,7 @@ export default function OrderTable({
   branchMode = true
 }: OrderTableProps) {
   return (
-    <div className="card table-wrap">
+    <Card padding="none">
       {loading ? (
         <TableSkeleton rows={5} cols={branchMode ? 5 : 6} />
       ) : orders.length === 0 ? (
@@ -79,31 +84,31 @@ export default function OrderTable({
           />
         )
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <SortableHeader label="ID" field="id" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
-              {!branchMode && <th>Branch</th>}
+        <Table>
+          <TableHead>
+            <TableRow>
+              <SortableHeader sticky label="ID" field="id" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
+              {!branchMode && <TableCell isHeader>Branch</TableCell>}
               <SortableHeader label="Status" field="status" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Total" field="totalAmount" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Date" field="createdAt" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
-              {onOpenDetail && <th>Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
+              {onOpenDetail && <TableCell isHeader>Actions</TableCell>}
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {orders.map(order => (
-              <tr key={order.id}>
-                <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>#{order.id}</td>
+              <TableRow key={order.id}>
+                <TableCell sticky style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 13 }}>#{order.id}</TableCell>
                 {!branchMode && (
-                  <td style={{ fontWeight: 500 }}>
+                  <TableCell style={{ fontWeight: 500 }}>
                     {(order as any).branch?.name || `Branch #${order.branchId}`}
-                  </td>
+                  </TableCell>
                 )}
-                <td><StatusBadge status={order.status} /></td>
-                <td style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(order.totalAmount).toFixed(2)}</td>
-                <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(order.createdAt).toLocaleString()}</td>
+                <TableCell><StatusBadge status={order.status} /></TableCell>
+                <TableCell style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(order.totalAmount).toFixed(2)}</TableCell>
+                <TableCell style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(order.createdAt).toLocaleString()}</TableCell>
                 {onOpenDetail && (
-                  <td>
+                  <TableCell>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => onOpenDetail(order)}>
                         <Eye size={13} /> Detail
@@ -121,13 +126,13 @@ export default function OrderTable({
                         </select>
                       )}
                     </div>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
-    </div>
+    </Card>
   );
 }

@@ -10,6 +10,8 @@ interface LowStockAlertsProps {
   cafeName: string;
 }
 
+import { Card } from "@/components/Card";
+
 export function LowStockAlerts({ cafeId, cafeName }: LowStockAlertsProps) {
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ["lowStockAlerts", cafeId],
@@ -17,23 +19,23 @@ export function LowStockAlerts({ cafeId, cafeName }: LowStockAlertsProps) {
   });
 
   if (isLoading) return (
-    <div className="card">
+    <Card>
       <h3 style={{ margin: "0 0 16px", fontSize: 16 }}>Low Stock Alerts</h3>
       <Skeleton height={60} />
-    </div>
+    </Card>
   );
 
   if (alerts.length === 0) return null;
 
   return (
-    <div className="card" style={{ borderColor: "#f59e0b44" }}>
-      <h3 style={{ margin: "0 0 16px", fontSize: 16, display: "flex", alignItems: "center", gap: 8, color: "#f59e0b" }}>
+    <Card style={{ borderColor: "var(--warning-glow)" }}>
+      <h3 style={{ margin: "0 0 16px", fontSize: 16, display: "flex", alignItems: "center", gap: 8, color: "var(--warning)" }}>
         <AlertCircle size={18} />
         Low Stock Alerts — {cafeName || `Café #${cafeId}`}
       </h3>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {alerts.map(alert => (
-          <div key={alert.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12, background: "rgba(245, 158, 11, 0.05)", borderRadius: 8 }}>
+          <div key={alert.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12, background: "var(--warning-glow)", borderRadius: 8 }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{alert.masterItemName}</div>
               <div style={{ color: "var(--text-muted)", fontSize: 13, display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
@@ -56,6 +58,6 @@ export function LowStockAlerts({ cafeId, cafeName }: LowStockAlertsProps) {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

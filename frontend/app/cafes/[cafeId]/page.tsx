@@ -12,6 +12,8 @@ import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import OrderTable from "@/components/orders/OrderTable";
+import { Card } from "@/components/Card";
+import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname } from "next/navigation";
 import { OrdersResponse } from "@/types/order";
@@ -209,9 +211,9 @@ export default function CafeDetailPage() {
         <GitBranch size={16} style={{ marginRight: 8, display: "inline" }} />
         Branches ({branches.length})
       </h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 40 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 40, alignItems: "start" }}>
         {branches.map(b => (
-          <div key={b.id} className="card" style={{ position: "relative" }}>
+          <Card key={b.id} style={{ position: "relative" }}>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{b.name}</div>
             {b.location && <div style={{ color: "var(--text-muted)", fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
               <MapPin size={12} /> {b.location}
@@ -227,7 +229,7 @@ export default function CafeDetailPage() {
                 <Trash2 size={12} /> Delete
               </button>
             </div>
-          </div>
+          </Card>
         ))}
         {branches.length === 0 && <div style={{ color: "var(--text-muted)", fontSize: 14 }}>No branches yet.</div>}
       </div>
@@ -290,33 +292,52 @@ export default function CafeDetailPage() {
             <GitBranch size={16} style={{ marginRight: 8, display: "inline" }} />
             All Branches Stock Rollup
           </h3>
-          <div className="card table-wrap" style={{ marginBottom: 40 }}>
+          <Card padding="none" style={{ marginBottom: 40 }}>
             {stockRollup.length === 0 ? (
               <EmptyState icon={GitBranch} title="No items in stock" subtitle="Add items to branch menus to track stock." />
             ) : (
-              <table>
-                <thead><tr><th>Item</th><th>Branch</th><th>Qty</th><th>Status</th></tr></thead>
-                <tbody>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell isHeader>Item</TableCell>
+                    <TableCell isHeader>Branch</TableCell>
+                    <TableCell isHeader>Qty</TableCell>
+                    <TableCell isHeader>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {stockRollup.map(item => {
                     let statusText = "In Stock";
                     let color = "var(--success)";
-                    if (item.isInStock === false) { statusText = "Sold Out (Manual Override)"; color = "var(--danger)"; }
-                    else if (item.availableQuantity === 0) { statusText = "Sold Out"; color = "var(--danger)"; }
-                    else if (item.availableQuantity !== null && item.availableQuantity <= item.lowStockThreshold) { statusText = "Low Stock"; color = "var(--warning)"; }
+                    let bg = "var(--success-glow)";
+                    if (item.isInStock === false) { statusText = "Sold Out (Manual Override)"; color = "var(--danger)"; bg = "var(--danger-glow)"; }
+                    else if (item.availableQuantity === 0) { statusText = "Sold Out"; color = "var(--danger)"; bg = "var(--danger-glow)"; }
+                    else if (item.availableQuantity !== null && item.availableQuantity <= item.lowStockThreshold) { statusText = "Low Stock"; color = "var(--warning)"; bg = "var(--warning-glow)"; }
                     
                     return (
-                      <tr key={item.id}>
-                        <td style={{ fontWeight: 600 }}>{item.masterItem.name}</td>
-                        <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{item.branch.name}</td>
-                        <td style={{ fontFamily: "monospace" }}>{item.availableQuantity ?? '∞'}</td>
-                        <td style={{ color, fontSize: 13, fontWeight: 600 }}>{statusText}</td>
-                      </tr>
+                      <TableRow key={item.id}>
+                        <TableCell style={{ fontWeight: 600 }}>{item.masterItem.name}</TableCell>
+                        <TableCell style={{ color: "var(--text-muted)", fontSize: 13 }}>{item.branch.name}</TableCell>
+                        <TableCell style={{ fontFamily: "monospace" }}>{item.availableQuantity ?? '∞'}</TableCell>
+                        <TableCell>
+                          <span style={{
+                            background: bg,
+                            color: color,
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600
+                          }}>
+                            {statusText}
+                          </span>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
-          </div>
+          </Card>
         </>
       ) : null}
 

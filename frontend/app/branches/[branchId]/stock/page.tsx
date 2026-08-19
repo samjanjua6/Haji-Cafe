@@ -10,6 +10,9 @@ import Modal from "@/components/Modal";
 import EmptyState from "@/components/EmptyState";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
+import { Card } from "@/components/Card";
+import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
+
 export default function BranchStockPage() {
   const router = useRouter();
   const params = useParams<{ branchId: string }>();
@@ -108,23 +111,23 @@ export default function BranchStockPage() {
         </div>
       </div>
 
-      <div className="card table-wrap">
+      <Card padding="none">
         {isLoading ? (
           <div style={{ padding: 40, textAlign: "center" }}><span className="loading" /></div>
         ) : items.length === 0 ? (
           <EmptyState icon={GitBranch} title="No items found" subtitle="No menu items are assigned to this branch." />
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Status</th>
-                <th>Qty Remaining</th>
-                <th>Threshold</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell isHeader>Item</TableCell>
+                <TableCell isHeader>Status</TableCell>
+                <TableCell isHeader>Qty Remaining</TableCell>
+                <TableCell isHeader>Threshold</TableCell>
+                <TableCell isHeader style={{ textAlign: "right" }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {items.map(item => {
                 let statusText = "In Stock";
                 let color = "var(--success)";
@@ -133,12 +136,12 @@ export default function BranchStockPage() {
                 else if (item.availableQuantity !== null && item.availableQuantity <= item.lowStockThreshold) { statusText = "Low Stock"; color = "var(--warning)"; }
 
                 return (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 600 }}>{item.masterItem.name}</td>
-                    <td style={{ color, fontSize: 13, fontWeight: 600 }}>{statusText}</td>
-                    <td style={{ fontFamily: "monospace" }}>{item.availableQuantity ?? "∞"}</td>
-                    <td style={{ color: "var(--text-muted)" }}>{item.lowStockThreshold}</td>
-                    <td style={{ textAlign: "right" }}>
+                  <TableRow key={item.id}>
+                    <TableCell style={{ fontWeight: 600 }}>{item.masterItem.name}</TableCell>
+                    <TableCell style={{ color, fontSize: 13, fontWeight: 600 }}>{statusText}</TableCell>
+                    <TableCell style={{ fontFamily: "monospace" }}>{item.availableQuantity ?? "∞"}</TableCell>
+                    <TableCell style={{ color: "var(--text-muted)" }}>{item.lowStockThreshold}</TableCell>
+                    <TableCell style={{ textAlign: "right" }}>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openStockModal(item)} title="Adjust Stock">
                           <Settings2 size={14} /> Adjust
@@ -152,14 +155,14 @@ export default function BranchStockPage() {
                           <History size={14} /> Log
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </Card>
 
       {/* Adjust Stock Modal */}
       <Modal open={!!stockModal} onClose={() => setStockModal(null)} title={`Adjust Stock: ${stockModal?.masterItem.name}`}>
