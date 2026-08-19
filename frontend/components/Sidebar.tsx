@@ -38,7 +38,7 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
       onMouseEnter={e => {
         if (!active) {
           (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
-          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.04)";
+          (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-surface)";
           (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(2px)";
         }
       }}

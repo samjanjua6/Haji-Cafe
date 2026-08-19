@@ -3,6 +3,7 @@
   --bg-base: #0f172a;
   --bg-card: #1e293b;
   --bg-surface: #263348;
+  --bg-topbar: rgba(15, 23, 42, 0.85);
   --border: #334155;
   --border-subtle: rgba(255, 255, 255, 0.06);
   --accent: #f59e0b;
@@ -44,6 +45,7 @@
   --bg-base: #f8fafc;
   --bg-card: #ffffff;
   --bg-surface: #f1f5f9;
+  --bg-topbar: rgba(248, 250, 252, 0.85);
   --border: #e2e8f0;
   --border-subtle: #f1f5f9;
   
@@ -225,7 +227,7 @@ tbody tr {
   transition: background 0.12s;
   position: relative;
 }
-tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody tr:hover { background: var(--bg-surface); }
 tbody tr:last-child td { border-bottom: none; }
 
 /* ===== Page Header ===== */
@@ -340,7 +342,7 @@ tbody tr:last-child td { border-bottom: none; }
   justify-content: space-between;
   padding: 0 28px;
   border-bottom: 1px solid var(--border);
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--bg-topbar);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   position: sticky;
