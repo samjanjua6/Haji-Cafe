@@ -45,8 +45,8 @@ export default function AdminUsersPage() {
     onError: (e: any) => toast.error(e.message)
   });
 
-  const handleRoleChange = (userId: number, roleName: string) => {
-    roleMutation.mutate({ userId, roleName });
+  const handleRoleChange = async (userId: number, roleName: string) => {
+    return roleMutation.mutateAsync({ userId, roleName });
   };
 
   const assignScope = (userId: number) => {

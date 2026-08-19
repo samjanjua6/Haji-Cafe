@@ -4,11 +4,21 @@ from app.modules.admin import repository
 async def get_all_users():
     return await repository.get_all_users()
 
-async def update_user_role(user_id: int, role_name: str):
+async def update_user_role(user_id: int, role_name: str, current_user_id: int):
+    if user_id == current_user_id:
+        # A user cannot change their own role. Especially blocking self-demotion from SUPER_ADMIN.
+        raise BadRequestException("You cannot change your own role. Another administrator must perform this action, or direct database intervention is required.")
+
     role = await repository.get_role_by_name(role_name)
     if not role:
         raise NotFoundException(f"Role '{role_name}' not found.")
-    return await repository.update_user_role(user_id, role.id)
+        
+    try:
+        return await repository.update_user_role_atomic(user_id, role.id, current_user_id)
+    except Exception as e:
+        if str(e) == "Cannot demote the last SUPER_ADMIN.":
+            raise BadRequestException(str(e))
+        raise BadRequestException(f"Failed to update role: {str(e)}")
 
 async def add_user_scope(user_id: int, cafe_id: int = None, branch_id: int = None):
     if not cafe_id and not branch_id:

@@ -12,9 +12,9 @@ async def list_users(_=Depends(require_role("SUPER_ADMIN"))):
     return prisma_to_dict(await service.get_all_users())
 
 @router.put("/users/{user_id}/role")
-async def update_user_role(user_id: int, body: RoleUpdate, _=Depends(require_role("SUPER_ADMIN"))):
+async def update_user_role(user_id: int, body: RoleUpdate, current_user=Depends(require_role("SUPER_ADMIN"))):
     """[SUPER_ADMIN] Update a user's role."""
-    return prisma_to_dict(await service.update_user_role(user_id, body.role_name))
+    return prisma_to_dict(await service.update_user_role(user_id, body.role_name, current_user.id))
 
 @router.post("/users/{user_id}/scopes", status_code=status.HTTP_201_CREATED)
 async def add_user_scope(user_id: int, body: ScopeCreate, _=Depends(require_role("SUPER_ADMIN"))):
