@@ -106,6 +106,9 @@ def _build_voice_tools(current_user) -> list:
     We deliberately EXCLUDE routing tools (route_to_cafe_specialist etc.)
     because they only work inside engine.py's multi-step loop.
     """
+    logger.info(f"REAL_CALL_LOG: user_id={getattr(current_user, 'id', None)}, email={getattr(current_user, 'email', None)}")
+    logger.info(f"REAL_CALL_LOG: scopes at build_voice_tools time = {getattr(current_user, 'userScopes', 'N/A')}")
+    
     from app.modules.chatbot.tools.registry import build_tools
 
     role_name = current_user.role.name
@@ -152,6 +155,8 @@ async def _run_session(ctx: JobContext):
             break
         await asyncio.sleep(0.5)
 
+    logger.info(f"REAL_CALL_LOG: After participant loop, user_id is: {user_id}")
+
     if not user_id:
         logger.error("No user ID found in participant metadata — aborting job")
         return
@@ -160,6 +165,8 @@ async def _run_session(ctx: JobContext):
     # 2. Load user from database
     # ------------------------------------------------------------------
     current_user = await _load_user(user_id)
+    logger.info(f"REAL_CALL_LOG: After _load_user, current_user is: {current_user}")
+    
     if not current_user:
         logger.error(f"User {user_id} not found in database — aborting job")
         return
@@ -169,6 +176,8 @@ async def _run_session(ctx: JobContext):
     # ------------------------------------------------------------------
     # 3. Build flat voice prompt + tools (no supervisor routing)
     # ------------------------------------------------------------------
+    logger.info(f"VOICE_IDENTITY_CHECK: user_id={current_user.id}, email={current_user.email}, role={current_user.role.name}, scopes={[s.model_dump() for s in current_user.userScopes]}")
+    
     system_prompt = _build_voice_system_prompt(current_user)
     tools = _build_voice_tools(current_user)
 
