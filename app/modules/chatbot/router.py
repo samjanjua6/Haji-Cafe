@@ -17,6 +17,7 @@ class TTSRequest(BaseModel):
 
 import json
 import os
+import uuid
 from livekit.api import AccessToken, VideoGrants
 
 @router.get("/livekit-token")
@@ -31,7 +32,9 @@ async def get_livekit_token(
     if not api_key or not api_secret:
         raise HTTPException(status_code=500, detail="LiveKit credentials missing")
         
-    room_name = f"chatbot-room-{current_user.id}"
+    # Unique room per session ensures immediate agent dispatch on every reconnect
+    session_id = uuid.uuid4().hex[:8]
+    room_name = f"chatbot-room-{current_user.id}-{session_id}"
     
     grant = VideoGrants(
         room_join=True, 
