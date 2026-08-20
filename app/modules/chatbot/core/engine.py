@@ -147,10 +147,14 @@ def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, 
     return sys_prompt, tool_fn_map, groq_tools
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
     if not body.messages:
         return ChatResponse(messages=[])
 
+    logger.info(f"TEXT_IDENTITY_CHECK: user_id={current_user.id}, email={current_user.email}, role={current_user.role.name}, scopes={[s.model_dump() for s in current_user.userScopes]}")
     active_agent = "supervisor"
     sys_prompt, tool_fn_map, groq_tools = _get_agent_context(current_user, active_agent, body)
     messages = _build_messages(sys_prompt, body.messages[:-1], body.messages[-1].content)
