@@ -191,7 +191,7 @@ async def _run_session(ctx: JobContext):
     # ------------------------------------------------------------------
     # 1. Connect and find the human participant
     # ------------------------------------------------------------------
-    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
 
     user_id: int | None = None
     for _ in range(20):  # wait up to 10 seconds
@@ -278,6 +278,25 @@ async def _run_session(ctx: JobContext):
     await session.generate_reply(
         instructions=f"Greet the user with this exact message: '{greeting}'"
     )
+
+    # ------------------------------------------------------------------
+    # 6. Keep session alive until user leaves or room disconnects
+    # ------------------------------------------------------------------
+    shutdown_event = asyncio.Event()
+
+    @ctx.room.on("disconnected")
+    def on_disconnected(*args, **kwargs):
+        shutdown_event.set()
+
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(*args, **kwargs):
+        if not ctx.room.remote_participants:
+            shutdown_event.set()
+
+    ctx.add_shutdown_callback(lambda: shutdown_event.set())
+
+    await shutdown_event.wait()
+    logger.info(f"Voice session ended for user {current_user.id}")
 
 
 if __name__ == "__main__":
