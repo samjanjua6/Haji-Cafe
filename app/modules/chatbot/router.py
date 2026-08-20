@@ -15,11 +15,15 @@ router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 class TTSRequest(BaseModel):
     text: str
 
+import json
 import os
 from livekit.api import AccessToken, VideoGrants
 
 @router.get("/livekit-token")
-async def get_livekit_token(current_user=Depends(get_current_user)):
+async def get_livekit_token(
+    timezone: str = "Asia/Karachi",
+    current_user=Depends(get_current_user)
+):
     """Generate a secure LiveKit token for the current user to join their private chatbot room."""
     api_key = os.environ.get("LIVEKIT_API_KEY")
     api_secret = os.environ.get("LIVEKIT_API_SECRET")
@@ -37,12 +41,15 @@ async def get_livekit_token(current_user=Depends(get_current_user)):
         can_subscribe=True
     )
     
+    resolved_tz = timezone or getattr(current_user, "timezone", None) or "Asia/Karachi"
+    meta_payload = json.dumps({"user_id": current_user.id, "timezone": resolved_tz})
+    
     token = (
         AccessToken(api_key, api_secret)
         .with_grants(grant)
         .with_identity(f"user-{current_user.id}")
         .with_name(current_user.email)
-        .with_metadata(str(current_user.id))  # agent reads this to load user context
+        .with_metadata(meta_payload)  # agent reads this to load user context & timezone
     )
     
     return {"token": token.to_jwt(), "room": room_name}

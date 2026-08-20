@@ -149,7 +149,10 @@ def build_cafe_tools(current_user, authorized_cafes, _check_cafe_access):
         if cafe_id == 0:
             return "ERROR: You must provide a valid cafe_id. Call get_my_cafes first."
 
-        resolved_tz = timezone.strip() or getattr(current_user, "timezone", "UTC") or "UTC"
+        user_tz = getattr(current_user, "timezone", "") or "Asia/Karachi"
+        if user_tz.upper() == "UTC":
+            user_tz = "Asia/Karachi"
+        resolved_tz = timezone.strip() if timezone.strip() and timezone.strip().upper() != "UTC" else user_tz
             
         if not attendee_user_ids:
             return "ERROR: You cannot schedule a meeting without attendees. Please check with the user which staff members to invite, and call get_staff_list to find their integer IDs."

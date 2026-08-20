@@ -299,14 +299,17 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         await websocket.send_json({"chunk": final_content})
     else:
         # Loop exited after tool calls — ask the model to synthesize a final answer.
-        stream = await _chat_completions_create_with_fallback(
-            model=GROQ_MODEL,
-            messages=messages,
-            tools=groq_tools if groq_tools else None,
-            tool_choice="none",
-            stream=True,
-            temperature=0.1,
-        )
+        call_kwargs = {
+            "model": GROQ_MODEL,
+            "messages": messages,
+            "stream": True,
+            "temperature": 0.1,
+        }
+        if groq_tools:
+            call_kwargs["tools"] = groq_tools
+            call_kwargs["tool_choice"] = "none"
+
+        stream = await _chat_completions_create_with_fallback(**call_kwargs)
         async for chunk in stream:
             delta = chunk.choices[0].delta.content
             if delta:

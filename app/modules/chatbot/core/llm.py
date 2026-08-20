@@ -1,4 +1,5 @@
 import inspect
+import typing
 from groq import AsyncGroq, RateLimitError, APIError
 from app.config import settings
 
@@ -9,15 +10,17 @@ GROQ_MODEL = "openai/gpt-oss-120b"
 FALLBACK_MODEL = "openai/gpt-oss-20b"
 
 async def _chat_completions_create_with_fallback(**kwargs):
+    # Strip any None kwargs so Groq does not fail on tool_choice=None or tools=None
+    clean_kwargs = {k: v for k, v in kwargs.items() if v is not None}
     try:
-        return await client.chat.completions.create(**kwargs)
+        return await client.chat.completions.create(**clean_kwargs)
     except RateLimitError:
-        kwargs["model"] = FALLBACK_MODEL
-        return await client.chat.completions.create(**kwargs)
+        clean_kwargs["model"] = FALLBACK_MODEL
+        return await client.chat.completions.create(**clean_kwargs)
     except APIError as e:
         if e.status_code == 429:
-            kwargs["model"] = FALLBACK_MODEL
-            return await client.chat.completions.create(**kwargs)
+            clean_kwargs["model"] = FALLBACK_MODEL
+            return await client.chat.completions.create(**clean_kwargs)
         raise e
 
 def _fn_to_groq_tool(fn) -> dict:
@@ -35,8 +38,19 @@ def _fn_to_groq_tool(fn) -> dict:
     for name, param in sig.parameters.items():
         annotation = param.annotation
         
-        if getattr(annotation, '__origin__', None) is list:
-            item_type = getattr(annotation, '__args__', (str,))[0]
+        # Unwrap Union / Optional (e.g. list[int] | None or int | None)
+        origin = getattr(annotation, '__origin__', None)
+        args = getattr(annotation, '__args__', ())
+
+        if origin is typing.Union or str(type(annotation)) == "<class 'types.UnionType'>":
+            non_none_args = [a for a in args if a is not type(None)]
+            if non_none_args:
+                annotation = non_none_args[0]
+                origin = getattr(annotation, '__origin__', None)
+                args = getattr(annotation, '__args__', ())
+
+        if origin is list or annotation is list:
+            item_type = args[0] if args else str
             item_json_type = type_map.get(item_type, "string")
             properties[name] = {
                 "type": "array",

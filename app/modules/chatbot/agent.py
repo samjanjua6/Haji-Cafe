@@ -199,14 +199,24 @@ async def _run_session(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
 
     user_id: int | None = None
+    user_timezone: str | None = None
     for _ in range(20):  # wait up to 10 seconds
         for participant in ctx.room.remote_participants.values():
             if participant.metadata:
                 try:
-                    user_id = int(participant.metadata)
-                    break
-                except (ValueError, TypeError):
-                    pass
+                    import json
+                    meta_dict = json.loads(participant.metadata)
+                    if isinstance(meta_dict, dict):
+                        user_id = int(meta_dict.get("user_id"))
+                        if meta_dict.get("timezone"):
+                            user_timezone = str(meta_dict.get("timezone"))
+                    else:
+                        user_id = int(participant.metadata)
+                except Exception:
+                    try:
+                        user_id = int(participant.metadata)
+                    except (ValueError, TypeError):
+                        pass
             if not user_id and participant.identity:
                 # Fallback: extract numeric ID from 'user-123'
                 ident = participant.identity
@@ -220,7 +230,7 @@ async def _run_session(ctx: JobContext):
             break
         await asyncio.sleep(0.5)
 
-    logger.info(f"REAL_CALL_LOG: After participant loop, user_id is: {user_id}")
+    logger.info(f"REAL_CALL_LOG: After participant loop, user_id is: {user_id}, tz is: {user_timezone}")
 
     if not user_id:
         logger.error("No user ID found in participant metadata or identity — aborting job")
@@ -236,7 +246,13 @@ async def _run_session(ctx: JobContext):
         logger.error(f"User {user_id} not found in database — aborting job")
         return
 
-    logger.info(f"Voice session started: user={current_user.id} role={current_user.role.name}")
+    # Set timezone preference (defaulting to client timezone or Asia/Karachi over naive UTC)
+    if user_timezone:
+        current_user.timezone = user_timezone
+    elif not getattr(current_user, "timezone", None) or current_user.timezone.upper() == "UTC":
+        current_user.timezone = "Asia/Karachi"
+
+    logger.info(f"Voice session started: user={current_user.id} role={current_user.role.name} tz={current_user.timezone}")
 
     # ------------------------------------------------------------------
     # 3. Build flat voice prompt + tools
