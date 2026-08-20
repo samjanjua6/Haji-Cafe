@@ -14,7 +14,12 @@ def get_base_prompt(current_user, body: ChatRequest = None) -> str:
     )
 
     # --- Cafe-level scope (for SUPER_ADMIN and CAFE_OWNER) ---
-    authorized_cafes = list({scope.cafeId for scope in current_user.userScopes if scope.cafeId is not None})
+    authorized_cafes_set = {scope.cafeId for scope in (current_user.userScopes or []) if scope.cafeId is not None}
+    if hasattr(current_user, "ownedCafes") and current_user.ownedCafes:
+        for c in current_user.ownedCafes:
+            if not getattr(c, "isArchived", False):
+                authorized_cafes_set.add(c.id)
+    authorized_cafes = list(authorized_cafes_set)
     if len(authorized_cafes) == 1:
         base += f"The user manages a single Cafe (ID: {authorized_cafes[0]}). Use this cafe ID automatically when scheduling meetings, viewing staff, or searching menus.\n"
     elif len(authorized_cafes) > 1:

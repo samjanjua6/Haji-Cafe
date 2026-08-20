@@ -39,12 +39,17 @@ _vad = silero.VAD.load()
 
 
 async def _load_user(user_id: int):
-    """Load the full user record with role and scopes from the database."""
+    """Load the full user record with role, scopes, and owned cafes from the database."""
     from app.database import db
-    return await db.user.find_unique(
+    user = await db.user.find_unique(
         where={"id": user_id},
         include={
             "role": True,
+            "ownedCafes": {
+                "include": {
+                    "branches": True,
+                }
+            },
             "userScopes": {
                 "include": {
                     "cafe": True,
@@ -53,67 +58,115 @@ async def _load_user(user_id: int):
             },
         },
     )
+    if not user:
+        return None
+
+    # Filter out archived scopes matching core dependencies
+    filtered_scopes = []
+    for scope in (user.userScopes or []):
+        cafe_is_archived = False
+        if scope.cafe and scope.cafe.isArchived:
+            cafe_is_archived = True
+        if scope.branch and scope.branch.cafe and scope.branch.cafe.isArchived:
+            cafe_is_archived = True
+        if not cafe_is_archived:
+            filtered_scopes.append(scope)
+    user.userScopes = filtered_scopes
+    return user
 
 
 def _build_voice_system_prompt(current_user) -> str:
     """
-    Build a voice-optimised system prompt using the base user context.
-    We intentionally DO NOT use get_supervisor_prompt() because that prompt
-    contains routing instructions that don't apply in the flat voice pipeline.
+    Build a voice-optimised system prompt using the base user context and live date/time.
     """
+    import zoneinfo
+    from datetime import datetime, timedelta
     from app.modules.chatbot.agents.base import get_base_prompt
+
+    # Localized date and time
+    from datetime import datetime, timedelta, timezone
+
+    user_tz_name = getattr(current_user, "timezone", "UTC") or "UTC"
+    now = None
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo(user_tz_name)
+        now = datetime.now(tz)
+    except Exception:
+        pass
+
+    if now is None:
+        try:
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo("UTC")
+            now = datetime.now(tz)
+        except Exception:
+            now = datetime.now(timezone.utc)
+            user_tz_name = "UTC"
+
+    tomorrow = now + timedelta(days=1)
+    current_time_str = now.strftime("%A, %B %d, %Y at %I:%M %p")
+    today_iso = now.strftime("%Y-%m-%d")
+    tomorrow_iso = tomorrow.strftime("%Y-%m-%d")
 
     base = get_base_prompt(current_user, body=None)
     role_name = current_user.role.name
 
-    # Role-specific tool guidance (flat — no routing)
+    time_context = (
+        f"\nCURRENT LIVE TIME & DATE:\n"
+        f"- Current Time: {current_time_str} (Timezone: {user_tz_name})\n"
+        f"- Today's Date: {today_iso} ({now.strftime('%A')})\n"
+        f"- Tomorrow's Date: {tomorrow_iso}\n"
+        f"Use this exact timestamp to accurately resolve relative requests like 'today', 'tomorrow', or 'this afternoon'."
+    )
+
+    # Role-specific tool guidance
     if role_name == "STAFF":
         tool_guidance = (
-            "You have access to order tools. "
+            "You have direct access to order and inventory tools. "
             "For any question about orders or order status, call get_recent_orders or get_order_by_id directly."
         )
     elif role_name == "BRANCH_MANAGER":
         tool_guidance = (
-            "You have access to inventory and order tools. "
-            "For menu/stock questions call get_menu, get_branch_inventory, or search_menu. "
-            "For order questions call get_recent_orders or get_order_by_id."
+            "You have direct access to inventory and order tools. "
+            "For menu/stock questions call get_branch_inventory, search_menu, or update_branch_menu_item. "
+            "For order questions call get_recent_orders or get_order_by_id directly."
         )
     else:  # CAFE_OWNER / SUPER_ADMIN
         tool_guidance = (
-            "You have access to cafe, inventory, and order tools. "
-            "For cafe/branch/staff questions call get_my_cafes, get_cafe, get_branches_for_cafe, or get_staff_list. "
-            "For menu/stock questions call get_menu, get_branch_inventory, or search_menu. "
-            "For order questions call get_recent_orders or get_order_by_id."
+            "You have full access to cafe, menu, inventory, staff, and meeting tools.\n"
+            "WORKFLOW INSTRUCTIONS:\n"
+            "1. When the user asks to schedule a staff meeting:\n"
+            "   - First call get_staff_list to fetch the available staff members.\n"
+            "   - Then call schedule_meeting with start_time_iso, end_time_iso, and the staff integer IDs.\n"
+            "2. When the user asks about cafes, branches, or menus:\n"
+            "   - Call get_my_cafes, get_branches_for_cafe, or get_menu directly.\n"
+            "3. When the user asks about orders:\n"
+            "   - Call get_recent_orders or get_order_by_id directly."
         )
 
     voice_rules = (
         "\n\nVOICE MODE RULES — CRITICAL:\n"
-        "1. You are speaking aloud — never use markdown, bullet points, asterisks, or headers.\n"
-        "2. Keep responses short and conversational (2-4 sentences max).\n"
-        "3. ALWAYS call a tool before answering questions about real data (cafes, orders, inventory).\n"
-        "4. After a tool returns data, summarise it verbally in plain English.\n"
-        "5. Never read out IDs, long lists, or raw JSON — pick the most important info.\n"
-        "6. If a tool returns multiple items, say 'You have X items' and name a few examples.\n"
-        "7. DO NOT HALLUCINATE any data. If you don't have a tool for something, say so.\n"
+        "1. You are speaking aloud over voice — never use markdown, bullet points, asterisks, or raw formatting.\n"
+        "2. Keep spoken responses short, natural, and conversational (2-3 sentences max).\n"
+        "3. ALWAYS call tools to retrieve real data before answering questions.\n"
+        "4. After a tool returns data, summarise it conversationally in plain English.\n"
+        "5. Never read out raw JSON, long ID strings, or database technicalities."
     )
 
-    return f"{base}\n\n{tool_guidance}{voice_rules}"
+    return f"{base}\n{time_context}\n\n{tool_guidance}{voice_rules}"
 
 
 def _build_voice_tools(current_user) -> list:
     """
     Build a flat list of real data tools for the voice agent.
-    We deliberately EXCLUDE routing tools (route_to_cafe_specialist etc.)
-    because they only work inside engine.py's multi-step loop.
     """
     logger.info(f"REAL_CALL_LOG: user_id={getattr(current_user, 'id', None)}, email={getattr(current_user, 'email', None)}")
-    logger.info(f"REAL_CALL_LOG: scopes at build_voice_tools time = {getattr(current_user, 'userScopes', 'N/A')}")
     
     from app.modules.chatbot.tools.registry import build_tools
 
     role_name = current_user.role.name
 
-    # Build only the specialist tools the user's role allows
     if role_name == "STAFF":
         real_tools = build_tools(current_user, "order")
     elif role_name == "BRANCH_MANAGER":
@@ -121,14 +174,12 @@ def _build_voice_tools(current_user) -> list:
     else:  # CAFE_OWNER / SUPER_ADMIN
         real_tools = build_tools(current_user, "all")
 
-    # Wrap each callable as a LiveKit function_tool
     return [agents_llm.function_tool(fn) for fn in real_tools]
 
 
 async def entrypoint(ctx: JobContext):
     from app.database import db
 
-    # Connect to DB for the entire session lifetime
     await db.connect()
     try:
         await _run_session(ctx)
@@ -151,6 +202,15 @@ async def _run_session(ctx: JobContext):
                     break
                 except (ValueError, TypeError):
                     pass
+            if not user_id and participant.identity:
+                # Fallback: extract numeric ID from 'user-123'
+                ident = participant.identity
+                if ident.startswith("user-"):
+                    try:
+                        user_id = int(ident.replace("user-", ""))
+                        break
+                    except (ValueError, TypeError):
+                        pass
         if user_id:
             break
         await asyncio.sleep(0.5)
@@ -158,7 +218,7 @@ async def _run_session(ctx: JobContext):
     logger.info(f"REAL_CALL_LOG: After participant loop, user_id is: {user_id}")
 
     if not user_id:
-        logger.error("No user ID found in participant metadata — aborting job")
+        logger.error("No user ID found in participant metadata or identity — aborting job")
         return
 
     # ------------------------------------------------------------------
@@ -174,10 +234,8 @@ async def _run_session(ctx: JobContext):
     logger.info(f"Voice session started: user={current_user.id} role={current_user.role.name}")
 
     # ------------------------------------------------------------------
-    # 3. Build flat voice prompt + tools (no supervisor routing)
+    # 3. Build flat voice prompt + tools
     # ------------------------------------------------------------------
-    logger.info(f"VOICE_IDENTITY_CHECK: user_id={current_user.id}, email={current_user.email}, role={current_user.role.name}, scopes={[s.model_dump() for s in current_user.userScopes]}")
-    
     system_prompt = _build_voice_system_prompt(current_user)
     tools = _build_voice_tools(current_user)
 
