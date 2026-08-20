@@ -27,6 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
 from livekit.agents.voice import Agent, AgentSession
+from livekit.agents.voice.turn import TurnHandlingOptions
 from livekit.agents import llm as agents_llm
 from livekit.plugins import groq, deepgram, elevenlabs, silero
 
@@ -34,8 +35,12 @@ load_dotenv()
 
 logger = logging.getLogger("livekit-agent")
 
-# Pre-load Silero VAD model once at startup — avoids the download delay per job
-_vad = silero.VAD.load()
+# Pre-load Silero VAD model with comfortable silence threshold to avoid splitting slow speech
+_vad = silero.VAD.load(
+    min_speech_duration=0.1,
+    min_silence_duration=0.8,
+    prefix_padding_duration=0.5,
+)
 
 
 async def _load_user(user_id: int):
@@ -242,8 +247,25 @@ async def _run_session(ctx: JobContext):
     logger.info(f"Voice agent ready with {len(tools)} tools for role {current_user.role.name}")
 
     # ------------------------------------------------------------------
-    # 4. Start the voice session
+    # 4. Start the voice session with tuned turn handling
     # ------------------------------------------------------------------
+    turn_handling = TurnHandlingOptions(
+        endpointing={
+            "mode": "dynamic",
+            "min_delay": 0.9,   # Allow natural pauses without splitting sentences into fragments
+            "max_delay": 3.5,
+        },
+        interruption={
+            "enabled": True,
+            "min_duration": 0.6,
+            "min_words": 1,
+            "resume_false_interruption": True,
+        },
+        preemptive_generation={
+            "enabled": False,  # Avoid rapid canceled LLM calls on incomplete user phrases
+        },
+    )
+
     session = AgentSession(
         vad=_vad,
         stt=deepgram.STT(),
@@ -252,7 +274,13 @@ async def _run_session(ctx: JobContext):
             voice_id=os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
             api_key=os.environ.get("ELEVENLABS_API_KEY"),
         ),
+        turn_handling=turn_handling,
+        max_tool_steps=5,
     )
+
+    @session.on("error")
+    def on_session_error(err):
+        logger.error(f"LiveKit Voice Session error: {err}")
 
     await session.start(
         room=ctx.room,
