@@ -15,6 +15,7 @@ from app.modules.orders.router import router as orders_router
 from app.modules.audit.router import router as audit_router
 from app.modules.chatbot.router import router as chatbot_router
 from app.modules.analytics.router import router as analytics_router
+from app.modules.realtime.router import router as realtime_router
 
 
 @asynccontextmanager
@@ -54,6 +55,7 @@ app.include_router(orders_router, tags=["Orders"])
 app.include_router(audit_router, tags=["Audit"])
 app.include_router(chatbot_router)
 app.include_router(analytics_router)
+app.include_router(realtime_router)
 
 
 @app.get("/", tags=["Health"])
