@@ -56,7 +56,21 @@ async def place_order(branch_id: int, user_id: Optional[int], items: List[OrderI
             "notes": item.notes,
         })
 
-    return await repository.create_order(branch_id, user_id, total, items_data)
+    order = await repository.create_order(branch_id, user_id, total, items_data)
+
+    # Real-time WebSocket broadcast (non-blocking)
+    try:
+        from app.modules.realtime.manager import order_ws_manager
+        from app.utils.serializer import prisma_to_dict
+        await order_ws_manager.broadcast_to_branch(
+            branch_id=branch_id,
+            event="ORDER_CREATED",
+            payload=prisma_to_dict(order),
+        )
+    except Exception:
+        pass
+
+    return order
 
 
 def _build_orders_query(search: str = None, statuses: str = None, date_from: str = None, date_to: str = None, sort_by: str = "createdAt", sort_dir: str = "desc"):
@@ -123,7 +137,21 @@ async def transition_status(branch_id: int, order_id: int, new_status: OrderStat
             f"Allowed: {[s.value for s in allowed_transitions] or 'none (terminal state)'}"
         )
 
-    return await repository.update_order_status(order_id, new_status.value, user_id)
+    updated_order = await repository.update_order_status(order_id, new_status.value, user_id)
+
+    # Real-time WebSocket broadcast (non-blocking)
+    try:
+        from app.modules.realtime.manager import order_ws_manager
+        from app.utils.serializer import prisma_to_dict
+        await order_ws_manager.broadcast_to_branch(
+            branch_id=branch_id,
+            event="ORDER_STATUS_UPDATED",
+            payload=prisma_to_dict(updated_order),
+        )
+    except Exception:
+        pass
+
+    return updated_order
 
 
 async def get_cafe_orders(cafe_id: int, branch_id: int = None, page: int = 1, limit: int = 25, search: str = None, statuses: str = None, date_from: str = None, date_to: str = None, sort_by: str = "createdAt", sort_dir: str = "desc"):
