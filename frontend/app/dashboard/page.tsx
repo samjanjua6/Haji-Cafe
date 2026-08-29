@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
+import { KpiCards } from "@/components/analytics/KpiCards";
 
 import { Card } from "@/components/Card";
 
@@ -143,6 +144,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </Card>
+
+          {/* KPI Metric Cards — Today's Revenue, Active Orders, Low Stock */}
+          <KpiCards />
 
           {/* Quick links */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, alignItems: "start" }}>

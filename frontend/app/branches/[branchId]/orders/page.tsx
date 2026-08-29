@@ -8,6 +8,7 @@ import { BranchMenuItem } from "@/types/menu";
 import OrderTable from "@/components/orders/OrderTable";
 import OrderModals from "@/components/orders/OrderModals";
 import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
+import { ExportButtons } from "@/components/orders/ExportButtons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 
@@ -134,9 +135,12 @@ export default function BranchOrdersPage() {
           <div className="page-title">Branch Orders</div>
           <div className="page-subtitle">Branch #{branchId} — Showing {orders.length} of {meta.total} orders</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setPlaceModal(true)}>
-          <Plus size={16} /> Place Order
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
+          <button className="btn btn-primary" onClick={() => setPlaceModal(true)}>
+            <Plus size={16} /> Place Order
+          </button>
+        </div>
       </div>
 
       <OrdersFilterBar 
