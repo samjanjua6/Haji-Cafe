@@ -17,3 +17,5 @@ livekit-plugins-groq==1.6.10
 livekit-plugins-openai==1.6.10
 livekit-plugins-silero==1.6.10
 tzdata
+scikit-learn>=1.4.0
+pandas>=2.2.0
