@@ -12,6 +12,7 @@ import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import OrderTable from "@/components/orders/OrderTable";
+import { ExportButtons } from "@/components/orders/ExportButtons";
 import { Card } from "@/components/Card";
 import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
 import { HistoricalPredictionChart } from "@/components/analytics/HistoricalPredictionChart";
@@ -241,10 +242,13 @@ export default function CafeDetailPage() {
       </div>
 
       {/* Café-wide Orders */}
-      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-        <ShoppingCart size={16} style={{ marginRight: 8, display: "inline" }} />
-        All Orders — Showing {ordersList.length} of {meta.total}
-      </h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+          <ShoppingCart size={16} style={{ marginRight: 8, display: "inline" }} />
+          All Orders — Showing {ordersList.length} of {meta.total}
+        </h3>
+        <ExportButtons orders={ordersList as any} cafeId={cafeId as string} disabled={loading || loadingOrders} />
+      </div>
       
       <OrdersFilterBar 
         search={search}
