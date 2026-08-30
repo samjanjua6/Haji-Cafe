@@ -116,6 +116,17 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 input::placeholder { color: var(--text-faint); }
+
+/* Checkbox & Radio fix — prevent 100% width stretching */
+input[type="checkbox"], input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  flex-shrink: 0 !important;
+  accent-color: var(--accent);
+  cursor: pointer;
+  padding: 0 !important;
+}
 label {
   display: block;
   font-size: 12px;

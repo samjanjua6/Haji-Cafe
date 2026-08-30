@@ -42,6 +42,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       auth.setTokens(data.access_token, data.refresh_token);
       toast.success(tab === "login" ? "Welcome back to Haji Cafe!" : "Account created successfully!");
       onClose();
+
+      // If user is kitchen@gmail.com, route directly to Kitchen Display System (KDS)
+      if (email.trim().toLowerCase() === "kitchen@gmail.com") {
+        try {
+          const profile: any = await api.get("/auth/me");
+          const branchId = profile.scopes?.[0]?.branchId || 1;
+          router.push(`/branches/${branchId}/kitchen`);
+          return;
+        } catch {
+          router.push("/branches/1/kitchen");
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (err: any) {
       toast.error(err.message || "Authentication failed. Please check your credentials.");

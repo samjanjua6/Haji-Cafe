@@ -51,6 +51,12 @@ async def main():
         "email": "staff@sunrise-downtown.com",
         "passwordHash": password,
     })
+    kitchen = await db.user.create(data={
+        "roleId": roles["STAFF"].id,
+        "email": "kitchen@gmail.com",
+        "displayName": "Kitchen Display",
+        "passwordHash": password,
+    })
 
     print("Seeding Cafe & Branches...")
     cafe = await db.cafe.create(data={
@@ -73,6 +79,7 @@ async def main():
     await db.userscope.create(data={"userId": owner.id, "cafeId": cafe.id})
     await db.userscope.create(data={"userId": manager.id, "branchId": branch_hq.id})
     await db.userscope.create(data={"userId": staff.id, "branchId": branch_hq.id})
+    await db.userscope.create(data={"userId": kitchen.id, "branchId": branch_hq.id})
 
     print("Seeding Menu...")
     cat_espresso = await db.category.create(data={
@@ -164,7 +171,7 @@ async def main():
         "priceAtPurchase": Decimal("3.25")
     })
 
-    print("✅ Seeding completed successfully!")
+    print("[SUCCESS] Seeding completed successfully!")
     await db.disconnect()
 
 if __name__ == "__main__":

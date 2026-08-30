@@ -42,6 +42,20 @@ function LoginContent() {
       const data: any = await api.post(endpoint, { email, password });
       auth.setTokens(data.access_token, data.refresh_token);
       toast.success(tab === "login" ? "Welcome back!" : "Account created successfully!");
+
+      // If user is kitchen@gmail.com, route directly to Kitchen Display System (KDS)
+      if (email.trim().toLowerCase() === "kitchen@gmail.com") {
+        try {
+          const profile: any = await api.get("/auth/me");
+          const branchId = profile.scopes?.[0]?.branchId || 1;
+          router.push(`/branches/${branchId}/kitchen`);
+          return;
+        } catch {
+          router.push("/branches/1/kitchen");
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (err: any) {
       toast.error(err.message || "An unexpected error occurred");

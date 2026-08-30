@@ -4,6 +4,7 @@ from app.database import db
 from .cafe_tools import build_cafe_tools
 from .inventory_tools import build_inventory_tools
 from .order_tools import build_order_tools
+from .business_tools import build_business_tools
 
 def build_tools(current_user, agent_type: str = "all"):
     """
@@ -56,5 +57,8 @@ def build_tools(current_user, agent_type: str = "all"):
         
     if agent_type in ["all", "order"]:
         tools.extend(build_order_tools(current_user, _check_branch_access))
+
+    if agent_type in ["all", "business"]:
+        tools.extend(build_business_tools(current_user, _check_cafe_access, _check_branch_access))
         
     return tools

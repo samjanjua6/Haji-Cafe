@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { User, Shield, Mail, Coffee, ShoppingCart, RefreshCw, Calendar, CheckCircle } from "lucide-react";
+import { User, Shield, Mail, Coffee, ShoppingCart, RefreshCw, Calendar, CheckCircle, Flame } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
@@ -26,6 +26,13 @@ export default function DashboardPage() {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    if (user?.email && user.email.toLowerCase() === "kitchen@gmail.com") {
+      const branchId = user.scopes?.[0]?.branchId || 1;
+      router.replace(`/branches/${branchId}/kitchen`);
+    }
+  }, [user, router]);
 
   const handleRefresh = async () => {
     const refreshToken = auth.getRefresh();
@@ -104,6 +111,24 @@ export default function DashboardPage() {
             <span style={{ fontWeight: 600, fontSize: 14 }}>{scope.branchName || `Branch #${scope.branchId}`} Orders</span>
           </Card>
         </Link>
+      ));
+    }
+    if (user?.role === "STAFF") {
+      return user.scopes.map((scope, idx) => (
+        <React.Fragment key={idx}>
+          <Link href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}&takeOrder=true`} style={{ textDecoration: "none" }}>
+            <Card interactive style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", height: "100%" }}>
+              <div style={{ background: "rgba(249, 115, 22, 0.15)", borderRadius: 12, padding: 14 }}><ShoppingCart size={24} color="var(--accent)" /></div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Take Customer Order ({scope.branchName || `Branch #${scope.branchId}`})</span>
+            </Card>
+          </Link>
+          <Link href={`/branches/${scope.branchId}/kitchen?cafeId=${scope.cafeId}`} style={{ textDecoration: "none" }}>
+            <Card interactive style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", height: "100%" }}>
+              <div style={{ background: "rgba(59, 130, 246, 0.15)", borderRadius: 12, padding: 14 }}><Flame size={24} color="#3b82f6" /></div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Live Kitchen Display (KDS)</span>
+            </Card>
+          </Link>
+        </React.Fragment>
       ));
     }
     return null;

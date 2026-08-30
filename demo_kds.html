@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haji Cafe — Live Kitchen Display (KDS)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .ticket-enter {
+      animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Top Header Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-bold text-lg shadow-lg shadow-orange-600/30">
+        ☕
+      </div>
+      <div>
+        <h1 class="font-extrabold text-xl tracking-tight text-white flex items-center gap-2">
+          Haji Café <span class="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">KITCHEN KDS</span>
+        </h1>
+        <p class="text-xs text-slate-400">Branch #1 — Real-Time WebSocket Terminal</p>
+      </div>
+    </div>
+
+    <!-- Status & Action Bar -->
+    <div class="flex items-center gap-4">
+      <div id="wsStatus" class="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        Connecting...
+      </div>
+
+      <button onclick="simulateOrder()" class="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+        <span>🛒</span> Place Test Order
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full">
+    
+    <!-- Left 3 Columns: Active Kitchen Tickets -->
+    <div class="lg:col-span-3">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-slate-200 text-lg flex items-center gap-2">
+          🔥 Live Order Queue
+          <span id="orderCount" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">0 orders</span>
+        </h2>
+        <span class="text-xs text-slate-400">Auto-updates in real-time without refreshing</span>
+      </div>
+
+      <div id="ticketsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Empty State -->
+        <div id="emptyState" class="col-span-full py-20 text-center border-2 border-dashed border-slate-800 rounded-2xl">
+          <div class="text-4xl mb-3">🍳</div>
+          <h3 class="font-semibold text-slate-300 text-base">Kitchen Queue is Clear</h3>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Click "Place Test Order" above to watch a real-time order slide in instantly via WebSocket.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right 1 Column: WebSocket Event Feed Log -->
+    <div class="lg:col-span-1 flex flex-col h-[calc(100vh-140px)] sticky top-24">
+      <div class="border border-slate-800 bg-slate-900/50 rounded-2xl p-4 flex flex-col h-full">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">WebSocket Wire Log</span>
+          <button onclick="clearLogs()" class="text-[11px] text-slate-500 hover:text-slate-300">Clear</button>
+        </div>
+        <div id="eventLogs" class="flex-1 overflow-y-auto space-y-2 text-xs font-mono pr-1">
+          <!-- Logs populate here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const WS_URL = "ws://127.0.0.1:8000/ws/orders/1";
+    let socket = null;
+    let audioCtx = null;
+    const ordersMap = new Map();
+
+    // Synthesize an audible order chime (No external mp3 required)
+    function playChime() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        // Pleasant bell chord
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, now); // A5
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15); // A6
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+        osc.start(now);
+        osc.stop(now + 0.6);
+      } catch (e) {
+        console.log("Audio not allowed yet:", e);
+      }
+    }
+
+    // Connect WebSocket
+    function connectWS() {
+      const statusEl = document.getElementById("wsStatus");
+      socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        statusEl.className = "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400";
+        statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Connected to Branch #1';
+        logEvent("SYS", "WebSocket connected successfully");
+      };
+
+      socket.onmessage = (event) => {
+        const payload = JSON.parse(event.data);
+        logEvent("INCOMING", payload.event, payload);
+
+        if (payload.event === "ORDER_CREATED") {
+          playChime();
+          addOrderCard(payload.data);
+        } else if (payload.event === "ORDER_STATUS_UPDATED") {
+          updateOrderCard(payload.data);
+        }
+      };
+
+      socket.onclose = () => {
+        statusEl.className = "flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400";
+        statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Disconnected (Retrying...)';
+        logEvent("ERR", "Connection lost, reconnecting in 2s...");
+        setTimeout(connectWS, 2000);
+      };
+    }
+
+    function addOrderCard(order) {
+      document.getElementById("emptyState")?.remove();
+      ordersMap.set(order.id, order);
+      updateOrderCount();
+
+      const grid = document.getElementById("ticketsGrid");
+      const card = document.createElement("div");
+      card.id = `order-${order.id}`;
+      card.className = "ticket-enter bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all";
+
+      const itemsHtml = (order.orderItems || []).map(item => `
+        <li class="flex items-center justify-between py-1.5 border-b border-slate-800/60 last:border-0 text-sm">
+          <span class="text-slate-200 font-medium">${item.name}</span>
+          <span class="text-orange-400 font-bold bg-orange-500/10 px-2 py-0.5 rounded-md text-xs">x${item.quantity}</span>
+        </li>
+      `).join("");
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between pb-3 border-b border-slate-800 mb-3">
+            <div>
+              <span class="text-xs font-mono text-slate-500">ORDER</span>
+              <h4 class="font-extrabold text-lg text-white">#${order.id}</h4>
+              <span class="text-xs font-medium text-slate-400">${order.tableNumber || 'Takeaway'}</span>
+            </div>
+            <span id="badge-${order.id}" class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              PENDING
+            </span>
+          </div>
+
+          <ul class="mb-4">
+            ${itemsHtml}
+          </ul>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+          <div class="text-xs text-slate-400 font-mono">
+            Total: <span class="font-bold text-white">$${order.totalAmount}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="changeStatus(${order.id}, 'IN_PREPARATION')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition">
+              Cook
+            </button>
+            <button onclick="changeStatus(${order.id}, 'COMPLETED')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition">
+              Ready
+            </button>
+          </div>
+        </div>
+      `;
+
+      grid.prepend(card);
+    }
+
+    function updateOrderCard(order) {
+      const badge = document.getElementById(`badge-${order.id}`);
+      if (badge) {
+        badge.innerText = order.status;
+        if (order.status === "IN_PREPARATION") {
+          badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20";
+        } else if (order.status === "COMPLETED") {
+          badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+          const card = document.getElementById(`order-${order.id}`);
+          if (card) {
+            setTimeout(() => {
+              card.style.opacity = "0.5";
+            }, 1000);
+          }
+        }
+      }
+    }
+
+    function updateOrderCount() {
+      document.getElementById("orderCount").innerText = `${ordersMap.size} active`;
+    }
+
+    function logEvent(source, eventName, data = null) {
+      const logsEl = document.getElementById("eventLogs");
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement("div");
+      div.className = "p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 leading-relaxed";
+      div.innerHTML = `
+        <div class="flex items-center justify-between text-[10px] text-slate-500">
+          <span class="font-bold text-orange-400">[${source}]</span>
+          <span>${time}</span>
+        </div>
+        <div class="font-bold text-slate-300 mt-0.5">${eventName}</div>
+        ${data ? `<pre class="text-[10px] text-slate-400 mt-1 overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>` : ''}
+      `;
+      logsEl.prepend(div);
+    }
+
+    function clearLogs() {
+      document.getElementById("eventLogs").innerHTML = "";
+    }
+
+    async function simulateOrder() {
+      try {
+        await fetch("http://127.0.0.1:8000/demo/trigger-order", { method: "POST" });
+      } catch (err) {
+        alert("Make sure demo server is running! Run: python demo_realtime.py");
+      }
+    }
+
+    async function changeStatus(orderId, nextStatus) {
+      try {
+        await fetch(`http://127.0.0.1:8000/demo/trigger-status?order_id=${orderId}&status=${nextStatus}`, { method: "POST" });
+      } catch (err) {
+        alert("Failed to update status.");
+      }
+    }
+
+    // Auto connect on page load
+    connectWS();
+  </script>
+</body>
+</html>
