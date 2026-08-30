@@ -308,52 +308,28 @@ export default function KitchenDisplayPage() {
       <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto" }}>
         <button
           onClick={() => setActiveTab("ALL")}
-          className="btn btn-sm"
-          style={{
-            background: activeTab === "ALL" ? "var(--accent)" : "var(--bg-card)",
-            color: activeTab === "ALL" ? "#0f172a" : "var(--text-primary)",
-            border: "1px solid var(--border)",
-            fontWeight: 600,
-          }}
+          className={`btn btn-sm ${activeTab === "ALL" ? "btn-primary" : "btn-ghost"}`}
         >
           <ShoppingBag size={14} /> All Active ({pendingCount + inPrepCount})
         </button>
 
         <button
           onClick={() => setActiveTab("PENDING")}
-          className="btn btn-sm"
-          style={{
-            background: activeTab === "PENDING" ? "var(--warning)" : "var(--bg-card)",
-            color: activeTab === "PENDING" ? "#0f172a" : "var(--text-primary)",
-            border: "1px solid var(--border)",
-            fontWeight: 600,
-          }}
+          className={`btn btn-sm ${activeTab === "PENDING" ? "btn-primary" : "btn-ghost"}`}
         >
           <Clock size={14} /> Pending Queue ({pendingCount})
         </button>
 
         <button
           onClick={() => setActiveTab("IN_PREPARATION")}
-          className="btn btn-sm"
-          style={{
-            background: activeTab === "IN_PREPARATION" ? "var(--info)" : "var(--bg-card)",
-            color: activeTab === "IN_PREPARATION" ? "#fff" : "var(--text-primary)",
-            border: "1px solid var(--border)",
-            fontWeight: 600,
-          }}
+          className={`btn btn-sm ${activeTab === "IN_PREPARATION" ? "btn-primary" : "btn-ghost"}`}
         >
           <Flame size={14} /> In Preparation ({inPrepCount})
         </button>
 
         <button
           onClick={() => setActiveTab("COMPLETED")}
-          className="btn btn-sm"
-          style={{
-            background: activeTab === "COMPLETED" ? "var(--success)" : "var(--bg-card)",
-            color: activeTab === "COMPLETED" ? "#fff" : "var(--text-primary)",
-            border: "1px solid var(--border)",
-            fontWeight: 600,
-          }}
+          className={`btn btn-sm ${activeTab === "COMPLETED" ? "btn-primary" : "btn-ghost"}`}
         >
           <CheckCircle2 size={14} /> Completed ({completedCount})
         </button>
@@ -385,10 +361,7 @@ export default function KitchenDisplayPage() {
 
             const rawItems = (order as any).orderItems || (order as any).orderLines || [];
 
-            let borderStyle = "1px solid var(--border)";
-            if (isPending) borderStyle = "1.5px solid var(--warning)";
-            if (isInPrep) borderStyle = "1.5px solid var(--info)";
-            if (isCompleted) borderStyle = "1px solid var(--success-glow)";
+            const borderStyle = "1px solid var(--border)";
 
             return (
               <div
@@ -533,12 +506,10 @@ export default function KitchenDisplayPage() {
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                   {isPending && (
                     <button
-                      className="btn btn-sm"
+                      className="btn btn-primary btn-sm"
                       onClick={() => handleTransition(order.id, "IN_PREPARATION")}
                       style={{
                         flex: 1,
-                        background: "var(--info)",
-                        color: "#fff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
