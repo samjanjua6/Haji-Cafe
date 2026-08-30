@@ -274,11 +274,19 @@ async def seed_historical_data():
             branch_items = branch_items_by_branch[branch.id]
             item_weights = [popularity_map.get(m.name, 5) for b, m in branch_items]
 
+            is_today = (current_day.date() == now.date())
+
             for _ in range(num_orders):
-                # Pick realistic hour based on diurnal weights
-                hour = random.choices(hours_list, weights=hours_weights, k=1)[0]
-                minute = random.randint(0, 59)
-                second = random.randint(0, 59)
+                if is_today:
+                    # Distribute today's orders across past few hours
+                    hour = random.randint(0, max(1, now.hour))
+                    minute = random.randint(0, now.minute if hour == now.hour else 59)
+                    second = random.randint(0, 59)
+                else:
+                    # Pick realistic hour based on diurnal weights
+                    hour = random.choices(hours_list, weights=hours_weights, k=1)[0]
+                    minute = random.randint(0, 59)
+                    second = random.randint(0, 59)
 
                 order_time = current_day.replace(
                     hour=hour, minute=minute, second=second, microsecond=0
@@ -286,7 +294,7 @@ async def seed_historical_data():
 
                 # Avoid timestamps in the future
                 if order_time > now:
-                    continue
+                    order_time = now - datetime.timedelta(minutes=random.randint(5, 120))
 
                 # Status determination
                 if (now - order_time).total_seconds() < 3600:

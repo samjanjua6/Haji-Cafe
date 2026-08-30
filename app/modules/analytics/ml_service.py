@@ -188,7 +188,8 @@ async def generate_sales_forecast(
 
     sorted_dates = sorted(daily_rev.keys())
     min_date = sorted_dates[0]
-    max_date = sorted_dates[-1]
+    today_date = now.date()
+    max_date = max(today_date, sorted_dates[-1])
 
     # Fill continuous range
     dates_list: List[datetime.date] = []
@@ -393,12 +394,20 @@ async def get_kpi_summary(
         where={**where_base, "status": {"in": ["PENDING", "IN_PREPARATION"]}}
     )
 
-    low_stock_count = await db.branchmenuitem.count(
+    branch_items = await db.branchmenuitem.find_many(
         where={
             **({"branchId": branch_id} if branch_id else {}),
-            "isInStock": True,
-            "availableQuantity": {"lte": 15},
+            **({"branch": {"cafeId": cafe_id}} if cafe_id and not branch_id else {}),
+            "isActive": True,
+            "masterItem": {"isDeleted": False},
         }
+    )
+
+    low_stock_count = sum(
+        1
+        for item in branch_items
+        if (item.isInStock is False)
+        or (item.availableQuantity is not None and item.availableQuantity <= item.lowStockThreshold)
     )
 
     now = datetime.datetime.now(datetime.timezone.utc)

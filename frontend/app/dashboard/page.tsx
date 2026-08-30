@@ -11,6 +11,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
+import { KpiCards } from "@/components/analytics/KpiCards";
+import { HistoricalPredictionChart } from "@/components/analytics/HistoricalPredictionChart";
 
 import { Card } from "@/components/Card";
 
@@ -143,6 +145,18 @@ export default function DashboardPage() {
               </div>
             </div>
           </Card>
+
+          {/* KPI Metric Cards — Today's Revenue, Active Orders, Out of Stock, Low Stock */}
+          <KpiCards />
+
+          {/* AI Historical Intelligence & Predictive Sales Forecasting Graph */}
+          {user.role !== "STAFF" && (
+            <HistoricalPredictionChart
+              cafeId={user.scopes[0]?.cafeId}
+              branchId={user.scopes[0]?.branchId}
+              cafeName={user.scopes[0]?.cafeName}
+            />
+          )}
 
           {/* Quick links */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, alignItems: "start" }}>
