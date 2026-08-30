@@ -188,7 +188,8 @@ async def generate_sales_forecast(
 
     sorted_dates = sorted(daily_rev.keys())
     min_date = sorted_dates[0]
-    max_date = sorted_dates[-1]
+    today_date = now.date()
+    max_date = max(today_date, sorted_dates[-1])
 
     # Fill continuous range
     dates_list: List[datetime.date] = []

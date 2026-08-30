@@ -22,6 +22,14 @@ interface HistoricalPredictionChartProps {
   cafeName?: string | null;
 }
 
+const formatDateLabel = (dateStr: string, options?: Intl.DateTimeFormatOptions) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length < 3) return dateStr;
+  const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+  return dateObj.toLocaleDateString("en-US", options || { month: "short", day: "numeric" });
+};
+
 export function HistoricalPredictionChart({
   cafeId,
   branchId,
@@ -666,7 +674,7 @@ export function HistoricalPredictionChart({
                     fontSize="11"
                     fill="var(--text-muted)"
                   >
-                    {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {formatDateLabel(p.date, { month: "short", day: "numeric" })}
                   </text>
                 ))}
             </svg>
@@ -692,7 +700,7 @@ export function HistoricalPredictionChart({
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontWeight: 700, fontSize: 13 }}>
-                    {new Date(hoveredPoint.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                    {formatDateLabel(hoveredPoint.date, { weekday: "short", month: "short", day: "numeric" })}
                   </span>
                   <span
                     style={{
