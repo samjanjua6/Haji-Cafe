@@ -224,9 +224,6 @@ export function HistoricalPredictionChart({
     <Card
       style={{
         padding: 24,
-        background: "var(--card-bg, #ffffff)",
-        borderColor: "var(--border)",
-        boxShadow: "var(--shadow-sm)",
         display: "flex",
         flexDirection: "column",
         gap: 20,
@@ -248,8 +245,8 @@ export function HistoricalPredictionChart({
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 borderRadius: 10,
                 background: "var(--accent-muted)",
                 display: "flex",
@@ -260,7 +257,7 @@ export function HistoricalPredictionChart({
               <TrendingUp size={20} color="var(--accent)" />
             </div>
             <div>
-              <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: "-0.01em" }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
                 AI Historical Intelligence & Forecasting
               </h2>
               <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
@@ -275,7 +272,8 @@ export function HistoricalPredictionChart({
         <div
           style={{
             display: "inline-flex",
-            background: "var(--bg-base, rgba(0,0,0,0.04))",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border)",
             padding: 4,
             borderRadius: 10,
             gap: 4,
@@ -323,79 +321,83 @@ export function HistoricalPredictionChart({
               gap: 12,
             }}
           >
+            {/* Projected Revenue Card */}
             <div
               style={{
-                background: "rgba(99, 102, 241, 0.06)",
-                border: "1px solid rgba(99, 102, 241, 0.2)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
-                padding: 14,
+                padding: 16,
               }}
             >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                 30-Day Projected Revenue
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--accent)", marginTop: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--accent)", marginTop: 6 }}>
                 ${forecastData ? forecastData.projected_30d_revenue.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "--"}
               </div>
-              <div style={{ fontSize: 12, color: "var(--success)", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--success)", fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
                 <ArrowUpRight size={13} />
                 +{forecastData?.projected_growth_rate_pct ?? 5.1}% growth trend
               </div>
             </div>
 
+            {/* Current Daily Average */}
             <div
               style={{
-                background: "rgba(16, 185, 129, 0.06)",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
-                padding: 14,
+                padding: 16,
               }}
             >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                 Current Daily Average
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--success)", marginTop: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--success)", marginTop: 6 }}>
                 ${forecastData ? forecastData.current_daily_avg_revenue.toFixed(2) : "--"}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
                 Baseline daily velocity
               </div>
             </div>
 
+            {/* Peak Expected Day */}
             <div
               style={{
-                background: "rgba(245, 158, 11, 0.06)",
-                border: "1px solid rgba(245, 158, 11, 0.2)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
-                padding: 14,
+                padding: 16,
               }}
             >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                 Peak Expected Day
               </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--warning)", marginTop: 4 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--warning)", marginTop: 6 }}>
                 ${forecastData ? forecastData.peak_forecast_revenue.toFixed(2) : "--"}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
                 Expected: {forecastData?.peak_forecast_day || "Weekend Peak"}
               </div>
             </div>
 
+            {/* Detected Anomalies */}
             <div
               style={{
-                background: "rgba(239, 68, 68, 0.06)",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
-                padding: 14,
+                padding: 16,
               }}
             >
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                 Detected Anomalies
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--danger)", marginTop: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "var(--danger)", marginTop: 6 }}>
                 {forecastData?.anomalies?.length ?? 0}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
                 Identified historical spikes & dips
               </div>
             </div>
@@ -410,7 +412,7 @@ export function HistoricalPredictionChart({
               flexWrap: "wrap",
               gap: 12,
               padding: "10px 14px",
-              background: "var(--bg-base, rgba(0,0,0,0.02))",
+              background: "var(--bg-surface)",
               borderRadius: 10,
               border: "1px solid var(--border)",
             }}
@@ -451,8 +453,8 @@ export function HistoricalPredictionChart({
               </div>
 
               {/* Toggles for Layers */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
-                <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4, cursor: "pointer", margin: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: 8 }}>
+                <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 5, cursor: "pointer", margin: 0, color: "var(--text-primary)" }}>
                   <input
                     type="checkbox"
                     checked={showConfidenceBand}
@@ -460,7 +462,7 @@ export function HistoricalPredictionChart({
                   />
                   95% Confidence Band
                 </label>
-                <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4, cursor: "pointer", margin: 0 }}>
+                <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 5, cursor: "pointer", margin: 0, color: "var(--text-primary)" }}>
                   <input
                     type="checkbox"
                     checked={showAnomalies}
@@ -478,7 +480,7 @@ export function HistoricalPredictionChart({
               position: "relative",
               width: "100%",
               overflowX: "auto",
-              background: "radial-gradient(ellipse at top, rgba(99, 102, 241, 0.03), transparent 70%)",
+              background: "var(--bg-base)",
               borderRadius: 12,
               border: "1px solid var(--border)",
               padding: "16px 8px 8px 8px",
@@ -491,13 +493,13 @@ export function HistoricalPredictionChart({
             >
               <defs>
                 <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0.00" />
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.00" />
                 </linearGradient>
 
                 <linearGradient id="confGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.05" />
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.20" />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.04" />
                 </linearGradient>
 
                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -519,7 +521,7 @@ export function HistoricalPredictionChart({
                       y2={y}
                       stroke="var(--border)"
                       strokeDasharray="4 4"
-                      strokeOpacity="0.6"
+                      strokeOpacity="0.8"
                     />
                     <text
                       x={padding.left - 10}
@@ -546,7 +548,7 @@ export function HistoricalPredictionChart({
                     stroke="var(--accent)"
                     strokeWidth="1.5"
                     strokeDasharray="5 3"
-                    strokeOpacity="0.7"
+                    strokeOpacity="0.8"
                   />
                   <rect
                     x={todayX - 32}
@@ -561,8 +563,8 @@ export function HistoricalPredictionChart({
                     y={padding.top - 2}
                     textAnchor="middle"
                     fontSize="10"
-                    fill="#ffffff"
-                    fontWeight="700"
+                    fill="#0f172a"
+                    fontWeight="800"
                   >
                     TODAY
                   </text>
@@ -582,7 +584,7 @@ export function HistoricalPredictionChart({
                 <path
                   d={historicalPath}
                   fill="none"
-                  stroke="#6366f1"
+                  stroke="var(--accent)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -594,7 +596,7 @@ export function HistoricalPredictionChart({
                 <path
                   d={forecastPath}
                   fill="none"
-                  stroke="#8b5cf6"
+                  stroke="#a78bfa"
                   strokeWidth="2.5"
                   strokeDasharray="6 4"
                   strokeLinecap="round"
@@ -613,14 +615,14 @@ export function HistoricalPredictionChart({
                           cx={p.x}
                           cy={p.y}
                           r="9"
-                          fill={p.anomaly_type === "SPIKE" ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)"}
+                          fill={p.anomaly_type === "SPIKE" ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)"}
                         />
                         <circle
                           cx={p.x}
                           cy={p.y}
                           r="5"
                           fill={p.anomaly_type === "SPIKE" ? "var(--success)" : "var(--danger)"}
-                          stroke="#ffffff"
+                          stroke="var(--bg-card)"
                           strokeWidth="1.5"
                         />
                       </g>
@@ -647,15 +649,15 @@ export function HistoricalPredictionChart({
                     y1={padding.top}
                     x2={hoveredPoint.x}
                     y2={svgHeight - padding.bottom}
-                    stroke="#818cf8"
+                    stroke="var(--accent)"
                     strokeWidth="1.5"
                   />
                   <circle
                     cx={hoveredPoint.x}
                     cy={hoveredPoint.y}
                     r="6"
-                    fill={hoveredPoint.is_forecast ? "#8b5cf6" : "#6366f1"}
-                    stroke="#ffffff"
+                    fill={hoveredPoint.is_forecast ? "#a78bfa" : "var(--accent)"}
+                    stroke="var(--bg-base)"
                     strokeWidth="2"
                     filter="url(#glow)"
                   />
@@ -686,11 +688,11 @@ export function HistoricalPredictionChart({
                   position: "absolute",
                   top: 24,
                   right: 24,
-                  background: "var(--card-bg, #ffffff)",
+                  background: "var(--bg-card)",
                   border: "1px solid var(--border)",
                   borderRadius: 10,
                   padding: "12px 16px",
-                  boxShadow: "var(--shadow-md, 0 10px 25px -5px rgba(0,0,0,0.1))",
+                  boxShadow: "var(--shadow-lg)",
                   fontSize: 13,
                   pointerEvents: "none",
                   minWidth: 220,
@@ -699,7 +701,7 @@ export function HistoricalPredictionChart({
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
                     {formatDateLabel(hoveredPoint.date, { weekday: "short", month: "short", day: "numeric" })}
                   </span>
                   <span
@@ -708,8 +710,8 @@ export function HistoricalPredictionChart({
                       padding: "2px 6px",
                       borderRadius: 4,
                       fontWeight: 700,
-                      background: hoveredPoint.is_forecast ? "rgba(139, 92, 246, 0.15)" : "rgba(99, 102, 241, 0.15)",
-                      color: hoveredPoint.is_forecast ? "#8b5cf6" : "#6366f1",
+                      background: hoveredPoint.is_forecast ? "rgba(139, 92, 246, 0.15)" : "var(--accent-muted)",
+                      color: hoveredPoint.is_forecast ? "#a78bfa" : "var(--accent)",
                     }}
                   >
                     {hoveredPoint.is_forecast ? "AI PREDICTION" : "HISTORICAL"}
@@ -732,7 +734,7 @@ export function HistoricalPredictionChart({
                       marginTop: 8,
                       padding: "6px 8px",
                       borderRadius: 6,
-                      background: hoveredPoint.anomaly_type === "SPIKE" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                      background: hoveredPoint.anomaly_type === "SPIKE" ? "var(--success-glow)" : "var(--danger-glow)",
                       border: `1px solid ${hoveredPoint.anomaly_type === "SPIKE" ? "var(--success)" : "var(--danger)"}`,
                       fontSize: 12,
                     }}
@@ -753,8 +755,8 @@ export function HistoricalPredictionChart({
           {forecastData?.dynamic_pricing_tips && forecastData.dynamic_pricing_tips.length > 0 && (
             <div
               style={{
-                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
-                border: "1px solid rgba(99, 102, 241, 0.2)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 16,
               }}
@@ -770,12 +772,13 @@ export function HistoricalPredictionChart({
                     style={{
                       display: "flex",
                       gap: 8,
-                      background: "var(--card-bg, #ffffff)",
+                      background: "var(--bg-card)",
                       padding: 12,
                       borderRadius: 8,
                       border: "1px solid var(--border)",
                       fontSize: 13,
                       lineHeight: 1.45,
+                      color: "var(--text-primary)",
                     }}
                   >
                     <span style={{ color: "var(--accent)", fontWeight: 700 }}>•</span>
@@ -791,14 +794,12 @@ export function HistoricalPredictionChart({
       {/* ── TAB 2: ITEM DEMAND PREDICTION ────────────────────────────── */}
       {activeTab === "demand" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
-                7-Day Item Demand & Kitchen Prep Forecasting
-              </h3>
-              <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                AI-driven batch preparation quantities to minimize waste and stockouts
-              </div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+              7-Day Item Demand & Kitchen Prep Forecasting
+            </h3>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+              AI-driven batch preparation quantities to minimize waste and stockouts
             </div>
           </div>
 
@@ -810,7 +811,7 @@ export function HistoricalPredictionChart({
                 <div
                   key={idx}
                   style={{
-                    background: "var(--bg-base, rgba(0,0,0,0.02))",
+                    background: "var(--bg-surface)",
                     border: "1px solid var(--border)",
                     borderRadius: 12,
                     padding: 16,
@@ -822,7 +823,7 @@ export function HistoricalPredictionChart({
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{item.item_name}</div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>{item.item_name}</div>
                       <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{item.category}</div>
                     </div>
                     <span
@@ -843,7 +844,7 @@ export function HistoricalPredictionChart({
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      background: "var(--card-bg, #ffffff)",
+                      background: "var(--bg-card)",
                       padding: "10px 12px",
                       borderRadius: 8,
                       border: "1px solid var(--border)",
@@ -851,7 +852,7 @@ export function HistoricalPredictionChart({
                   >
                     <div>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>7-Day Demand</div>
-                      <div style={{ fontSize: 18, fontWeight: 800 }}>{item.predicted_7d_total} units</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)" }}>{item.predicted_7d_total} units</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Prep Advice</div>
@@ -874,9 +875,9 @@ export function HistoricalPredictionChart({
       {/* ── TAB 3: PEAK HOURS HEATMAP ────────────────────────────────── */}
       {activeTab === "peak" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
                 24-Hour Ordering Heatmap & Staffing Optimization
               </h3>
               <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -889,7 +890,7 @@ export function HistoricalPredictionChart({
                   🔥 Peak: {peakHoursData.busiest_hour_label}
                 </span>
                 <span style={{ fontSize: 13, background: "var(--info-glow)", color: "var(--info)", padding: "4px 10px", borderRadius: 6, fontWeight: 700 }}>
-                  👥 Recommended Staff: {peakHoursData.recommended_shift_staff} Baristas
+                  👥 Staff: {peakHoursData.recommended_shift_staff} Baristas
                 </span>
               </div>
             )}
@@ -898,7 +899,7 @@ export function HistoricalPredictionChart({
           {loadingPeak ? (
             <Skeleton height={180} />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: 4, alignItems: "flex-end", height: 160, padding: "16px 0" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(24, 1fr)", gap: 4, alignItems: "flex-end", height: 160, padding: "16px 0", background: "var(--bg-base)", borderRadius: 10, border: "1px solid var(--border)", paddingInline: 8 }}>
               {peakHoursData?.hourly_distribution?.map((pt: any) => {
                 const heightPct = Math.max(8, pt.intensity * 100);
                 const isPeak = pt.hour === peakHoursData.busiest_hour;
@@ -922,8 +923,8 @@ export function HistoricalPredictionChart({
                         background: isPeak
                           ? "var(--accent)"
                           : pt.intensity > 0.6
-                          ? "rgba(99, 102, 241, 0.7)"
-                          : "rgba(99, 102, 241, 0.25)",
+                          ? "rgba(245, 158, 11, 0.7)"
+                          : "rgba(245, 158, 11, 0.25)",
                         transition: "all 0.2s",
                       }}
                     />
@@ -942,7 +943,7 @@ export function HistoricalPredictionChart({
       {activeTab === "bcg" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
               BCG Menu Matrix Portfolio (Profitability vs Popularity)
             </h3>
             <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -955,13 +956,13 @@ export function HistoricalPredictionChart({
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
               {/* Stars */}
-              <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: 10, padding: 14 }}>
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--warning-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--warning)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   ⭐ Stars (High Volume, High Margin)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.stars?.map((item: any, i: number) => (
-                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--border)", color: "var(--text-primary)" }}>
                       <span style={{ fontWeight: 600 }}>{item.item_name}</span>
                       <span style={{ color: "var(--text-muted)" }}>{item.sales_volume} sold (${item.revenue_generated.toFixed(0)})</span>
                     </div>
@@ -970,13 +971,13 @@ export function HistoricalPredictionChart({
               </div>
 
               {/* Cash Cows */}
-              <div style={{ background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: 10, padding: 14 }}>
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--success-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--success)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   🐄 Cash Cows (High Volume, Steady)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.cash_cows?.map((item: any, i: number) => (
-                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--border)", color: "var(--text-primary)" }}>
                       <span style={{ fontWeight: 600 }}>{item.item_name}</span>
                       <span style={{ color: "var(--text-muted)" }}>{item.sales_volume} sold (${item.revenue_generated.toFixed(0)})</span>
                     </div>
@@ -985,13 +986,13 @@ export function HistoricalPredictionChart({
               </div>
 
               {/* Puzzles */}
-              <div style={{ background: "rgba(99, 102, 241, 0.05)", border: "1px solid rgba(99, 102, 241, 0.3)", borderRadius: 10, padding: 14 }}>
-                <div style={{ fontWeight: 800, color: "var(--accent)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--info-glow)", borderRadius: 10, padding: 14 }}>
+                <div style={{ fontWeight: 800, color: "var(--info)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   ❓ Puzzles (High Margin, Promote More)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.puzzles?.map((item: any, i: number) => (
-                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--border)", color: "var(--text-primary)" }}>
                       <span style={{ fontWeight: 600 }}>{item.item_name}</span>
                       <span style={{ color: "var(--text-muted)" }}>{item.sales_volume} sold</span>
                     </div>
@@ -1000,13 +1001,13 @@ export function HistoricalPredictionChart({
               </div>
 
               {/* Dogs */}
-              <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: 10, padding: 14 }}>
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--danger-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--danger)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   🐕 Dogs (Low Volume, Low Margin)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.dogs?.map((item: any, i: number) => (
-                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                    <div key={i} style={{ fontSize: 13, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--border)", color: "var(--text-primary)" }}>
                       <span style={{ fontWeight: 600 }}>{item.item_name}</span>
                       <span style={{ color: "var(--text-muted)" }}>{item.sales_volume} sold</span>
                     </div>

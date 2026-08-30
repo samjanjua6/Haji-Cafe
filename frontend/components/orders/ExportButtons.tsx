@@ -6,15 +6,9 @@ import {
   FileText,
   FileSpreadsheet,
   Calendar,
-  Filter,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  Layers,
+  Sparkles,
   X,
   Loader2,
-  ChevronDown,
-  Sparkles,
 } from "lucide-react";
 import { Order } from "@/types/order";
 import { api } from "@/lib/api";
@@ -92,15 +86,14 @@ function exportToExcel(orders: Order[], contextName: string, titleLabel: string,
   const allRows = [...summaryRows, ...dataRows];
   const worksheet = XLSX.utils.aoa_to_sheet(allRows);
 
-  // Column width configuration for perfect Excel viewing
   worksheet["!cols"] = [
-    { wch: 14 }, // Order ID
-    { wch: 18 }, // Scope / Branch
-    { wch: 18 }, // Status
-    { wch: 18 }, // Total Amount
-    { wch: 16 }, // Date
-    { wch: 14 }, // Time
-    { wch: 28 }, // Items
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 28 },
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -139,7 +132,7 @@ function exportToCSV(orders: Order[], contextName: string) {
   toast.success("CSV file downloaded!");
 }
 
-// ── 3. LUXURY EXECUTIVE PDF GENERATOR (Fixed Spacing & Alignment) ─────
+// ── 3. LUXURY EXECUTIVE PDF GENERATOR ─────────────────────────────────
 async function exportToPDF(orders: Order[], contextName: string, titleLabel: string, dateRangeLabel: string) {
   const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF({
@@ -208,7 +201,7 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setFontSize(8);
       doc.text(`${titleLabel}  •  Range: ${dateRangeLabel}`, textX, 32.5);
 
-      // Metadata Block (Right-aligned)
+      // Metadata Block
       const rightX = pageWidth - margin - 6;
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
@@ -222,7 +215,7 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       const timeStr = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
       doc.text(`Generated: ${timeStr}`, rightX, 26.5, { align: "right" });
 
-      doc.setTextColor(52, 211, 153); // Emerald
+      doc.setTextColor(52, 211, 153);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.text("STATUS: AUDITED & SECURE", rightX, 32.5, { align: "right" });
@@ -317,7 +310,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     }
   };
 
-  // Safe table header with vertical clearance
   const drawTableHeader = (startY: number) => {
     doc.setFillColor(30, 41, 59); // Slate-800
     doc.roundedRect(margin, startY, contentWidth, 8, 1.5, 1.5, "F");
@@ -358,7 +350,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   let currentHeaderY = 65;
   drawTableHeader(currentHeaderY);
 
-  // Generous gap so first row NEVER overlaps the table header
   let currentY = currentHeaderY + 13;
   const rowHeight = 7.8;
 
@@ -397,7 +388,7 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     doc.setTextColor(71, 85, 105);
     doc.text(`Branch #${o.branchId}`, margin + 34, currentY);
 
-    // 3. Status Pill / Badge (Perfect vertical centering)
+    // 3. Status Pill / Badge
     const st = (o.status || "").toUpperCase();
     let bgR = 241, bgG = 245, bgB = 249;
     let txtR = 71, txtG = 85, txtB = 105;
@@ -533,7 +524,6 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
     }
   };
 
-  // Initialize with 30D on first open
   useEffect(() => {
     if (modalOpen && !dateFrom) {
       handlePresetSelect("30d");
@@ -543,7 +533,6 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
   const contextName = branchId ? `branch-${branchId}` : cafeId ? `cafe-${cafeId}` : "all";
   const titleLabel = branchId ? `Branch #${branchId}` : cafeId ? `Café #${cafeId}` : "All Orders";
 
-  // Fetch full orders dataset for chosen date range
   const fetchOrdersForExport = async (): Promise<Order[]> => {
     try {
       let endpoint = "";
@@ -551,7 +540,7 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
       if (dateFrom) params.append("date_from", dateFrom);
       if (dateTo) params.append("date_to", dateTo);
       if (statusFilter !== "ALL") params.append("status", statusFilter);
-      params.append("limit", "2000"); // High ceiling for full date range
+      params.append("limit", "2000");
 
       if (branchId) {
         endpoint = `/branches/${branchId}/orders?${params.toString()}`;
@@ -565,11 +554,8 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
           return res.data;
         }
       }
-    } catch {
-      // Fallback to local filter if network call encounters issue
-    }
+    } catch {}
 
-    // Local client-side fallback
     return orders.filter((o) => {
       const oDate = o.createdAt ? o.createdAt.split("T")[0] : "";
       if (dateFrom && oDate < dateFrom) return false;
@@ -610,7 +596,7 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
 
   return (
     <>
-      {/* ── TRIGGER BUTTONS ─────────────────────────────────────────── */}
+      {/* ── TRIGGER BUTTON ──────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button
           className="btn btn-ghost btn-sm"
@@ -623,9 +609,9 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: "rgba(99, 102, 241, 0.08)",
+            background: "var(--bg-surface)",
             color: "var(--accent)",
-            borderColor: "rgba(99, 102, 241, 0.3)",
+            border: "1px solid var(--border)",
           }}
           title="Export Orders with Custom Date Range"
         >
@@ -643,8 +629,8 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.55)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
@@ -655,16 +641,17 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
         >
           <div
             style={{
-              background: "var(--card-bg, #ffffff)",
+              background: "var(--bg-card)",
               border: "1px solid var(--border)",
               borderRadius: 16,
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              boxShadow: "var(--shadow-lg)",
               width: "100%",
               maxWidth: 520,
               padding: 24,
               display: "flex",
               flexDirection: "column",
               gap: 20,
+              color: "var(--text-primary)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -673,19 +660,20 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 42,
+                    height: 42,
                     borderRadius: 12,
-                    background: "rgba(245, 158, 11, 0.12)",
+                    background: "var(--accent-muted)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <Sparkles size={22} color="var(--warning)" />
+                  <Sparkles size={22} color="var(--accent)" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
                     Export Intelligence Report
                   </h3>
                   <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
@@ -695,7 +683,7 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
               </div>
               <button
                 onClick={() => !loadingExport && setModalOpen(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
               >
                 <X size={20} />
               </button>
@@ -703,8 +691,8 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
 
             {/* Quick Presets Strip */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8, display: "block" }}>
-                Select Time Horizon Preset
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8, display: "block" }}>
+                SELECT TIME HORIZON PRESET
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                 {[
@@ -713,64 +701,98 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
                   { id: "30d", label: "Last 30D" },
                   { id: "90d", label: "Last 90D" },
                   { id: "all", label: "All Time" },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`btn btn-sm ${activePreset === p.id ? "btn-primary" : "btn-ghost"}`}
-                    onClick={() => handlePresetSelect(p.id)}
-                    style={{ fontSize: 12, padding: "6px 4px", textAlign: "center" }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
+                ].map((p) => {
+                  const isActive = activePreset === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePresetSelect(p.id)}
+                      style={{
+                        padding: "8px 4px",
+                        fontSize: 12,
+                        fontWeight: isActive ? 700 : 500,
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid",
+                        borderColor: isActive ? "var(--accent)" : "var(--border)",
+                        background: isActive ? "var(--accent)" : "var(--bg-surface)",
+                        color: isActive ? "#0f172a" : "var(--text-muted)",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Custom Date Picker Inputs */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em", marginBottom: 6, display: "block" }}>
                   FROM DATE
                 </label>
                 <input
                   type="date"
-                  className="input"
                   value={dateFrom}
                   onChange={(e) => {
                     setActivePreset("custom");
                     setDateFrom(e.target.value);
                   }}
-                  style={{ width: "100%", fontSize: 13 }}
+                  style={{
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "9px 12px",
+                    width: "100%",
+                    fontSize: 13,
+                  }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em", marginBottom: 6, display: "block" }}>
                   TO DATE
                 </label>
                 <input
                   type="date"
-                  className="input"
                   value={dateTo}
                   onChange={(e) => {
                     setActivePreset("custom");
                     setDateTo(e.target.value);
                   }}
-                  style={{ width: "100%", fontSize: 13 }}
+                  style={{
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "9px 12px",
+                    width: "100%",
+                    fontSize: 13,
+                  }}
                 />
               </div>
             </div>
 
             {/* Status Filter Dropdown */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em", marginBottom: 6, display: "block" }}>
                 ORDER STATUS FILTER
               </label>
               <select
-                className="input"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ width: "100%", fontSize: 13 }}
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-primary)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "9px 12px",
+                  width: "100%",
+                  fontSize: 13,
+                }}
               >
                 <option value="ALL">All Statuses (Completed, Pending, In Prep, Cancelled)</option>
                 <option value="COMPLETED">Completed Only</option>
@@ -782,6 +804,7 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
 
             {/* Format Selection Action Cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+              {/* PDF Action Banner */}
               <button
                 type="button"
                 disabled={loadingExport}
@@ -792,15 +815,15 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
                   justifyContent: "space-between",
                   padding: "14px 16px",
                   borderRadius: 12,
-                  background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.12) 100%)",
-                  border: "1px solid rgba(245, 158, 11, 0.35)",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--accent)",
                   cursor: loadingExport ? "not-allowed" : "pointer",
                   textAlign: "left",
                   transition: "all 0.15s ease",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ background: "var(--warning)", color: "#ffffff", padding: 8, borderRadius: 8 }}>
+                  <div style={{ background: "var(--accent)", color: "#0f172a", padding: 8, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {loadingExport ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
                   </div>
                   <div>
@@ -812,23 +835,30 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
                     </div>
                   </div>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--warning)" }}>Generate PDF →</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
+                  Generate PDF →
+                </span>
               </button>
 
+              {/* Excel & CSV Buttons */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <button
                   type="button"
                   disabled={loadingExport}
                   onClick={() => handleExportAction("excel")}
-                  className="btn btn-secondary"
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    padding: "12px 14px",
+                    padding: "11px 14px",
                     fontWeight: 700,
                     fontSize: 13,
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
                   }}
                 >
                   <FileSpreadsheet size={16} color="var(--success)" />
@@ -839,16 +869,19 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
                   type="button"
                   disabled={loadingExport}
                   onClick={() => handleExportAction("csv")}
-                  className="btn btn-ghost"
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    padding: "12px 14px",
+                    padding: "11px 14px",
                     fontWeight: 700,
                     fontSize: 13,
+                    background: "var(--bg-surface)",
                     border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
                   }}
                 >
                   <FileDown size={16} />
