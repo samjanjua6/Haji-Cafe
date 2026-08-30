@@ -14,6 +14,7 @@ import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import OrderTable from "@/components/orders/OrderTable";
 import { Card } from "@/components/Card";
 import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
+import { HistoricalPredictionChart } from "@/components/analytics/HistoricalPredictionChart";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname } from "next/navigation";
 import { OrdersResponse } from "@/types/order";
@@ -204,6 +205,11 @@ export default function CafeDetailPage() {
             <Plus size={15} /> Add Branch
           </button>
         </div>
+      </div>
+
+      {/* AI Historical Intelligence & Predictive Sales Forecasting Graph */}
+      <div style={{ marginBottom: 32 }}>
+        <HistoricalPredictionChart cafeId={parseInt(cafeId)} cafeName={cafe?.name} />
       </div>
 
       {/* Branches */}
