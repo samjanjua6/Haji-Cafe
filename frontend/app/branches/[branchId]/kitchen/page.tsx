@@ -560,54 +560,84 @@ export default function KitchenDisplayPage() {
 
                   {/* Item List with Interactive Kitchen Checklist */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                    {(order.orderLines || []).map((item, idx) => {
-                      const key = `${order.id}-${item.id || idx}`;
-                      const isChecked = checkedItems[key] || false;
-                      const itemName = item.itemName || item.branchMenuItem?.masterItem?.name || `Item #${item.branchMenuItemId}`;
-
-                      return (
-                        <div
-                          key={key}
-                          onClick={() => toggleItemCheck(order.id, item.id || idx)}
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 10,
-                            padding: "8px 10px",
-                            borderRadius: 8,
-                            background: isChecked ? "var(--bg-surface)" : "transparent",
-                            border: "1px solid var(--border)",
-                            cursor: "pointer",
-                            transition: "background 0.1s ease",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {}}
-                            style={{ marginTop: 2, cursor: "pointer", accentColor: "var(--accent)" }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                color: isChecked ? "var(--text-muted)" : "var(--text-primary)",
-                                textDecoration: isChecked ? "line-through" : "none",
-                              }}
-                            >
-                              <span style={{ color: "var(--accent)", marginRight: 6 }}>{item.quantity}x</span>
-                              {itemName}
-                            </div>
-                            {item.notes && (
-                              <div style={{ fontSize: 11, color: "#f59e0b", fontStyle: "italic", marginTop: 2 }}>
-                                Note: {item.notes}
-                              </div>
-                            )}
+                    {(() => {
+                      const rawItems = (order as any).orderItems || (order as any).orderLines || [];
+                      if (rawItems.length === 0) {
+                        return (
+                          <div style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic", padding: "6px 0" }}>
+                            Standard Café Order ({order.totalAmount ? `$${Number(order.totalAmount).toFixed(2)}` : "Pending Ticket"})
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+
+                      return rawItems.map((item: any, idx: number) => {
+                        const key = `${order.id}-${item.id || idx}`;
+                        const isChecked = checkedItems[key] || false;
+                        const itemName =
+                          item.branchMenuItem?.masterItem?.name ||
+                          item.masterItem?.name ||
+                          item.itemName ||
+                          `Item #${item.branchMenuItemId || idx + 1}`;
+                        const quantity = item.quantity || 1;
+
+                        return (
+                          <div
+                            key={key}
+                            onClick={() => toggleItemCheck(order.id, item.id || idx)}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 10,
+                              padding: "9px 12px",
+                              borderRadius: 8,
+                              background: isChecked ? "var(--bg-surface)" : "rgba(255, 255, 255, 0.03)",
+                              border: isChecked ? "1px solid var(--border)" : "1px solid rgba(255, 255, 255, 0.08)",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {}}
+                              style={{ marginTop: 3, cursor: "pointer", accentColor: "var(--accent)" }}
+                            />
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 700,
+                                  color: isChecked ? "var(--text-muted)" : "var(--text-primary)",
+                                  textDecoration: isChecked ? "line-through" : "none",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    background: isChecked ? "var(--border)" : "var(--accent)",
+                                    color: "#fff",
+                                    padding: "2px 7px",
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  {quantity}x
+                                </span>
+                                <span>{itemName}</span>
+                              </div>
+                              {item.notes && (
+                                <div style={{ fontSize: 12, color: "#f59e0b", fontStyle: "italic", marginTop: 4, paddingLeft: 4 }}>
+                                  📝 Special Instructions: {item.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 

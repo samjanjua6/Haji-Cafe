@@ -24,7 +24,17 @@ async def create_order(branch_id: int, user_id: Optional[int], total_amount, ite
                     "create": items_data,
                 },
             },
-            include={"orderItems": True},
+            include={
+                "orderItems": {
+                    "include": {
+                        "branchMenuItem": {
+                            "include": {
+                                "masterItem": True
+                            }
+                        }
+                    }
+                }
+            },
         )
         
         # Deduct inventory atomically with gte guard
@@ -85,6 +95,17 @@ async def get_orders_by_branch(branch_id: int, skip: int = 0, take: int = 25, wh
         order=query_order,
         skip=skip,
         take=take,
+        include={
+            "orderItems": {
+                "include": {
+                    "branchMenuItem": {
+                        "include": {
+                            "masterItem": True
+                        }
+                    }
+                }
+            }
+        },
     )
     
     return {"data": data, "meta": {"total": total, "skip": skip, "take": take}}
@@ -111,7 +132,17 @@ async def update_order_status(order_id: int, new_status: str, user_id: Optional[
         order = await transaction.order.update(
             where={"id": order_id},
             data={"status": new_status},
-            include={"orderItems": True},
+            include={
+                "orderItems": {
+                    "include": {
+                        "branchMenuItem": {
+                            "include": {
+                                "masterItem": True
+                            }
+                        }
+                    }
+                }
+            },
         )
         
         # If cancelled, restore stock
