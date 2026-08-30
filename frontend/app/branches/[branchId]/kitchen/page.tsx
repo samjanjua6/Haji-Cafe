@@ -402,7 +402,7 @@ export default function KitchenDisplayPage() {
                       </div>
                     </div>
 
-                    <ElapsedBadge createdAt={order.createdAt} />
+                    {!isCompleted && <ElapsedBadge createdAt={order.createdAt} />}
                   </div>
 
                   {/* Items List (Full Width, Unsquished) */}
@@ -481,20 +481,24 @@ export default function KitchenDisplayPage() {
                               </div>
                             </div>
 
-                            {/* Checkbox */}
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}}
-                              style={{
-                                width: 18,
-                                height: 18,
-                                minWidth: 18,
-                                flexShrink: 0,
-                                cursor: "pointer",
-                                accentColor: "var(--accent)",
-                              }}
-                            />
+                            {/* Checkbox for active orders, check icon for completed */}
+                            {!isCompleted ? (
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  minWidth: 18,
+                                  flexShrink: 0,
+                                  cursor: "pointer",
+                                  accentColor: "var(--accent)",
+                                }}
+                              />
+                            ) : (
+                              <CheckCircle2 size={16} color="var(--success)" style={{ flexShrink: 0 }} />
+                            )}
                           </div>
                         );
                       })
