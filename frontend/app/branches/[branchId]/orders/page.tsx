@@ -10,7 +10,7 @@ import OrderModals from "@/components/orders/OrderModals";
 import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import { ExportButtons } from "@/components/orders/ExportButtons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export default function BranchOrdersPage() {
   const router = useRouter();
@@ -67,6 +67,12 @@ export default function BranchOrdersPage() {
 
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [placeModal, setPlaceModal] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("takeOrder") === "true") {
+      setPlaceModal(true);
+    }
+  }, [searchParams]);
 
   const { data, isLoading: loadingOrders } = useQuery({
     queryKey: ["orders", branchId, search, status, dateFrom, dateTo, sortBy, sortDir, page],
@@ -153,8 +159,8 @@ export default function BranchOrdersPage() {
             <Flame size={16} /> Kitchen KDS
           </button>
           <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
-          <button className="btn btn-primary" onClick={() => setPlaceModal(true)}>
-            <Plus size={16} /> Place Order
+          <button className="btn btn-primary" onClick={() => setPlaceModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+            <Plus size={16} /> Take Customer Order
           </button>
         </div>
       </div>
