@@ -13,7 +13,9 @@ import {
   ShoppingBag,
   Coffee,
   XCircle,
-  RotateCcw
+  RotateCcw,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -26,6 +28,9 @@ function playKitchenBell() {
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
 
     const osc1 = ctx.createOscillator();
@@ -51,6 +56,21 @@ function playKitchenBell() {
     osc2.stop(now + 0.8);
   } catch (err) {
     console.error("Audio error:", err);
+  }
+}
+
+// Browser Text-to-Speech voice announcement for incoming orders
+function announceOrderVoice(text: string) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn("Speech synthesis error:", e);
   }
 }
 
@@ -114,6 +134,7 @@ export default function KitchenDisplayPage() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState<"ALL" | "PENDING" | "IN_PREPARATION" | "COMPLETED">("ALL");
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
@@ -166,8 +187,18 @@ export default function KitchenDisplayPage() {
             const newOrder = payload.data as Order;
             if (soundEnabled) playKitchenBell();
 
-            toast.success(`🔔 New Ticket #${newOrder.id} received!`, {
-              duration: 4000,
+            // Extract items for spoken voice announcement
+            const items = (newOrder as any).orderItems || (newOrder as any).orderLines || [];
+            const itemSummary = items
+              .map((i: any) => `${i.quantity || 1} ${i.branchMenuItem?.masterItem?.name || i.itemName || "Item"}`)
+              .join(", ");
+
+            if (voiceEnabled) {
+              announceOrderVoice(`New Order ${newOrder.id}. ${itemSummary || "New items"}`);
+            }
+
+            toast.success(`🔔 New Ticket #${newOrder.id}: ${itemSummary || "Incoming order"}`, {
+              duration: 5000,
               icon: "☕",
             });
 
@@ -286,6 +317,34 @@ export default function KitchenDisplayPage() {
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Test Voice & Audio Button (Also unlocks browser audio policy) */}
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              playKitchenBell();
+              announceOrderVoice("Haji Cafe Kitchen Voice Alert is Active and Ready!");
+              toast.success("🔊 Audio & Voice Unlocked! Testing speaker sound.");
+            }}
+            style={{ color: "var(--accent)" }}
+            title="Test speaker sound & unlock browser audio"
+          >
+            <Volume2 size={15} /> Test Voice
+          </button>
+
+          {/* Voice Toggle */}
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            style={{
+              color: voiceEnabled ? "var(--accent)" : "var(--text-muted)",
+            }}
+            title={voiceEnabled ? "Voice announcements active" : "Voice announcements muted"}
+          >
+            {voiceEnabled ? <Mic size={15} /> : <MicOff size={15} />}
+            {voiceEnabled ? "Voice On" : "Voice Off"}
+          </button>
+
+          {/* Chime Toggle */}
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setSoundEnabled(!soundEnabled)}
