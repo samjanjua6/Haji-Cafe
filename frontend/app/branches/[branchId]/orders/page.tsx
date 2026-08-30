@@ -1,6 +1,6 @@
 "use client";
 import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Flame } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Order, OrdersResponse } from "@/types/order";
@@ -136,6 +136,22 @@ export default function BranchOrdersPage() {
           <div className="page-subtitle">Branch #{branchId} — Showing {orders.length} of {meta.total} orders</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            className="btn"
+            style={{
+              background: "rgba(249, 115, 22, 0.15)",
+              color: "var(--accent)",
+              border: "1px solid var(--accent)",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={() => router.push(`/branches/${branchId}/kitchen${searchParams.get("cafeId") ? `?cafeId=${searchParams.get("cafeId")}` : ""}`)}
+          >
+            <Flame size={16} /> Kitchen KDS
+          </button>
           <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
           <button className="btn btn-primary" onClick={() => setPlaceModal(true)}>
             <Plus size={16} /> Place Order
