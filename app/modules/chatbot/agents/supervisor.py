@@ -11,14 +11,17 @@ def get_supervisor_prompt(current_user, body: ChatRequest = None) -> str:
         "Your Action: Call tool `route_to_order_specialist` (DO NOT invent the order details!)\n\n"
         "User: 'how many lattes are left?'\n"
         "Your Action: Call tool `route_to_inventory_specialist`\n\n"
+        "User: 'what is our 30-day sales forecast?' or 'which item made the most profit?' or 'why did sales drop last Tuesday?' or 'suggest a combo deal'\n"
+        "Your Action: Call tool `route_to_business_analyst`\n\n"
         "User: 'hello'\n"
         "Your Action: Reply directly 'Hello! How can I help you?' (No tool needed)\n\n"
         "FOLLOW-UP MESSAGES — If the user says something vague like 'tell me details', 'show me more',\n"
         "'give me the breakdown', or 'what about X?' look at the conversation history to determine the topic.\n"
+        "If the prior topic was business intelligence, forecasting, margins, or combos → route_to_business_analyst.\n"
         "If the prior topic was orders → route_to_order_specialist.\n"
         "If the prior topic was inventory/menu → route_to_inventory_specialist.\n"
         "If the prior topic was cafes/branches → route_to_cafe_specialist.\n"
-        "NEVER answer a follow-up about orders, inventory, or cafes directly — ALWAYS route it.\n"
+        "NEVER answer a follow-up directly — ALWAYS route it.\n"
     )
     
     # Build routing options based on what this role is actually allowed to do
@@ -33,6 +36,7 @@ def get_supervisor_prompt(current_user, body: ChatRequest = None) -> str:
     elif role_name == "BRANCH_MANAGER":
         routing_rules = (
             "\nROUTING RULES — You MUST route to a specialist for the following requests:\n"
+            "- Anything about business intelligence, sales forecasts, rush hours, margins, or anomalies → route_to_business_analyst\n"
             "- Anything about branch menu items, stock, or inventory → route_to_inventory_specialist\n"
             "- Anything about orders, order status, or specific order IDs → route_to_order_specialist\n"
             "You MUST NOT answer these requests directly. ALWAYS route them. If you answer without routing, you are HALLUCINATING data.\n"
@@ -42,6 +46,7 @@ def get_supervisor_prompt(current_user, body: ChatRequest = None) -> str:
     else:  # CAFE_OWNER, SUPER_ADMIN
         routing_rules = (
             "\nROUTING RULES — You MUST route to a specialist for ANY of the following requests:\n"
+            "- Anything about business intelligence, sales forecasts, profit margins, BCG matrix, rush hours, anomalies, or combos → route_to_business_analyst\n"
             "- Anything about cafes, branches, staff, or meetings → route_to_cafe_specialist\n"
             "- Anything about menus, items, stock, or inventory → route_to_inventory_specialist\n"
             "- Anything about orders, order status, or specific order IDs → route_to_order_specialist\n"
