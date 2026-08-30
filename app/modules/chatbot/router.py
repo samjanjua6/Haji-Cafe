@@ -5,15 +5,45 @@ from app.core.dependencies import get_current_user
 from app.core.security import decode_access_token
 from app.database import db
 from jose import JWTError
-from .schemas import ChatRequest, ChatResponse, ChatMessage
 from app.modules.chatbot.core import engine
 from . import voice as voice_service
+from .schemas import ChatRequest, ChatResponse, ChatMessage
+from app.modules.chatbot.rag import sync_knowledge_base, get_knowledge_base_stats, get_vector_store
+from typing import Optional
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 
 
 class TTSRequest(BaseModel):
     text: str
+
+
+class RAGQueryRequest(BaseModel):
+    query: str
+    top_k: int = 3
+    branch_id: Optional[int] = None
+
+
+@router.post("/rag/sync", tags=["RAG Brain"])
+async def sync_rag_knowledge_base(current_user=Depends(get_current_user)):
+    """[CAFE_OWNER, SUPER_ADMIN] Re-index the RAG vector knowledge base from live database entities."""
+    return await sync_knowledge_base()
+
+
+@router.get("/rag/stats", tags=["RAG Brain"])
+async def get_rag_stats(current_user=Depends(get_current_user)):
+    """Get indexing statistics and status of the in-memory RAG vector store."""
+    return get_knowledge_base_stats()
+
+
+@router.post("/rag/query", tags=["RAG Brain"])
+async def query_rag_knowledge_base(body: RAGQueryRequest, current_user=Depends(get_current_user)):
+    """Directly query the semantic RAG vector knowledge store."""
+    store = get_vector_store()
+    if store.total_docs == 0:
+        await sync_knowledge_base()
+    results = store.query(query_text=body.query, top_k=body.top_k, branch_id=body.branch_id)
+    return {"query": body.query, "count": len(results), "results": results}
 
 import json
 import os

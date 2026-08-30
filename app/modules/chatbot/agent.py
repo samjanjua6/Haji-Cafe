@@ -133,20 +133,23 @@ def _build_voice_system_prompt(current_user) -> str:
         )
     elif role_name == "BRANCH_MANAGER":
         tool_guidance = (
-            "You have direct access to inventory and order tools. "
-            "For menu/stock questions call get_branch_inventory, search_menu, or update_branch_menu_item. "
-            "For order questions call get_recent_orders or get_order_by_id directly."
+            "You have direct access to inventory, order, and business intelligence tools.\n"
+            "- For menu/stock questions call get_branch_inventory, search_menu, or update_branch_menu_item.\n"
+            "- For order questions call get_recent_orders or get_order_by_id directly.\n"
+            "- For business performance, forecasts, rush hours, or margins, call get_sales_forecast_insight, get_peak_traffic_and_staffing, or query_cafe_intelligence."
         )
     else:  # CAFE_OWNER / SUPER_ADMIN
         tool_guidance = (
-            "You have full access to cafe, menu, inventory, staff, and meeting tools.\n"
+            "You have full access to executive business intelligence, RAG knowledge search, sales forecasting, BCG matrix, combo engineering, cafes, menus, inventory, staff, and meeting tools.\n"
             "WORKFLOW INSTRUCTIONS:\n"
-            "1. When the user asks to schedule a staff meeting:\n"
+            "1. When the user asks about business performance, forecasts, profit margins, anomalies, or combo deals:\n"
+            "   - Call get_sales_forecast_insight, get_menu_engineering_bcg, get_historical_anomaly_diagnostic, suggest_combo_promotions, or query_cafe_intelligence.\n"
+            "2. When the user asks to schedule a staff meeting:\n"
             "   - First call get_staff_list to fetch the available staff members.\n"
             "   - Then call schedule_meeting with start_time_iso, end_time_iso, and the staff integer IDs.\n"
-            "2. When the user asks about cafes, branches, or menus:\n"
+            "3. When the user asks about cafes, branches, or menus:\n"
             "   - Call get_my_cafes, get_branches_for_cafe, or get_menu directly.\n"
-            "3. When the user asks about orders:\n"
+            "4. When the user asks about orders:\n"
             "   - Call get_recent_orders or get_order_by_id directly."
         )
 
@@ -175,7 +178,7 @@ def _build_voice_tools(current_user) -> list:
     if role_name == "STAFF":
         real_tools = build_tools(current_user, "order")
     elif role_name == "BRANCH_MANAGER":
-        real_tools = build_tools(current_user, "inventory") + build_tools(current_user, "order")
+        real_tools = build_tools(current_user, "inventory") + build_tools(current_user, "order") + build_tools(current_user, "business")
     else:  # CAFE_OWNER / SUPER_ADMIN
         real_tools = build_tools(current_user, "all")
 

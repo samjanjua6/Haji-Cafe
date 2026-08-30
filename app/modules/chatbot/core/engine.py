@@ -8,9 +8,22 @@ from app.modules.chatbot.agents.supervisor import get_supervisor_prompt
 from app.modules.chatbot.agents.cafe_agent import get_cafe_agent_prompt
 from app.modules.chatbot.agents.inventory_agent import get_inventory_agent_prompt
 from app.modules.chatbot.agents.order_agent import get_order_agent_prompt
+from app.modules.chatbot.agents.business_agent import get_business_agent_prompt
 from app.modules.chatbot.tools.registry import build_tools
 
 # Routing tools (used by supervisor to transition state)
+async def route_to_business_analyst(request_summary: str = "") -> str:
+    """
+    Use this to answer ANY questions about business intelligence, sales forecasts,
+    profit margins, BCG menu engineering matrix, peak traffic/staffing, historical anomalies, or combo promotions.
+    CRITICAL: You MUST ONLY use the 'request_summary' parameter. DO NOT create or add any other parameters.
+    """
+    context = f" User query: '{request_summary}'." if request_summary.strip() else ""
+    return (
+        f"[Business Intelligence Analyst active.{context}"
+        " You MUST immediately call one of your tools (query_cafe_intelligence, get_sales_forecast_insight, get_menu_engineering_bcg, get_peak_traffic_and_staffing, get_historical_anomaly_diagnostic, or suggest_combo_promotions) before generating any response."
+        " Do NOT write anything without first calling a tool.]"
+    )
 async def route_to_cafe_specialist(request_summary: str = "") -> str:
     """
     Use this to answer questions about cafes, branches, and scheduling staff meetings. 
@@ -48,22 +61,29 @@ async def route_to_order_specialist(request_summary: str = "") -> str:
     )
 
 _TOOL_PROGRESS_MESSAGES = {
-    "route_to_cafe_specialist":      "🔀 Routing to Cafe Specialist...",
-    "route_to_inventory_specialist": "🔀 Routing to Inventory Specialist...",
-    "route_to_order_specialist":     "🔀 Routing to Order Specialist...",
-    "get_my_cafes":                  "🏪 Fetching your cafes...",
-    "get_cafe":                      "🏪 Looking up cafe details...",
-    "get_branches_for_cafe":         "🌿 Fetching branches...",
-    "search_cafes":                  "🔍 Searching cafes...",
-    "get_staff_list":                "👥 Fetching staff list...",
-    "schedule_meeting":              "📅 Scheduling meeting on Google Calendar...",
-    "get_menu":                      "🍽️ Fetching menu...",
-    "search_menu":                   "🔍 Searching menu...",
-    "get_branch_inventory":          "📦 Fetching inventory...",
-    "upsert_inventory_quantity":     "✏️ Updating stock...",
-    "get_recent_orders":             "🧾 Fetching recent orders...",
-    "get_order_by_id":               "🧾 Looking up order details...",
-    "update_order_status":           "✅ Updating order status...",
+    "route_to_business_analyst":           "🔀 Routing to Business Intelligence Analyst...",
+    "route_to_cafe_specialist":            "🔀 Routing to Cafe Specialist...",
+    "route_to_inventory_specialist":       "🔀 Routing to Inventory Specialist...",
+    "route_to_order_specialist":           "🔀 Routing to Order Specialist...",
+    "query_cafe_intelligence":             "🧠 Querying Café Intelligence Brain (RAG)...",
+    "get_sales_forecast_insight":          "📈 Computing ML Sales Forecast...",
+    "get_menu_engineering_bcg":            "📊 Analyzing BCG Menu Matrix & Margins...",
+    "get_peak_traffic_and_staffing":       "⏰ Analyzing Peak Rush & Staffing...",
+    "get_historical_anomaly_diagnostic":   "⚠️ Diagnosing Historical Sales Anomalies...",
+    "suggest_combo_promotions":            "💡 Generating High-Margin Combo Deals...",
+    "get_my_cafes":                        "🏪 Fetching your cafes...",
+    "get_cafe":                            "🏪 Looking up cafe details...",
+    "get_branches_for_cafe":               "🌿 Fetching branches...",
+    "search_cafes":                        "🔍 Searching cafes...",
+    "get_staff_list":                      "👥 Fetching staff list...",
+    "schedule_meeting":                    "📅 Scheduling meeting on Google Calendar...",
+    "get_menu":                            "🍽️ Fetching menu...",
+    "search_menu":                         "🔍 Searching menu...",
+    "get_branch_inventory":                "📦 Fetching inventory...",
+    "upsert_inventory_quantity":           "✏️ Updating stock...",
+    "get_recent_orders":                   "🧾 Fetching recent orders...",
+    "get_order_by_id":                     "🧾 Looking up order details...",
+    "update_order_status":                 "✅ Updating order status...",
 }
 
 async def _execute_tool_calls(tool_calls, tool_fn_map: dict, websocket=None) -> list[dict]:
@@ -102,9 +122,12 @@ def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, 
         if role_name == "STAFF":
             tool_fns = [route_to_order_specialist]
         elif role_name == "BRANCH_MANAGER":
-            tool_fns = [route_to_inventory_specialist, route_to_order_specialist]
+            tool_fns = [route_to_business_analyst, route_to_inventory_specialist, route_to_order_specialist]
         else:
-            tool_fns = [route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
+            tool_fns = [route_to_business_analyst, route_to_cafe_specialist, route_to_inventory_specialist, route_to_order_specialist]
+    elif agent_name == "business":
+        sys_prompt = get_business_agent_prompt(current_user, body)
+        tool_fns = build_tools(current_user, agent_name)
     elif agent_name == "cafe":
         sys_prompt = get_cafe_agent_prompt(current_user, body)
         tool_fns = build_tools(current_user, agent_name)
@@ -122,7 +145,7 @@ def _get_agent_context(current_user, agent_name: str, body: ChatRequest = None, 
     history_tool_names = set()
     # Routing tools that should NEVER be injected into specialist tool lists.
     # A specialist must never be able to re-route; that is the supervisor's job.
-    _routing_tool_names = {"route_to_cafe_specialist", "route_to_inventory_specialist", "route_to_order_specialist"}
+    _routing_tool_names = {"route_to_business_analyst", "route_to_cafe_specialist", "route_to_inventory_specialist", "route_to_order_specialist"}
 
     if messages and agent_name != "supervisor":
         for m in messages:
@@ -197,7 +220,10 @@ async def handle_chat(body: ChatRequest, current_user) -> ChatResponse:
         
         routed = False
         for tc in msg.tool_calls:
-            if tc.function.name == "route_to_cafe_specialist":
+            if tc.function.name == "route_to_business_analyst":
+                active_agent = "business"
+                routed = True
+            elif tc.function.name == "route_to_cafe_specialist":
                 active_agent = "cafe"
                 routed = True
             elif tc.function.name == "route_to_inventory_specialist":
@@ -277,7 +303,10 @@ async def stream_chat(websocket: WebSocket, body: ChatRequest, current_user):
         
         routed = False
         for tc in msg.tool_calls:
-            if tc.function.name == "route_to_cafe_specialist":
+            if tc.function.name == "route_to_business_analyst":
+                active_agent = "business"
+                routed = True
+            elif tc.function.name == "route_to_cafe_specialist":
                 active_agent = "cafe"
                 routed = True
             elif tc.function.name == "route_to_inventory_specialist":
