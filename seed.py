@@ -164,7 +164,7 @@ async def main():
         "priceAtPurchase": Decimal("3.25")
     })
 
-    print("✅ Seeding completed successfully!")
+    print("[SUCCESS] Seeding completed successfully!")
     await db.disconnect()
 
 if __name__ == "__main__":
