@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings, Flame
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -169,7 +169,7 @@ export default function Sidebar() {
           ))}
 
           {/* Scoped Branch Links */}
-          {user?.role === "BRANCH_MANAGER" && user.scopes.map((scope, idx) => (
+          {(user?.role === "BRANCH_MANAGER" || user?.role === "STAFF") && user.scopes.map((scope, idx) => (
             <div key={idx} style={{ marginTop: 16 }}>
               <div style={{
                 fontSize: 10,
@@ -184,9 +184,15 @@ export default function Sidebar() {
               </div>
               <NavLink
                 href={`/branches/${scope.branchId}/orders?cafeId=${scope.cafeId}`}
-                label="Orders"
+                label={user?.role === "STAFF" ? "Take Customer Order" : "Orders"}
                 icon={ShoppingCart}
                 active={pathname.includes(`/branches/${scope.branchId}/orders`)}
+              />
+              <NavLink
+                href={`/branches/${scope.branchId}/kitchen?cafeId=${scope.cafeId}`}
+                label="Kitchen KDS"
+                icon={Flame}
+                active={pathname.includes(`/branches/${scope.branchId}/kitchen`)}
               />
               <NavLink
                 href={`/branches/${scope.branchId}/menu?cafeId=${scope.cafeId}`}

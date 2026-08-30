@@ -31,7 +31,16 @@ function AuthContent() {
   // If user is already logged in, redirect immediately
   useEffect(() => {
     if (auth.isLoggedIn()) {
-      router.replace("/dashboard");
+      api.get<any>("/auth/me")
+        .then((profile) => {
+          if (profile?.email && profile.email.toLowerCase() === "kitchen@gmail.com") {
+            const branchId = profile.scopes?.[0]?.branchId || 1;
+            router.replace(`/branches/${branchId}/kitchen`);
+          } else {
+            router.replace("/dashboard");
+          }
+        })
+        .catch(() => router.replace("/dashboard"));
     }
   }, [router]);
 
@@ -43,6 +52,20 @@ function AuthContent() {
       const data: any = await api.post(endpoint, { email, password });
       auth.setTokens(data.access_token, data.refresh_token);
       toast.success(tab === "login" ? "Welcome back!" : "Account created!");
+
+      // If user is kitchen@gmail.com, route directly to Kitchen Display System (KDS)
+      if (email.trim().toLowerCase() === "kitchen@gmail.com") {
+        try {
+          const profile: any = await api.get("/auth/me");
+          const branchId = profile.scopes?.[0]?.branchId || 1;
+          router.push(`/branches/${branchId}/kitchen`);
+          return;
+        } catch {
+          router.push("/branches/1/kitchen");
+          return;
+        }
+      }
+
       // Navigate immediately — don't wait for anything else
       router.push("/dashboard");
     } catch (err: any) {

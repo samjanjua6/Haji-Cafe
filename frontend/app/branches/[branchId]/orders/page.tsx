@@ -1,6 +1,6 @@
 "use client";
 import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Flame } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Order, OrdersResponse } from "@/types/order";
@@ -10,7 +10,7 @@ import OrderModals from "@/components/orders/OrderModals";
 import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import { ExportButtons } from "@/components/orders/ExportButtons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export default function BranchOrdersPage() {
   const router = useRouter();
@@ -67,6 +67,12 @@ export default function BranchOrdersPage() {
 
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [placeModal, setPlaceModal] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("takeOrder") === "true") {
+      setPlaceModal(true);
+    }
+  }, [searchParams]);
 
   const { data, isLoading: loadingOrders } = useQuery({
     queryKey: ["orders", branchId, search, status, dateFrom, dateTo, sortBy, sortDir, page],
@@ -136,9 +142,25 @@ export default function BranchOrdersPage() {
           <div className="page-subtitle">Branch #{branchId} — Showing {orders.length} of {meta.total} orders</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            className="btn"
+            style={{
+              background: "rgba(249, 115, 22, 0.15)",
+              color: "var(--accent)",
+              border: "1px solid var(--accent)",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={() => router.push(`/branches/${branchId}/kitchen${searchParams.get("cafeId") ? `?cafeId=${searchParams.get("cafeId")}` : ""}`)}
+          >
+            <Flame size={16} /> Kitchen KDS
+          </button>
           <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
-          <button className="btn btn-primary" onClick={() => setPlaceModal(true)}>
-            <Plus size={16} /> Place Order
+          <button className="btn btn-primary" onClick={() => setPlaceModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+            <Plus size={16} /> Take Customer Order
           </button>
         </div>
       </div>
