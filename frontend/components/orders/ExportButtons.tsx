@@ -53,7 +53,6 @@ function exportToExcel(orders: Order[], contextName: string, titleLabel: string,
   const completedCount = orders.filter((o) => o.status === "COMPLETED").length;
   const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
 
-  // 1. Header and KPI summary block
   const summaryRows = [
     ["HAJI CAFE - EXECUTIVE ORDERS & SALES REPORT"],
     [`Scope: ${titleLabel}`, `Date Range: ${dateRangeLabel}`, `Generated: ${new Date().toLocaleString()}`],
@@ -66,7 +65,6 @@ function exportToExcel(orders: Order[], contextName: string, titleLabel: string,
     ["Order ID", "Scope / Branch", "Status", "Total Amount ($)", "Date", "Time", "Customer Note / Items"],
   ];
 
-  // 2. Data rows
   const dataRows = orders.map((o) => {
     const d = new Date(o.createdAt);
     const datePart = d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -144,9 +142,8 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   const pageWidth = 210;
   const pageHeight = 297;
   const margin = 14;
-  const contentWidth = pageWidth - margin * 2; // 182mm
+  const contentWidth = pageWidth - margin * 2;
 
-  // Compute Metrics
   const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
   const completedCount = orders.filter((o) => o.status === "COMPLETED").length;
   const prepCount = orders.filter((o) => o.status === "IN_PREPARATION").length;
@@ -155,7 +152,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
   const completionPct = orders.length > 0 ? Math.round((completedCount / orders.length) * 100) : 0;
 
-  // Load Brand Logo
   let logoBase64 = "";
   try {
     logoBase64 = await getBase64ImageFromUrl("/logo.png");
@@ -163,15 +159,12 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
 
   const drawPageHeader = (isFirstPage: boolean) => {
     if (isFirstPage) {
-      // ── TOP LUXURY HERO BANNER ──────────────────────────────────
-      doc.setFillColor(24, 24, 27); // #18181b Dark Charcoal
+      doc.setFillColor(24, 24, 27);
       doc.roundedRect(margin, 12, contentWidth, 27, 3, 3, "F");
 
-      // Left Accent Gold Stripe
-      doc.setFillColor(245, 158, 11); // #f59e0b Amber Gold
+      doc.setFillColor(245, 158, 11);
       doc.roundedRect(margin, 12, 3.5, 27, 1.5, 1.5, "F");
 
-      // Draw Logo Image
       if (logoBase64) {
         try {
           doc.addImage(logoBase64, "PNG", margin + 7, 15, 21, 21);
@@ -184,7 +177,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
         doc.circle(margin + 17, 25.5, 9, "F");
       }
 
-      // Brand Typography
       const textX = margin + (logoBase64 ? 32 : 28);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
@@ -201,7 +193,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setFontSize(8);
       doc.text(`${titleLabel}  •  Range: ${dateRangeLabel}`, textX, 32.5);
 
-      // Metadata Block
       const rightX = pageWidth - margin - 6;
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
@@ -220,12 +211,10 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setFontSize(7.5);
       doc.text("STATUS: AUDITED & SECURE", rightX, 32.5, { align: "right" });
 
-      // ── KPI SUMMARY CARDS STRIP ──────────────────────────────────
       const cardY = 43;
       const cardH = 18;
       const cardW = (contentWidth - 9) / 4;
 
-      // Card 1: Total Revenue
       doc.setFillColor(245, 243, 255);
       doc.setDrawColor(221, 214, 254);
       doc.roundedRect(margin, cardY, cardW, cardH, 2, 2, "FD");
@@ -241,7 +230,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setTextColor(124, 58, 237);
       doc.text(`${orders.length} Transactions`, margin + 4, cardY + 15.5);
 
-      // Card 2: Completed Orders
       const c2X = margin + cardW + 3;
       doc.setFillColor(240, 253, 244);
       doc.setDrawColor(187, 247, 208);
@@ -258,7 +246,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setTextColor(16, 185, 129);
       doc.text(`${completionPct}% Fulfillment`, c2X + 4, cardY + 15.5);
 
-      // Card 3: In Prep / Active
       const c3X = margin + (cardW + 3) * 2;
       doc.setFillColor(254, 252, 232);
       doc.setDrawColor(254, 240, 138);
@@ -275,7 +262,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setTextColor(245, 158, 11);
       doc.text(`${prepCount} Prep • ${pendingCount} Pend`, c3X + 4, cardY + 15.5);
 
-      // Card 4: Average Order Value
       const c4X = margin + (cardW + 3) * 3;
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
@@ -292,7 +278,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       doc.setTextColor(100, 116, 139);
       doc.text("Average Basket Size", c4X + 4, cardY + 15.5);
     } else {
-      // ── MINI REPEATING HEADER ─────────────────────────────────────
       doc.setFillColor(24, 24, 27);
       doc.roundedRect(margin, 10, contentWidth, 11, 2, 2, "F");
       doc.setFillColor(245, 158, 11);
@@ -311,7 +296,7 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   };
 
   const drawTableHeader = (startY: number) => {
-    doc.setFillColor(30, 41, 59); // Slate-800
+    doc.setFillColor(30, 41, 59);
     doc.roundedRect(margin, startY, contentWidth, 8, 1.5, 1.5, "F");
 
     doc.setTextColor(255, 255, 255);
@@ -344,7 +329,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     doc.text(`Page ${currentPage} of ${totalPages}`, pageWidth - margin, footY + 0.8, { align: "right" });
   };
 
-  // ── RENDER ROWS WITH PERFECT VERTICAL ALIGNMENT ───────────────────
   drawPageHeader(true);
 
   let currentHeaderY = 65;
@@ -356,7 +340,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   for (let i = 0; i < orders.length; i++) {
     const o = orders[i];
 
-    // Check page overflow
     if (currentY + rowHeight > pageHeight - 22) {
       doc.addPage();
       drawPageHeader(false);
@@ -365,30 +348,25 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
       currentY = currentHeaderY + 13;
     }
 
-    // Zebra striping background
     if (i % 2 === 1) {
       doc.setFillColor(248, 250, 252);
       doc.rect(margin, currentY - 5, contentWidth, rowHeight, "F");
     }
 
-    // Divider line
     doc.setDrawColor(241, 245, 249);
     doc.setLineWidth(0.2);
     doc.line(margin, currentY + 2.8, pageWidth - margin, currentY + 2.8);
 
-    // 1. Order ID
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(15, 23, 42);
     doc.text(`#${o.id}`, margin + 6, currentY);
 
-    // 2. Branch Name / ID
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
     doc.text(`Branch #${o.branchId}`, margin + 34, currentY);
 
-    // 3. Status Pill / Badge
     const st = (o.status || "").toUpperCase();
     let bgR = 241, bgG = 245, bgB = 249;
     let txtR = 71, txtG = 85, txtB = 105;
@@ -423,7 +401,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     doc.setTextColor(txtR, txtG, txtB);
     doc.text(displayStatus, pillX + pillW / 2, currentY - 0.4, { align: "center" });
 
-    // 4. Date & Time
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139);
@@ -438,7 +415,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     });
     doc.text(`${dateFormatted}, ${timeFormatted}`, margin + 120, currentY);
 
-    // 5. Total Amount
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(15, 23, 42);
@@ -447,7 +423,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
     currentY += rowHeight;
   }
 
-  // ── AUDIT SUMMARY BOX ─────────────────────────────────────────────
   if (currentY + 18 > pageHeight - 22) {
     doc.addPage();
     drawPageHeader(false);
@@ -474,7 +449,6 @@ async function exportToPDF(orders: Order[], contextName: string, titleLabel: str
   doc.setTextColor(5, 150, 105);
   doc.text(`$${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 8, currentY + 9, { align: "right" });
 
-  // ── STAMP FOOTERS ON ALL PAGES ────────────────────────────────────
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
@@ -490,14 +464,12 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
   const [modalOpen, setModalOpen] = useState(false);
   const [loadingExport, setLoadingExport] = useState(false);
 
-  // Date Filters
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>(todayStr);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [activePreset, setActivePreset] = useState<string>("30d");
 
-  // Dynamic Date Preset Handler
   const handlePresetSelect = (preset: string) => {
     setActivePreset(preset);
     const now = new Date();
@@ -596,7 +568,6 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
 
   return (
     <>
-      {/* ── TRIGGER BUTTON ──────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button
           className="btn btn-ghost btn-sm"
@@ -620,7 +591,6 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
         </button>
       </div>
 
-      {/* ── INTERACTIVE DATE RANGE EXPORT MODAL ──────────────────────── */}
       {modalOpen && (
         <div
           style={{
@@ -629,8 +599,8 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.65)",
-            backdropFilter: "blur(6px)",
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(8px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
@@ -641,10 +611,10 @@ export function ExportButtons({ orders = [], branchId, cafeId, disabled }: Expor
         >
           <div
             style={{
-              background: "var(--bg-card)",
+              backgroundColor: "var(--bg-card)",
               border: "1px solid var(--border)",
               borderRadius: 16,
-              boxShadow: "var(--shadow-lg)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
               width: "100%",
               maxWidth: 520,
               padding: 24,
