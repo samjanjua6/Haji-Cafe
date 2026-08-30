@@ -27,6 +27,13 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
+  React.useEffect(() => {
+    if (user?.email && user.email.toLowerCase() === "kitchen@gmail.com") {
+      const branchId = user.scopes?.[0]?.branchId || 1;
+      router.replace(`/branches/${branchId}/kitchen`);
+    }
+  }, [user, router]);
+
   const handleRefresh = async () => {
     const refreshToken = auth.getRefresh();
     if (!refreshToken) return;
