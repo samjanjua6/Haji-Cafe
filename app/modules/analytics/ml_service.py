@@ -393,12 +393,20 @@ async def get_kpi_summary(
         where={**where_base, "status": {"in": ["PENDING", "IN_PREPARATION"]}}
     )
 
-    low_stock_count = await db.branchmenuitem.count(
+    branch_items = await db.branchmenuitem.find_many(
         where={
             **({"branchId": branch_id} if branch_id else {}),
-            "isInStock": True,
-            "availableQuantity": {"lte": 15},
+            **({"branch": {"cafeId": cafe_id}} if cafe_id and not branch_id else {}),
+            "isActive": True,
+            "masterItem": {"isDeleted": False},
         }
+    )
+
+    low_stock_count = sum(
+        1
+        for item in branch_items
+        if (item.isInStock is False)
+        or (item.availableQuantity is not None and item.availableQuantity <= item.lowStockThreshold)
     )
 
     now = datetime.datetime.now(datetime.timezone.utc)

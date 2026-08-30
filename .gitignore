@@ -9,3 +9,5 @@ test_async_tool.py
 test_assign.py
 test_models.py
 test_stream.py
+*.tsbuildinfo
+
