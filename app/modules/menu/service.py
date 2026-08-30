@@ -88,6 +88,7 @@ async def get_branch_menu(branch_id: int):
             "masterItemId": item.masterItemId,
             "priceOverride": float(item.priceOverride) if item.priceOverride is not None else None,
             "availableQuantity": item.availableQuantity,
+            "lowStockThreshold": getattr(item, "lowStockThreshold", 5),
             "isInStock": item.isInStock,
             "isActive": item.isActive,
             "effectivePrice": float(effective),
