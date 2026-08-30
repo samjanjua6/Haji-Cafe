@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
-import { DollarSign, ShoppingCart, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { DollarSign, ShoppingCart, AlertTriangle, PackageX, TrendingUp, TrendingDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -163,15 +163,64 @@ export function KpiCards() {
     retry: false,
   });
 
+  const cafeId = user?.scopes[0]?.cafeId;
+  const branchId = user?.scopes[0]?.branchId;
+
+  const { data: alerts = [], isLoading: loadingAlerts } = useQuery<any[]>({
+    queryKey: ["lowStockAlerts", cafeId],
+    queryFn: () => api.get<any[]>(`/cafes/${cafeId}/low-stock-alerts`),
+    enabled: !!cafeId && (user?.role === "CAFE_OWNER" || user?.role === "SUPER_ADMIN"),
+  });
+
+  const { data: branchItems = [], isLoading: loadingBranchItems } = useQuery<any[]>({
+    queryKey: ["branchMenu", branchId],
+    queryFn: () => api.get<any[]>(`/branches/${branchId}/menu`),
+    enabled: !!branchId && user?.role === "BRANCH_MANAGER",
+  });
+
+  const { outOfStockCount, lowStockCount } = useMemo(() => {
+    if (user?.role === "BRANCH_MANAGER") {
+      let outCount = 0;
+      let lowCount = 0;
+      for (const item of branchItems) {
+        if (item.isInStock === false || item.availableQuantity === 0) {
+          outCount++;
+        } else if (
+          item.availableQuantity !== null &&
+          item.availableQuantity > 0 &&
+          item.availableQuantity <= item.lowStockThreshold
+        ) {
+          lowCount++;
+        }
+      }
+      return { outOfStockCount: outCount, lowStockCount: lowCount };
+    }
+
+    let outCount = 0;
+    let lowCount = 0;
+    for (const a of alerts) {
+      if (a.availableQuantity === 0 || a.status?.includes("Sold Out")) {
+        outCount++;
+      } else if (
+        a.availableQuantity !== null &&
+        a.availableQuantity > 0 &&
+        a.availableQuantity <= a.lowStockThreshold
+      ) {
+        lowCount++;
+      }
+    }
+    return { outOfStockCount: outCount, lowStockCount: lowCount };
+  }, [user, alerts, branchItems]);
+
   if (user?.role === "STAFF") return null;
 
-  const loading = isLoading || !kpis;
+  const loading = isLoading || !kpis || (user?.role === "BRANCH_MANAGER" ? loadingBranchItems : loadingAlerts);
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
         gap: 16,
       }}
     >
@@ -195,15 +244,34 @@ export function KpiCards() {
 
       <KpiCard
         loading={loading}
-        icon={<AlertTriangle size={22} color="var(--danger)" />}
+        icon={<PackageX size={22} color="var(--danger)" />}
         iconBg="var(--danger-glow)"
-        title="Low Stock Items"
-        value={kpis ? String(kpis.low_stock_items_count) : "--"}
+        title="Out of Stock"
+        value={!loading ? String(outOfStockCount) : "--"}
         subtitle={
-          kpis
-            ? kpis.low_stock_items_count === 0
-              ? "All items well stocked"
-              : "items need restocking"
+          !loading
+            ? outOfStockCount === 0
+              ? "All items in stock"
+              : outOfStockCount === 1
+              ? "1 item sold out"
+              : `${outOfStockCount} items sold out`
+            : undefined
+        }
+      />
+
+      <KpiCard
+        loading={loading}
+        icon={<AlertTriangle size={22} color="var(--warning)" />}
+        iconBg="var(--warning-glow)"
+        title="Low Stock"
+        value={!loading ? String(lowStockCount) : "--"}
+        subtitle={
+          !loading
+            ? lowStockCount === 0
+              ? "No low stock alerts"
+              : lowStockCount === 1
+              ? "1 item near threshold"
+              : `${lowStockCount} items near threshold`
             : undefined
         }
       />
