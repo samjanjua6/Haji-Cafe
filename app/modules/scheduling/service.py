@@ -35,24 +35,42 @@ async def get_peak_hour_analysis(
 
     for h in operating_hours:
         effective_arrival_rate = h["avg_orders_per_hr"] * demand_multiplier
+        intensity = h.get("peak_intensity_score", 0.0)
+
+        # Classify by branch relative peak intensity and demand surge
+        if intensity >= 70.0 or effective_arrival_rate >= 15.0:
+            rush_cat = "PEAK_RUSH"
+            calc_rate = max(effective_arrival_rate, 22.0)
+            min_staff = 3 if demand_multiplier < 1.2 else 4
+        elif intensity >= 40.0 or effective_arrival_rate >= 8.0:
+            rush_cat = "MODERATE"
+            calc_rate = max(effective_arrival_rate, 12.0)
+            min_staff = 2 if demand_multiplier < 1.3 else 3
+        else:
+            rush_cat = "OFF_PEAK"
+            calc_rate = max(effective_arrival_rate, 3.0)
+            min_staff = 1
+
         erlang_result = calculate_staffing_requirements(
-            arrival_rate_orders_per_hr=effective_arrival_rate,
+            arrival_rate_orders_per_hr=calc_rate,
             avg_prep_time_minutes=2.8,
             target_wait_minutes=3.5,
             target_sla_percent=90.0,
             hourly_labor_rate=15.0
         )
 
+        recommended = max(min_staff, erlang_result["recommended_staff"])
+
         hour_data = {
             **h,
             "effective_arrival_rate": round(effective_arrival_rate, 1),
-            "recommended_staff": erlang_result["recommended_staff"],
+            "recommended_staff": recommended,
             "traffic_intensity": erlang_result["traffic_intensity"],
             "wait_probability_percent": erlang_result["wait_probability_percent"],
             "avg_wait_time_minutes": erlang_result["avg_wait_time_minutes"],
             "service_level_percent": erlang_result["service_level_percent"],
-            "hourly_labor_cost": erlang_result["hourly_labor_cost"],
-            "rush_category": erlang_result["rush_category"]
+            "hourly_labor_cost": round(recommended * 15.0, 2),
+            "rush_category": rush_cat
         }
         processed_hours.append(hour_data)
 
