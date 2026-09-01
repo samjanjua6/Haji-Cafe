@@ -187,10 +187,21 @@ async def get_orders_by_cafe(cafe_id: int, skip: int = 0, take: int = 25, where:
     total = await db.order.count(where=query_where)
     data = await db.order.find_many(
         where=query_where,
-        include={"branch": True},
         order=query_order,
         skip=skip,
         take=take,
+        include={
+            "branch": True,
+            "orderItems": {
+                "include": {
+                    "branchMenuItem": {
+                        "include": {
+                            "masterItem": True
+                        }
+                    }
+                }
+            }
+        },
     )
     
     return {"data": data, "meta": {"total": total, "skip": skip, "take": take}}

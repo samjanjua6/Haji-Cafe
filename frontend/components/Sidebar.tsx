@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings, Flame
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings, Flame, GitBranch, Package, Coffee
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -139,13 +139,17 @@ export default function Sidebar() {
               <div style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: "var(--text-faint)",
+                color: "var(--text-muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
                 padding: "0 14px",
-                marginBottom: 6,
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}>
-                {scope.cafeName || `Café #${scope.cafeId}`}
+                <Coffee size={12} style={{ color: "var(--accent)" }} />
+                <span>{scope.cafeName || `Café #${scope.cafeId}`}</span>
               </div>
               <NavLink
                 href={`/cafes/${scope.cafeId}`}
@@ -154,10 +158,28 @@ export default function Sidebar() {
                 active={pathname === `/cafes/${scope.cafeId}`}
               />
               <NavLink
+                href={`/cafes/${scope.cafeId}/branches`}
+                label="Branches"
+                icon={GitBranch}
+                active={pathname === `/cafes/${scope.cafeId}/branches` || pathname.startsWith(`/cafes/${scope.cafeId}/branches/`)}
+              />
+              <NavLink
                 href={`/cafes/${scope.cafeId}/menu`}
                 label="Master Menu"
                 icon={UtensilsCrossed}
                 active={pathname.includes(`/cafes/${scope.cafeId}/menu`)}
+              />
+              <NavLink
+                href={`/cafes/${scope.cafeId}/stocks`}
+                label="Stocks"
+                icon={Package}
+                active={pathname === `/cafes/${scope.cafeId}/stocks` || pathname.startsWith(`/cafes/${scope.cafeId}/stocks/`)}
+              />
+              <NavLink
+                href={`/cafes/${scope.cafeId}/orders`}
+                label="Orders"
+                icon={ShoppingCart}
+                active={pathname === `/cafes/${scope.cafeId}/orders` || pathname.startsWith(`/cafes/${scope.cafeId}/orders/`)}
               />
               <NavLink
                 href={`/cafes/${scope.cafeId}/staff`}

@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { Order } from "@/types/order";
 import { BranchMenuItem } from "@/types/menu";
 import { useMutation } from "@tanstack/react-query";
+import OrderReceiptModal from "@/components/orders/OrderReceiptModal";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["IN_PREPARATION", "CANCELLED"],
@@ -90,40 +91,11 @@ export default function OrderModals({
 
   return (
     <>
-      <Modal open={!!detailOrder} onClose={() => setDetailOrder(null)} title={`Order #${detailOrder?.id}`} width={560}>
-        {detailOrder && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <StatusBadge status={detailOrder.status} />
-              <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18 }}>${Number(detailOrder.totalAmount).toFixed(2)}</span>
-            </div>
-            {detailOrder.orderLines?.map(oi => (
-              <div key={oi.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{oi.branchMenuItem?.masterItem?.name}</div>
-                  {oi.notes && <div style={{ color: "var(--text-muted)", fontSize: 12 }}>Note: {oi.notes}</div>}
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>x{oi.quantity} × ${Number(oi.unitPrice).toFixed(2)}</div>
-                  <div style={{ fontWeight: 700 }}>${(Number(oi.unitPrice) * oi.quantity).toFixed(2)}</div>
-                </div>
-              </div>
-            ))}
-            {STATUS_TRANSITIONS[detailOrder.status]?.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <label>Change Status</label>
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  {STATUS_TRANSITIONS[detailOrder.status].map(s => (
-                    <button key={s} className="btn btn-ghost btn-sm" onClick={() => onStatusChange(detailOrder, s)}>
-                      → {s.replace("_", " ")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      <OrderReceiptModal
+        order={detailOrder}
+        onClose={() => setDetailOrder(null)}
+        onStatusChange={onStatusChange}
+      />
 
       <Modal open={placeModal} onClose={() => setPlaceModal(false)} title="Place New Order" width={600}>
         <form onSubmit={handlePlaceOrder} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

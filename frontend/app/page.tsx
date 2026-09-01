@@ -10,6 +10,7 @@ import LandingHero from "@/components/landing/LandingHero";
 import LandingStats from "@/components/landing/LandingStats";
 import LandingAiPlayground from "@/components/landing/LandingAiPlayground";
 import LandingFeatures from "@/components/landing/LandingFeatures";
+import LandingSecurity from "@/components/landing/LandingSecurity";
 import LandingCalculator from "@/components/landing/LandingCalculator";
 import LandingHowItWorks from "@/components/landing/LandingHowItWorks";
 import LandingPricing from "@/components/landing/LandingPricing";
@@ -55,9 +56,10 @@ function LandingPageContent() {
         flexDirection: "column",
         backgroundColor: "var(--bg-base)",
         color: "var(--text-primary)",
+        paddingTop: "74px", // Space for the floating dynamic island navbar
       }}
     >
-      {/* Sticky Header */}
+      {/* Apple Dynamic Island Floating Liquid Navbar */}
       <LandingNavbar onOpenAuth={handleOpenAuth} />
 
       {/* Main Content Sections */}
@@ -66,6 +68,7 @@ function LandingPageContent() {
         <LandingStats />
         <LandingAiPlayground />
         <LandingFeatures />
+        <LandingSecurity />
         <LandingCalculator onOpenAuth={handleOpenAuth} />
         <LandingHowItWorks onOpenAuth={handleOpenAuth} />
         <LandingPricing onOpenAuth={handleOpenAuth} />

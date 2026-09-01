@@ -20,13 +20,13 @@ export default function LandingFooter() {
       style={{
         backgroundColor: "var(--bg-base)",
         borderTop: "1px solid var(--border)",
-        padding: "60px 24px 30px 24px",
+        padding: "60px 20px 30px 20px",
         position: "relative",
       }}
     >
       <div
         style={{
-          maxWidth: "1280px",
+          maxWidth: "1160px",
           margin: "0 auto",
         }}
       >

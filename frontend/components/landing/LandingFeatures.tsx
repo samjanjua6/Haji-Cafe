@@ -68,13 +68,13 @@ export default function LandingFeatures() {
     <section
       id="features"
       style={{
-        padding: "80px 24px",
+        padding: "60px 20px",
         position: "relative",
       }}
     >
       <div
         style={{
-          maxWidth: "1280px",
+          maxWidth: "1160px",
           margin: "0 auto",
         }}
       >

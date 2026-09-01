@@ -24,7 +24,7 @@ export default function LandingCalculator({ onOpenAuth }: LandingCalculatorProps
     <section
       id="calculator"
       style={{
-        padding: "80px 24px",
+        padding: "60px 20px",
         backgroundColor: "var(--bg-card)",
         borderTop: "1px solid var(--border)",
         borderBottom: "1px solid var(--border)",
@@ -33,7 +33,7 @@ export default function LandingCalculator({ onOpenAuth }: LandingCalculatorProps
     >
       <div
         style={{
-          maxWidth: "1280px",
+          maxWidth: "1160px",
           margin: "0 auto",
         }}
       >

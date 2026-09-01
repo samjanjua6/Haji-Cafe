@@ -37,7 +37,7 @@ export default function LandingFaq() {
     <section
       id="faq"
       style={{
-        padding: "80px 24px",
+        padding: "60px 20px",
         backgroundColor: "var(--bg-card)",
         borderTop: "1px solid var(--border)",
         borderBottom: "1px solid var(--border)",

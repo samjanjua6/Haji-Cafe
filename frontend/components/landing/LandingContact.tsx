@@ -61,13 +61,13 @@ export default function LandingContact() {
     <section
       id="contact"
       style={{
-        padding: "80px 24px 100px 24px",
+        padding: "60px 20px 80px 20px",
         position: "relative",
       }}
     >
       <div
         style={{
-          maxWidth: "1280px",
+          maxWidth: "1160px",
           margin: "0 auto",
         }}
       >
