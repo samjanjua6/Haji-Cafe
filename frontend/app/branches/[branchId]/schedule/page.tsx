@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import SplinePeakChart from "@/components/charts/SplinePeakChart";
 
 interface OperatingHour {
   hour: number;
@@ -98,6 +99,7 @@ export default function BranchSchedulePage() {
 
   // What-If Demand Surge Simulation Slider (1.0x to 1.5x)
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
+  const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM">("SPLINE");
   const [targetDate, setTargetDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -363,129 +365,156 @@ export default function BranchSchedulePage() {
         </div>
       </div>
 
-      {/* 3. 24-Hour Visual Hourly Peak Orders Histogram */}
+      {/* 3. 24-Hour Visual Hourly Peak Orders (Spline Curve / Histogram) */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
               <TrendingUp size={18} style={{ color: "var(--accent)" }} />
-              24-Hour Customer Order Peak Distribution
+              24-Hour Customer Order Peak Curve (Erlang-C Modeling)
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-              Historical hourly order frequency used by Erlang-C to determine exact server staffing.
+              Historical customer order velocity used by Erlang-C queuing models to compute server staffing.
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
-              <span>Peak Rush (&gt;20/hr)</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
-              <span>Moderate</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
-              <span>Off-Peak</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Histogram Bars */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
-            gap: 6,
-            alignItems: "flex-end",
-            height: 180,
-            paddingTop: 20,
-            borderBottom: "1px solid var(--border)",
-          }}
-        >
-          {hours.map((h) => {
-            const heightPercent = maxOrders > 0 ? Math.max(12, Math.round((h.total_orders / maxOrders) * 100)) : 12;
-            const isPeak = h.rush_category === "PEAK_RUSH" || heightPercent >= 70 || h.total_orders >= 160;
-            const isMod = !isPeak && (h.rush_category === "MODERATE" || heightPercent >= 45 || h.total_orders >= 95);
-
-            let barBg = "var(--bg-surface)";
-            let barBorder = "1px solid var(--border)";
-            let labelColor = "var(--text-muted)";
-            let staffCount = h.recommended_staff || 1;
-
-            if (isPeak) {
-              barBg = "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)";
-              barBorder = "1px solid #f59e0b";
-              labelColor = "#f59e0b";
-              staffCount = Math.max(3, staffCount);
-            } else if (isMod) {
-              barBg = "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)";
-              barBorder = "1px solid #3b82f6";
-              labelColor = "#3b82f6";
-              staffCount = Math.max(2, staffCount);
-            }
-
-            return (
-              <div
-                key={h.hour}
-                title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers`}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  height: "100%",
-                  justifyContent: "flex-end",
-                  cursor: "pointer",
-                }}
+          {/* Toggle View & Legend */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 4, background: "var(--bg-surface)", padding: 3, borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <button
+                className={`btn btn-sm ${chartType === "SPLINE" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setChartType("SPLINE")}
+                style={{ padding: "4px 10px", fontSize: 12 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 800, color: labelColor, marginBottom: 4 }}>
-                  {staffCount}p
-                </div>
-                <div
-                  style={{
-                    width: "100%",
-                    height: `${heightPercent}%`,
-                    background: barBg,
-                    border: barBorder,
-                    borderRadius: "5px 5px 0 0",
-                    boxShadow: isPeak ? "0 2px 8px rgba(245, 158, 11, 0.3)" : (isMod ? "0 2px 8px rgba(59, 130, 246, 0.25)" : "none"),
-                    transition: "all 0.25s ease",
-                  }}
-                />
+                📈 Spline Curve
+              </button>
+              <button
+                className={`btn btn-sm ${chartType === "HISTOGRAM" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setChartType("HISTOGRAM")}
+                style={{ padding: "4px 10px", fontSize: 12 }}
+              >
+                📊 Columns
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
+                <span>Peak Rush</span>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
+                <span>Moderate</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
+                <span>Off-Peak</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* X-Axis Hour Labels & Database Order Counts */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
-            gap: 6,
-            paddingTop: 8,
-            textAlign: "center",
-          }}
-        >
-          {hours.map((h) => (
-            <div key={h.hour} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <span style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>
-                {h.label}
-              </span>
-              <span
-                style={{
-                  fontSize: 9,
-                  color: h.rush_category === "PEAK_RUSH" ? "var(--accent)" : "var(--text-muted)",
-                  fontWeight: 600,
-                  marginTop: 2,
-                }}
-              >
-                {h.total_orders} orders
-              </span>
+        {/* Dynamic Chart Display */}
+        {chartType === "SPLINE" ? (
+          <SplinePeakChart hours={hours} maxOrders={maxOrders} />
+        ) : (
+          <div>
+            {/* Histogram Bars */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
+                gap: 6,
+                alignItems: "flex-end",
+                height: 180,
+                paddingTop: 20,
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              {hours.map((h) => {
+                const heightPercent = maxOrders > 0 ? Math.max(12, Math.round((h.total_orders / maxOrders) * 100)) : 12;
+                const isPeak = h.rush_category === "PEAK_RUSH" || heightPercent >= 70 || h.total_orders >= 160;
+                const isMod = !isPeak && (h.rush_category === "MODERATE" || heightPercent >= 45 || h.total_orders >= 95);
+
+                let barBg = "var(--bg-surface)";
+                let barBorder = "1px solid var(--border)";
+                let labelColor = "var(--text-muted)";
+                let staffCount = h.recommended_staff || 1;
+
+                if (isPeak) {
+                  barBg = "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)";
+                  barBorder = "1px solid #f59e0b";
+                  labelColor = "#f59e0b";
+                  staffCount = Math.max(3, staffCount);
+                } else if (isMod) {
+                  barBg = "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)";
+                  barBorder = "1px solid #3b82f6";
+                  labelColor = "#3b82f6";
+                  staffCount = Math.max(2, staffCount);
+                }
+
+                return (
+                  <div
+                    key={h.hour}
+                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers`}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      height: "100%",
+                      justifyContent: "flex-end",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800, color: labelColor, marginBottom: 4 }}>
+                      {staffCount}p
+                    </div>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: `${heightPercent}%`,
+                        background: barBg,
+                        border: barBorder,
+                        borderRadius: "5px 5px 0 0",
+                        boxShadow: isPeak ? "0 2px 8px rgba(245, 158, 11, 0.3)" : (isMod ? "0 2px 8px rgba(59, 130, 246, 0.25)" : "none"),
+                        transition: "all 0.25s ease",
+                      }}
+                    />
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+
+            {/* X-Axis Hour Labels & Database Order Counts */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
+                gap: 6,
+                paddingTop: 8,
+                textAlign: "center",
+              }}
+            >
+              {hours.map((h) => (
+                <div key={h.hour} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>
+                    {h.label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: h.rush_category === "PEAK_RUSH" ? "var(--accent)" : "var(--text-muted)",
+                      fontWeight: 600,
+                      marginTop: 2,
+                    }}
+                  >
+                    {h.total_orders} orders
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. AI Shift Roster Cards */}
