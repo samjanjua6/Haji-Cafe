@@ -443,7 +443,7 @@ export default function BranchSchedulePage() {
           })}
         </div>
 
-        {/* X-Axis Hour Labels */}
+        {/* X-Axis Hour Labels & Database Order Counts */}
         <div
           style={{
             display: "grid",
@@ -454,8 +454,20 @@ export default function BranchSchedulePage() {
           }}
         >
           {hours.map((h) => (
-            <div key={h.hour} style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
-              {h.label}
+            <div key={h.hour} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <span style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>
+                {h.label}
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  color: h.rush_category === "PEAK_RUSH" ? "var(--accent)" : "var(--text-muted)",
+                  fontWeight: 600,
+                  marginTop: 2,
+                }}
+              >
+                {h.total_orders} orders
+              </span>
             </div>
           ))}
         </div>
