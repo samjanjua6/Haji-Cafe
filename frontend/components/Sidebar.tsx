@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings, Flame, GitBranch, Package, Coffee
+  LayoutDashboard, Store, ShoppingCart, LogOut, Menu, X, UtensilsCrossed, Users, Settings, Flame, GitBranch, Package, Coffee, Calendar
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -187,6 +187,12 @@ export default function Sidebar() {
                 icon={Users}
                 active={pathname.includes(`/cafes/${scope.cafeId}/staff`)}
               />
+              <NavLink
+                href={`/cafes/${scope.cafeId}/schedule`}
+                label="AI Shifts & Peak Hours"
+                icon={Calendar}
+                active={pathname.includes(`/cafes/${scope.cafeId}/schedule`)}
+              />
             </div>
           ))}
 
@@ -215,6 +221,12 @@ export default function Sidebar() {
                 label="Kitchen KDS"
                 icon={Flame}
                 active={pathname.includes(`/branches/${scope.branchId}/kitchen`)}
+              />
+              <NavLink
+                href={`/branches/${scope.branchId}/schedule?cafeId=${scope.cafeId}`}
+                label="AI Shifts & Peak Hours"
+                icon={Calendar}
+                active={pathname.includes(`/branches/${scope.branchId}/schedule`)}
               />
               <NavLink
                 href={`/branches/${scope.branchId}/menu?cafeId=${scope.cafeId}`}
