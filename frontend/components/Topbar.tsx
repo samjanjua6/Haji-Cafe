@@ -15,18 +15,36 @@ function segmentToLabel(segment: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Build breadcrumb items from the current pathname
+// Build breadcrumb items from the current pathname, resolving IDs to names via user scopes
 function useBreadcrumbs() {
   const pathname = usePathname();
+  const { data: user } = useCurrentUser();
   const segments = pathname.split("/").filter(Boolean);
 
   const crumbs = segments.map((seg, idx) => {
     const href = "/" + segments.slice(0, idx + 1).join("/");
+
+    // Try to resolve numeric IDs to human-readable names using user scopes
+    if (/^\d+$/.test(seg) && user?.scopes) {
+      const numId = parseInt(seg, 10);
+      // Check if previous segment is "cafes" — resolve to cafe name
+      if (segments[idx - 1] === "cafes") {
+        const match = user.scopes.find((s: any) => s.cafeId === numId);
+        if (match?.cafeName) return { label: match.cafeName, href };
+      }
+      // Check if previous segment is "branches" — resolve to branch name
+      if (segments[idx - 1] === "branches") {
+        const match = user.scopes.find((s: any) => s.branchId === numId);
+        if (match?.branchName) return { label: match.branchName, href };
+      }
+    }
+
     return { label: segmentToLabel(seg), href };
   });
 
   return crumbs;
 }
+
 
 // User avatar with initials
 function UserAvatar({ email, role }: { email: string; role: string }) {

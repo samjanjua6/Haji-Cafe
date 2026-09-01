@@ -139,28 +139,32 @@ export default function BranchOrdersPage() {
             <ArrowLeft size={14} /> Back
           </button>
           <div className="page-title">Branch Orders</div>
-          <div className="page-subtitle">Branch #{branchId} — Showing {orders.length} of {meta.total} orders</div>
+          <div className="page-subtitle" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>Branch #{branchId} — Showing {orders.length} of {meta.total} orders</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "var(--success)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--success)", boxShadow: "0 0 6px var(--success)" }} />
+              Live Synced
+            </span>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
           <button
-            className="btn"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setPlaceModal(true)}
             style={{
-              background: "rgba(249, 115, 22, 0.15)",
-              color: "var(--accent)",
-              border: "1px solid var(--accent)",
               display: "flex",
               alignItems: "center",
               gap: 6,
+              background: "var(--bg-surface)",
+              color: "var(--accent)",
+              border: "1px solid var(--accent)",
               fontWeight: 600,
-              cursor: "pointer",
             }}
-            onClick={() => router.push(`/branches/${branchId}/kitchen${searchParams.get("cafeId") ? `?cafeId=${searchParams.get("cafeId")}` : ""}`)}
+            title="Create a new customer order"
           >
-            <Flame size={16} /> Kitchen KDS
-          </button>
-          <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
-          <button className="btn btn-primary" onClick={() => setPlaceModal(true)} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
-            <Plus size={16} /> Take Customer Order
+            <Plus size={14} />
+            Take Customer Order
           </button>
         </div>
       </div>

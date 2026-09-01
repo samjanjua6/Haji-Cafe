@@ -211,7 +211,7 @@ export default function KitchenDisplayPage() {
             setOrders((prev) =>
               prev.map((order) =>
                 order.id === updated.id
-                  ? { ...order, status: updated.status, ...(updated.orderItems ? { orderItems: updated.orderItems } : {}) }
+                  ? { ...order, status: updated.status, ...(updated.orderLines ? { orderLines: updated.orderLines } : (updated as any).orderItems ? { orderLines: (updated as any).orderItems } : {}) }
                   : order
               )
             );
