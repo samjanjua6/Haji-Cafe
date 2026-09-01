@@ -461,18 +461,31 @@ export default function CafeOwnerSchedulePage() {
           }}
         >
           {hours.map((h) => {
-            const heightPercent = maxOrders > 0 ? Math.max(8, Math.round((h.total_orders / maxOrders) * 100)) : 10;
-            const isPeak = h.rush_category === "PEAK_RUSH";
-            const isMod = h.rush_category === "MODERATE";
+            const heightPercent = maxOrders > 0 ? Math.max(12, Math.round((h.total_orders / maxOrders) * 100)) : 12;
+            const isPeak = h.rush_category === "PEAK_RUSH" || heightPercent >= 70 || h.total_orders >= 160;
+            const isMod = !isPeak && (h.rush_category === "MODERATE" || heightPercent >= 45 || h.total_orders >= 95);
 
-            let barColor = "var(--border)";
-            if (isPeak) barColor = "var(--accent)";
-            else if (isMod) barColor = "var(--info)";
+            let barBg = "var(--bg-surface)";
+            let barBorder = "1px solid var(--border)";
+            let labelColor = "var(--text-muted)";
+            let staffCount = h.recommended_staff || 1;
+
+            if (isPeak) {
+              barBg = "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)";
+              barBorder = "1px solid #f59e0b";
+              labelColor = "#f59e0b";
+              staffCount = Math.max(3, staffCount);
+            } else if (isMod) {
+              barBg = "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)";
+              barBorder = "1px solid #3b82f6";
+              labelColor = "#3b82f6";
+              staffCount = Math.max(2, staffCount);
+            }
 
             return (
               <div
                 key={h.hour}
-                title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${h.recommended_staff} servers`}
+                title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers`}
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -482,16 +495,18 @@ export default function CafeOwnerSchedulePage() {
                   cursor: "pointer",
                 }}
               >
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>
-                  {h.recommended_staff}p
+                <div style={{ fontSize: 11, fontWeight: 800, color: labelColor, marginBottom: 4 }}>
+                  {staffCount}p
                 </div>
                 <div
                   style={{
                     width: "100%",
                     height: `${heightPercent}%`,
-                    background: barColor,
-                    borderRadius: "4px 4px 0 0",
-                    transition: "height 0.3s ease, background 0.3s ease",
+                    background: barBg,
+                    border: barBorder,
+                    borderRadius: "5px 5px 0 0",
+                    boxShadow: isPeak ? "0 2px 8px rgba(245, 158, 11, 0.3)" : (isMod ? "0 2px 8px rgba(59, 130, 246, 0.25)" : "none"),
+                    transition: "all 0.25s ease",
                   }}
                 />
               </div>
