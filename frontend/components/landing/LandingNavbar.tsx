@@ -988,7 +988,7 @@ function ContactIslandContent() {
   const [msg, setMsg] = useState("");
   const [sent, setSent] = useState(false);
 
-  const contactEmail = "support@chartboard.com";
+  const contactEmail = "support@chatbot.com";
   const contactPhone = "+92 (300) 123-4567";
 
   const handleSend = (e: React.FormEvent) => {

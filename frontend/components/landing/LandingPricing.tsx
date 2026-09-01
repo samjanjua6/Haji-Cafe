@@ -23,7 +23,7 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
         "Fast POS Billing & Receipt Printing",
         "Basic Inventory & Raw Ingredient Tracking",
         "Standard Daily Sales Summary",
-        "Email Support (support@chartboard.com)",
+        "Email Support (support@chatbot.com)",
       ],
       popular: false,
       buttonText: "Start 14-Day Free Trial",

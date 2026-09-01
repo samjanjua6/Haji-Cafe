@@ -25,7 +25,7 @@ export default function LandingContact() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
-  const contactEmail = "support@chartboard.com";
+  const contactEmail = "support@chatbot.com";
   const contactPhone = "+92 (300) 123-4567";
   const tollFreePhone = "+1 (800) 555-HAJI";
 
@@ -48,7 +48,7 @@ export default function LandingContact() {
     setTimeout(() => {
       setLoading(false);
       toast.success(
-        `🎉 Thank you ${name || "there"}! Our support team at support@chartboard.com has received your message.`
+        `🎉 Thank you ${name || "there"}! Our support team at support@chatbot.com has received your message.`
       );
       setName("");
       setEmail("");
@@ -452,7 +452,7 @@ export default function LandingContact() {
                   </>
                 ) : (
                   <>
-                    <Send size={16} /> Send Inquiry to support@chartboard.com
+                    <Send size={16} /> Send Inquiry to support@chatbot.com
                   </>
                 )}
               </button>

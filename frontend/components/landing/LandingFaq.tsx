@@ -29,7 +29,7 @@ export default function LandingFaq() {
     },
     {
       q: "Can your support team assist with migrating my existing menu items?",
-      a: "Absolutely! Our team is available 24/7 at support@chartboard.com or via phone at +92 (300) 123-4567 to help you import your entire menu, configure categories, and set up your branches in no time.",
+      a: "Absolutely! Our team is available 24/7 at support@chatbot.com or via phone at +92 (300) 123-4567 to help you import your entire menu, configure categories, and set up your branches in no time.",
     },
   ];
 

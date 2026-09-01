@@ -69,8 +69,8 @@ export default function LandingFooter() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                 <Mail size={15} color="var(--accent)" />
-                <a href="mailto:support@chartboard.com" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
-                  support@chartboard.com
+                <a href="mailto:support@chatbot.com" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
+                  support@chatbot.com
                 </a>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
@@ -191,7 +191,7 @@ export default function LandingFooter() {
           }}
         >
           <div>
-            © 2026 Haji Cafe Management Platform &amp; Chartboard Inc. All rights reserved.
+            © 2026 Haji Cafe Management Platform. All rights reserved.
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
