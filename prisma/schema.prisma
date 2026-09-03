@@ -68,12 +68,13 @@ model Cafe {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  owner           User?            @relation(fields: [ownerId], references: [id])
+  owner           User?               @relation(fields: [ownerId], references: [id])
   branches        Branch[]
   categories      Category[]
   masterMenuItems MasterMenuItem[]
   userScopes      UserScope[]
   auditLogs       AuditLog[]
+  agentAlerts     AgentTriggerAlert[]
 
   @@map("cafes")
 }
@@ -86,11 +87,13 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  cafe            Cafe             @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  cafe            Cafe                @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   branchMenuItems BranchMenuItem[]
   orders          Order[]
   userScopes      UserScope[]
   auditLogs       AuditLog[]
+  agentAlerts     AgentTriggerAlert[]
+  customerReviews CustomerReview[]
 
   @@map("branches")
 }
@@ -233,4 +236,45 @@ model StockHistoryLog {
   user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("stock_history_logs")
+}
+
+model AgentTriggerAlert {
+  id              Int       @id @default(autoincrement())
+  branchId        Int?      @map("branch_id")
+  cafeId          Int?      @map("cafe_id")
+  triggerType     String    @map("trigger_type") // LOW_STOCK_DRAFT, SALES_DROP, STALE_ITEM_DISCOUNT
+  severity        String    @default("MEDIUM")   // LOW, MEDIUM, HIGH, URGENT
+  title           String
+  message         String
+  suggestedAction String?   @map("suggested_action")
+  actionPayload   Json?     @map("action_payload")
+  status          String    @default("PENDING")  // PENDING, APPROVED, REJECTED, DISMISSED
+  resolvedAt      DateTime? @map("resolved_at")
+  createdAt       DateTime  @default(now())      @map("created_at")
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  cafe   Cafe?   @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([status, triggerType, createdAt])
+  @@map("agent_trigger_alerts")
+}
+
+model CustomerReview {
+  id             Int      @id @default(autoincrement())
+  branchId       Int      @map("branch_id")
+  customerName   String?  @map("customer_name")
+  customerPhone  String?  @map("customer_phone")
+  rating         Int      @default(5)
+  comment        String
+  sentiment      String   @default("NEUTRAL") // POSITIVE, NEUTRAL, NEGATIVE
+  sentimentScore Float    @default(0.0)       @map("sentiment_score")
+  keyAspects     Json?    @map("key_aspects")
+  managerAlert   Boolean  @default(false)     @map("manager_alert")
+  managerReply   String?  @map("manager_reply")
+  createdAt      DateTime @default(now())      @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, sentiment, createdAt])
+  @@map("customer_reviews")
 }

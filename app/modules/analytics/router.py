@@ -106,3 +106,67 @@ async def get_cafe_forecast(
 @router.get("/cafes/{cafe_id}/analytics/kpis", response_model=KPISummaryResponse, tags=["Analytics"])
 async def get_cafe_kpis(cafe_id: int):
     return await ml_service.get_kpi_summary(cafe_id=cafe_id)
+
+
+# ── Customer Review & Sentiment Analysis Routes ────────────────────────
+
+from app.modules.analytics import sentiment as sentiment_service
+from app.modules.analytics.sentiment import (
+    ReviewCreateRequest,
+    ReviewResponse,
+    SentimentKPIsResponse,
+)
+from pydantic import BaseModel
+
+
+class ManagerReplyRequest(BaseModel):
+    reply: str
+
+
+@router.post("/analytics/reviews", response_model=ReviewResponse, tags=["Review Sentiment"])
+async def submit_customer_review(body: ReviewCreateRequest):
+    """
+    Submit a customer review.
+    Analyzes sentiment polarity, classifies key aspects (coffee quality, service speed, cleanliness, value),
+    and automatically triggers an urgent manager alert if rating <= 2 or sentiment is negative.
+    """
+    return await sentiment_service.analyze_and_record_review(body)
+
+
+@router.get("/analytics/reviews", response_model=List[ReviewResponse], tags=["Review Sentiment"])
+async def list_customer_reviews(
+    branch_id: Optional[int] = Query(None),
+    sentiment: Optional[str] = Query(None, description="Filter: POSITIVE, NEUTRAL, NEGATIVE"),
+    manager_alert: Optional[bool] = Query(None, description="Filter for reviews requiring manager intervention"),
+):
+    """List customer reviews with aspect tags and sentiment classifications."""
+    return await sentiment_service.list_reviews(
+        branch_id=branch_id,
+        sentiment=sentiment,
+        manager_alert=manager_alert,
+    )
+
+
+@router.get("/analytics/sentiment/kpis", response_model=SentimentKPIsResponse, tags=["Review Sentiment"])
+async def get_sentiment_kpis(
+    branch_id: Optional[int] = Query(None),
+):
+    """
+    [Executive Dashboard]
+    Get overall Customer Sentiment Index, positive/negative breakdowns,
+    aspect-level satisfaction scores, and count of urgent unaddressed alerts.
+    """
+    return await sentiment_service.get_sentiment_kpis(branch_id=branch_id)
+
+
+@router.post("/analytics/reviews/{review_id}/respond", response_model=ReviewResponse, tags=["Review Sentiment"])
+async def respond_to_review(
+    review_id: int,
+    body: ManagerReplyRequest,
+):
+    """Manager response to a customer review, marking the alert as resolved."""
+    updated = await sentiment_service.reply_to_review(review_id=review_id, manager_reply=body.reply)
+    if not updated:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Review not found")
+    return updated

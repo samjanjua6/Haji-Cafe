@@ -17,6 +17,8 @@ from app.modules.chatbot.router import router as chatbot_router
 from app.modules.analytics.router import router as analytics_router
 from app.modules.realtime.router import router as realtime_router
 from app.modules.scheduling.router import router as scheduling_router
+from app.modules.agentic.router import router as agentic_router
+from app.modules.webhooks.router import router as webhooks_router
 
 
 @asynccontextmanager
@@ -58,6 +60,8 @@ app.include_router(chatbot_router)
 app.include_router(analytics_router)
 app.include_router(realtime_router)
 app.include_router(scheduling_router)
+app.include_router(agentic_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/", tags=["Health"])
