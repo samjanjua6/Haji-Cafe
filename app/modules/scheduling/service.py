@@ -145,6 +145,9 @@ async def generate_ai_shift_schedule(
     else:
         target_date = date.today() + timedelta(days=1)
 
+    target_date_formatted = target_date.strftime("%A, %b %d, %Y")
+    day_name = target_date.strftime("%A")
+
     # 4. Calculate Staff Headcounts for 3 Core Shifts
     morning_hours = [h for h in hours if 7 <= h["hour"] <= 12]
     afternoon_hours = [h for h in hours if 12 <= h["hour"] <= 16]
@@ -191,6 +194,8 @@ async def generate_ai_shift_schedule(
         "badge_color": "var(--warning)",
         "start_time": f"{target_date.isoformat()}T07:30:00",
         "end_time": f"{target_date.isoformat()}T12:30:00",
+        "display_date": target_date_formatted,
+        "day_name": day_name,
         "display_time": "07:30 AM – 12:30 PM",
         "duration_hours": 5.0,
         "recommended_headcount": morning_req,
@@ -204,6 +209,8 @@ async def generate_ai_shift_schedule(
         "badge_color": "var(--info)",
         "start_time": f"{target_date.isoformat()}T12:00:00",
         "end_time": f"{target_date.isoformat()}T16:30:00",
+        "display_date": target_date_formatted,
+        "day_name": day_name,
         "display_time": "12:00 PM – 04:30 PM",
         "duration_hours": 4.5,
         "recommended_headcount": afternoon_req,
@@ -217,6 +224,8 @@ async def generate_ai_shift_schedule(
         "badge_color": "var(--accent)",
         "start_time": f"{target_date.isoformat()}T16:00:00",
         "end_time": f"{target_date.isoformat()}T21:30:00",
+        "display_date": target_date_formatted,
+        "day_name": day_name,
         "display_time": "04:00 PM – 09:30 PM",
         "duration_hours": 5.5,
         "recommended_headcount": evening_req,
@@ -235,7 +244,7 @@ async def generate_ai_shift_schedule(
     # Executive AI Narrative
     surge_text = f" (Adjusted for +{int((demand_multiplier - 1.0) * 100)}% simulated surge)" if demand_multiplier > 1.0 else ""
     ai_rationale = (
-        f"Based on Erlang-C queuing analysis for {branch.name}{surge_text} using Strategy: {current_strategy['name']}, "
+        f"Based on Erlang-C queuing analysis for {branch.name} on {target_date_formatted}{surge_text} using Strategy: {current_strategy['name']}, "
         f"the AI model identified a primary morning peak at 09:00 (averaging {peak_analysis['peak_summary']['top_rush_hour']}) "
         f"and secondary evening traffic after 16:30. "
         f"By reallocating labor dynamically, the branch saves approximately {round(savings / 15.0, 1)} labor hours "
@@ -248,6 +257,8 @@ async def generate_ai_shift_schedule(
         "cafe_id": branch.cafeId,
         "cafe_name": branch.cafe.name if branch.cafe else "Haji Cafe",
         "target_date": target_date.isoformat(),
+        "target_date_formatted": target_date_formatted,
+        "day_name": day_name,
         "demand_multiplier": demand_multiplier,
         "optimization_generation": rotation_offset + 1,
         "strategy_name": current_strategy["name"],

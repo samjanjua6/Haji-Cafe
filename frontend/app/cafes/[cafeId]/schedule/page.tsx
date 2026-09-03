@@ -65,6 +65,8 @@ interface ShiftItem {
   badge_color: string;
   start_time: string;
   end_time: string;
+  display_date?: string;
+  day_name?: string;
   display_time: string;
   duration_hours: number;
   recommended_headcount: number;
@@ -82,6 +84,8 @@ interface ScheduleData {
   branch_name: string;
   cafe_name?: string;
   target_date: string;
+  target_date_formatted?: string;
+  day_name?: string;
   demand_multiplier: number;
   optimization_generation?: number;
   strategy_name?: string;
@@ -339,15 +343,6 @@ export default function CafeOwnerSchedulePage() {
             title="Download .ICS for Apple Calendar & Outlook"
           >
             <Download size={14} /> Download .ICS
-          </button>
-
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleSyncGoogleCalendar}
-            disabled={syncing || !scheduleData}
-            style={{ fontWeight: 600 }}
-          >
-            <Calendar size={14} /> {syncing ? "Syncing..." : "Sync Google Calendar"}
           </button>
 
           <button
@@ -801,7 +796,10 @@ export default function CafeOwnerSchedulePage() {
                     <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
                       {shift.name}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 700, display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                      <Calendar size={13} /> {shift.display_date || scheduleData?.target_date_formatted || targetDate}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                       <Clock size={12} /> {shift.display_time} ({shift.duration_hours} hrs)
                     </div>
                   </div>
