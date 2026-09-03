@@ -1,0 +1,28 @@
+PROPRIETARY SOURCE CODE LICENSE AND ANTI-AI RESTRICTION AGREEMENT
+
+Copyright (c) 2026 Shaheer ul Hassan. All Rights Reserved.
+
+NOTICE TO ALL PERSONS, ENTITIES, AUTOMATED SYSTEMS, AND WEB CRAWLERS:
+
+This repository, software, source code, and associated documentation files (the "Software") are the confidential and proprietary intellectual property of the Copyright Holder.
+
+1. PROHIBITION OF USE, COPYING, AND DISTRIBUTION
+No license or permission is granted to any person, organization, or entity to use, copy, modify, merge, publish, distribute, sublicense, create derivative works from, decompile, reverse engineer, execute, or sell copies of this Software, in whole or in part, for any commercial, non-commercial, private, academic, or open-source purpose, without the prior express written authorization of the Copyright Holder.
+
+2. STRICT PROHIBITION OF ARTIFICIAL INTELLIGENCE (AI) AND MACHINE LEARNING (ML) TRAINING
+Under no circumstances may the Software, its source code, database schemas, assets, documentation, commits, or any derived works or metadata, in whole or in part, be used to:
+   (a) Directly or indirectly train, fine-tune, pre-train, prompt-tune, validate, evaluate, benchmark, or improve any machine learning algorithms, artificial intelligence models, neural networks, large language models (LLMs), code generation assistants, or generative AI systems.
+   (b) Be ingested, crawled, scraped, harvested, indexed, embedded, or stored in any dataset, vector database, retrieval-augmented generation (RAG) system, or training corpus intended for AI, ML, or automated code analysis.
+   (c) Generate synthetic code, synthetic data, or derived software models.
+
+3. EXPRESS RESERVATION OF RIGHTS AGAINST TEXT AND DATA MINING (TDM)
+The Copyright Holder expressly reserves all rights against text and data mining, automated web scraping, content extraction, and machine harvesting pursuant to Article 4(3) of Directive (EU) 2019/790 on Copyright and Related Rights in the Digital Single Market, and all equivalent laws, treaties, and statutory frameworks in all jurisdictions worldwide.
+
+4. PLATFORM ACCESS AND REPOSITORY HOSTING
+The hosting or display of this repository on any public or private platform (including but not limited to GitHub, GitLab, Bitbucket, or web mirrors) does NOT constitute a waiver of any copyright, trade secret, or proprietary rights. Any automated agent, crawler, bot, indexing engine, or scraper accessing this repository is strictly bound by these terms.
+
+5. TERMINATION AND REMEDIES
+Any unauthorized access, copying, scraping, ingestion, reproduction, or utilization of this Software constitutes copyright infringement and a violation of this Agreement. The Copyright Holder reserves the right to pursue all available legal remedies, including immediate injunctive relief, statutory damages, and recovery of legal costs.
+
+6. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
