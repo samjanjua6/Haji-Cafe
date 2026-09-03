@@ -125,7 +125,7 @@ export default function WeeklyRushHeatmap({
             </div>
             {operatingHours.map((h) => (
               <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)" }}>
-                {h:02d}:00
+                {h < 10 ? `0${h}` : h}:00
               </div>
             ))}
           </div>
