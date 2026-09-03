@@ -104,6 +104,14 @@ async def incoming_whatsapp_webhook(
         )
         return {"status": "ok", "order_id": result.order_id, "reply": result.reply_message}
 
+    # If incoming request was from WAHA / QR-Gateway (JSON payload)
+    if not Body and sender_phone:
+        await whatsapp_service.send_waha_whatsapp_message(
+            chat_id=sender_phone,
+            message_text=result.reply_message,
+        )
+        return {"status": "ok", "order_id": result.order_id, "reply": result.reply_message}
+
     # Return Twilio TwiML XML format for native WhatsApp rendering
     twiml_reply = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>

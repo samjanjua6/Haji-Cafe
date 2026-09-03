@@ -61,6 +61,40 @@ async def send_meta_whatsapp_message(
         return False
 
 
+async def send_waha_whatsapp_message(
+    chat_id: str,
+    message_text: str,
+    waha_url: Optional[str] = None,
+) -> bool:
+    """
+    Send an outbound message directly to customer's WhatsApp using WAHA (WhatsApp HTTP API).
+    Endpoint: POST {waha_url}/api/sendText
+    """
+    base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3000")
+    clean_id = chat_id.replace("+", "").replace(" ", "").replace("-", "").strip()
+    if not clean_id.endswith("@c.us") and not clean_id.endswith("@g.us"):
+        clean_id = f"{clean_id}@c.us"
+
+    url = f"{base_url.rstrip('/')}/api/sendText"
+    payload = {
+        "chatId": clean_id,
+        "text": message_text,
+        "session": "default",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code in [200, 201]:
+                logger.info(f"WAHA WhatsApp reply successfully sent to {clean_id}")
+                return True
+            else:
+                logger.debug(f"WAHA send response: {resp.status_code} - {resp.text}")
+                return False
+    except Exception as e:
+        logger.debug(f"WAHA outbound call skipped/unavailable: {e}")
+        return False
+
+
 async def process_whatsapp_order(
     message_text: str,
     customer_name: Optional[str] = "WhatsApp Customer",
