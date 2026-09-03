@@ -16,12 +16,14 @@ import {
   Sliders,
   Store,
   Building2,
-  DollarSign
+  DollarSign,
+  FileText
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
+import { exportScheduleToPDF } from "@/lib/schedulePdfExport";
 
 interface BranchOption {
   id: number;
@@ -244,6 +246,25 @@ export default function CafeOwnerSchedulePage() {
     }
   };
 
+  // Export Professional Printable PDF Report
+  const handleExportPDF = async () => {
+    if (!scheduleData || !scheduleData.shifts) return;
+    try {
+      await exportScheduleToPDF({
+        branchName: scheduleData.branch_name || `Café #${cafeId} Branch`,
+        targetDate: targetDate,
+        demandMultiplier: demandMultiplier,
+        shifts: scheduleData.shifts,
+        metrics: scheduleData.metrics,
+        peakSummary: peakData?.peak_summary,
+        executiveRationale: scheduleData.executive_rationale,
+      });
+      toast.success("📄 Downloaded PDF Shift Schedule Report!", { icon: "📄" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate PDF report");
+    }
+  };
+
   const hours = peakData?.operating_hours || [];
   const maxOrders = useMemo(() => {
     return Math.max(...hours.map((h) => h.total_orders), 1);
@@ -288,6 +309,24 @@ export default function CafeOwnerSchedulePage() {
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleExportPDF}
+            disabled={!scheduleData}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              color: "var(--accent)",
+              fontWeight: 600,
+            }}
+            title="Download Printable PDF Shift Schedule Report for Noticeboard"
+          >
+            <FileText size={14} /> Export PDF
+          </button>
+
           <button
             className="btn btn-ghost btn-sm"
             onClick={handleExportICS}
