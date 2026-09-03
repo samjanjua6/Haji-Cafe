@@ -12,6 +12,8 @@ import {
   Flame,
   ArrowRight,
   Store,
+  TrendingUp,
+  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
@@ -20,11 +22,13 @@ import Link from "next/link";
 import { AuditLogTable } from "@/components/AuditLogTable";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
 import { KpiCards } from "@/components/analytics/KpiCards";
 import { Card } from "@/components/Card";
+import SplinePeakChart from "@/components/charts/SplinePeakChart";
+import WeeklyRushHeatmap from "@/components/charts/WeeklyRushHeatmap";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -36,10 +40,30 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
+  const [dashChartType, setDashChartType] = React.useState<"HEATMAP" | "SPLINE" | "HISTOGRAM">("HEATMAP");
+  const branchId = user?.scopes?.[0]?.branchId || user?.defaultBranchId || (user?.role === "BRANCH_MANAGER" ? 3 : undefined);
+  const cafeId = user?.scopes?.[0]?.cafeId || user?.defaultCafeId || (user?.role === "CAFE_OWNER" ? 2 : undefined);
+
+  const { data: peakDataRes, isLoading: loadingPeaks } = useQuery({
+    queryKey: ["dashboard-peaks", branchId, cafeId],
+    queryFn: async () => {
+      const query = branchId
+        ? `/scheduling/peak-hours?branch_id=${branchId}`
+        : cafeId
+        ? `/scheduling/peak-hours?cafe_id=${cafeId}`
+        : `/scheduling/peak-hours`;
+      return api.get<{ status: string; data: any }>(query);
+    },
+    enabled: !!user,
+  });
+  const peakData = peakDataRes?.data;
+  const hours = peakData?.operating_hours || [];
+  const maxOrders = hours.length > 0 ? Math.max(...hours.map((h: any) => h.total_orders)) : 1;
+
   React.useEffect(() => {
     if (user?.email && user.email.toLowerCase() === "kitchen@gmail.com") {
-      const branchId = user.scopes?.[0]?.branchId || 1;
-      router.replace(`/branches/${branchId}/kitchen`);
+      const bId = user.scopes?.[0]?.branchId || 1;
+      router.replace(`/branches/${bId}/kitchen`);
     }
   }, [user, router]);
 
@@ -254,6 +278,226 @@ export default function DashboardPage() {
 
           {/* KPI Metric Cards — Today's Revenue, Active Orders, Out of Stock, Low Stock */}
           <KpiCards />
+
+          {/* AI Peak Hours, 7x24 Rush Heatmap & Hourly Profitability Hub directly embedded on Dashboard */}
+          {(user.role === "BRANCH_MANAGER" || user.role === "CAFE_OWNER" || user.role === "SUPER_ADMIN") && (
+            <Card style={{ padding: "20px 24px" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <TrendingUp size={20} style={{ color: "var(--accent)" }} />
+                    {dashChartType === "HEATMAP"
+                      ? "7×24 Day-of-Week Customer Traffic Heatmap Matrix"
+                      : "24-Hour Customer Order Peak Velocity & Staffing"}
+                    <span className="badge" style={{ background: "var(--accent-glow)", color: "var(--accent)", fontSize: 11 }}>
+                      <Sparkles size={11} style={{ marginRight: 3, display: "inline" }} /> Erlang-C AI
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>
+                    Live 7-day traffic density, peak rush bottlenecks, hourly profit margins, and queueing models.
+                  </div>
+                </div>
+
+                {/* 3-Way View Switcher */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 4, background: "var(--bg-surface)", padding: 3, borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                    <button
+                      className={`btn btn-sm ${dashChartType === "HEATMAP" ? "btn-primary" : "btn-ghost"}`}
+                      onClick={() => setDashChartType("HEATMAP")}
+                      style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700 }}
+                    >
+                      🔥 7×24 Heatmap
+                    </button>
+                    <button
+                      className={`btn btn-sm ${dashChartType === "SPLINE" ? "btn-primary" : "btn-ghost"}`}
+                      onClick={() => setDashChartType("SPLINE")}
+                      style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700 }}
+                    >
+                      📈 Spline Curve
+                    </button>
+                    <button
+                      className={`btn btn-sm ${dashChartType === "HISTOGRAM" ? "btn-primary" : "btn-ghost"}`}
+                      onClick={() => setDashChartType("HISTOGRAM")}
+                      style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700 }}
+                    >
+                      📊 Columns
+                    </button>
+                  </div>
+
+                  {user.role === "BRANCH_MANAGER" && user.scopes?.[0]?.branchId && (
+                    <Link
+                      href={`/branches/${user.scopes[0].branchId}/schedule?cafeId=${user.scopes[0].cafeId || ""}`}
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}
+                    >
+                      Full Roster Planner <ArrowRight size={13} style={{ marginLeft: 4 }} />
+                    </Link>
+                  )}
+                  {(user.role === "CAFE_OWNER" || user.role === "SUPER_ADMIN") && user.scopes?.[0]?.cafeId && (
+                    <Link
+                      href={`/cafes/${user.scopes[0].cafeId}/schedule`}
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}
+                    >
+                      Franchise Roster Planner <ArrowRight size={13} style={{ marginLeft: 4 }} />
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Financial Efficiency & Profit Margin Strip */}
+              {peakData?.financial_summary && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    background: "rgba(16, 185, 129, 0.06)",
+                    border: "1px solid rgba(16, 185, 129, 0.2)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "10px 16px",
+                    marginBottom: 16,
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#10b981", fontWeight: 700 }}>
+                    <span>💰 Financial & Labor Efficiency:</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "var(--text-primary)" }}>
+                    <span>
+                      Daily Projected Rev: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_revenue.toFixed(2)}</strong>
+                    </span>
+                    <span>
+                      Labor Cost: <strong style={{ color: "var(--accent)" }}>${peakData.financial_summary.daily_projected_labor_cost.toFixed(2)}</strong> ($15/hr)
+                    </span>
+                    <span>
+                      Net Labor Profit: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_net_profit.toFixed(2)}</strong>
+                    </span>
+                    <span
+                      style={{
+                        background: "rgba(16, 185, 129, 0.15)",
+                        color: "#10b981",
+                        padding: "2px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      Overall Margin: {peakData.financial_summary.overall_profit_margin_percent}% 🟢
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Chart Display directly inside Dashboard */}
+              {dashChartType === "HEATMAP" ? (
+                <WeeklyRushHeatmap
+                  heatmapData={peakData?.weekly_heatmap || []}
+                  topPeaks={peakData?.top_weekly_peaks || []}
+                  isLoading={loadingPeaks}
+                />
+              ) : dashChartType === "SPLINE" ? (
+                <SplinePeakChart hours={hours} maxOrders={maxOrders} />
+              ) : (
+                <div>
+                  {/* Histogram Bars */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
+                      gap: 6,
+                      alignItems: "flex-end",
+                      height: 180,
+                      paddingTop: 20,
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    {hours.map((h: any) => {
+                      const heightPercent = maxOrders > 0 ? Math.max(12, Math.round((h.total_orders / maxOrders) * 100)) : 12;
+                      const isPeak = h.rush_category === "PEAK_RUSH" || heightPercent >= 70 || h.total_orders >= 160;
+                      const isMod = !isPeak && (h.rush_category === "MODERATE" || heightPercent >= 45 || h.total_orders >= 95);
+
+                      let barBg = "var(--bg-surface)";
+                      let barBorder = "1px solid var(--border)";
+                      let labelColor = "var(--text-muted)";
+                      let staffCount = h.recommended_staff || 1;
+
+                      if (isPeak) {
+                        barBg = "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)";
+                        barBorder = "1px solid #f59e0b";
+                        labelColor = "#f59e0b";
+                      } else if (isMod) {
+                        barBg = "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)";
+                        barBorder = "1px solid #3b82f6";
+                        labelColor = "#3b82f6";
+                      }
+
+                      return (
+                        <div
+                          key={h.hour}
+                          title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers\nEstimated Revenue: $${(h.estimated_hourly_revenue || h.hourly_revenue || 0).toFixed(2)}\nProfit Margin: ${h.profit_margin_percent || 80}%`}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            height: "100%",
+                            justifyContent: "flex-end",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div style={{ fontSize: 11, fontWeight: 800, color: labelColor, marginBottom: 4 }}>
+                            {staffCount}p
+                          </div>
+                          <div
+                            style={{
+                              width: "100%",
+                              height: `${heightPercent}%`,
+                              background: barBg,
+                              border: barBorder,
+                              borderRadius: "5px 5px 0 0",
+                              boxShadow: isPeak ? "0 2px 8px rgba(245, 158, 11, 0.3)" : (isMod ? "0 2px 8px rgba(59, 130, 246, 0.25)" : "none"),
+                              transition: "all 0.25s ease",
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* X-Axis Hour Labels & Database Order Counts */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${hours.length || 16}, 1fr)`,
+                      gap: 6,
+                      paddingTop: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    {hours.map((h: any) => (
+                      <div key={h.hour} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, color: "var(--text-primary)", fontWeight: 700 }}>
+                          {h.label}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 9,
+                            color: h.rush_category === "PEAK_RUSH" ? "var(--accent)" : "var(--text-muted)",
+                            fontWeight: 600,
+                            marginTop: 2,
+                          }}
+                        >
+                          {h.total_orders} orders
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Google Calendar Connect Banner */}
           {user.role === "CAFE_OWNER" && (

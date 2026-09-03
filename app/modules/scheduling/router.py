@@ -13,10 +13,12 @@ class GenerateShiftsRequest(BaseModel):
     branch_id: int
     target_date: Optional[str] = None
     demand_multiplier: Optional[float] = 1.0
+    rotation_offset: Optional[int] = 0
 
 
 class SyncCalendarRequest(BaseModel):
-    cafe_id: int
+    branch_id: Optional[int] = None
+    cafe_id: Optional[int] = None
     branch_name: str
     shifts: List[Dict[str, Any]]
 
@@ -98,7 +100,8 @@ async def generate_shifts(
     data = await service.generate_ai_shift_schedule(
         branch_id=body.branch_id,
         target_date_str=body.target_date,
-        demand_multiplier=body.demand_multiplier or 1.0
+        demand_multiplier=body.demand_multiplier or 1.0,
+        rotation_offset=body.rotation_offset or 0
     )
     return {"status": "success", "data": data}
 
@@ -111,11 +114,11 @@ async def sync_calendar(
     """
     Syncs scheduled shifts directly into Google Calendar via Google Calendar API.
     """
-    verify_scheduling_access(current_user, cafe_id=body.cafe_id)
+    verify_scheduling_access(current_user, branch_id=body.branch_id, cafe_id=body.cafe_id)
 
     data = await service.sync_shifts_to_google_calendar(
         owner_user_id=current_user.id,
-        cafe_id=body.cafe_id,
+        cafe_id=body.cafe_id or 1,
         branch_name=body.branch_name,
         shifts=body.shifts
     )

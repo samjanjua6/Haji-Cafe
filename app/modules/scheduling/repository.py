@@ -34,10 +34,11 @@ async def get_hourly_order_metrics(
         order={"createdAt": "desc"}
     )
 
-    # Initialize 24-hour bins (0 to 23)
+    # Initialize 24-hour bins (0 to 23) and 7x24 matrix
     hourly_counts = {h: 0 for h in range(24)}
     hourly_revenue = {h: 0.0 for h in range(24)}
     day_of_week_counts = {d: 0 for d in range(7)} # 0 = Monday, 6 = Sunday
+    weekly_matrix = [[{"orders": 0, "revenue": 0.0} for _ in range(24)] for _ in range(7)]
 
     total_orders = len(orders)
     total_rev = 0.0
@@ -51,6 +52,8 @@ async def get_hourly_order_metrics(
         hourly_counts[hour] += 1
         hourly_revenue[hour] += amount
         day_of_week_counts[weekday] += 1
+        weekly_matrix[weekday][hour]["orders"] += 1
+        weekly_matrix[weekday][hour]["revenue"] += amount
         total_rev += amount
 
     # Estimate active operating days in the sample
@@ -75,6 +78,42 @@ async def get_hourly_order_metrics(
             "peak_intensity_score": peak_intensity
         })
 
+    # Format 7x24 Weekly Heatmap Matrix
+    max_weekly_orders = max(weekly_matrix[d][h]["orders"] for d in range(7) for h in range(24)) if orders else 1
+    days_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    weekly_heatmap = []
+    top_weekly_peaks = []
+
+    for d_idx, day_name in enumerate(days_labels):
+        day_cells = []
+        for h in range(24):
+            cnt = weekly_matrix[d_idx][h]["orders"]
+            rev = round(weekly_matrix[d_idx][h]["revenue"], 2)
+            intensity = round((cnt / max_weekly_orders) * 100.0, 1) if max_weekly_orders > 0 else 0.0
+
+            cell_data = {
+                "day_idx": d_idx,
+                "day": day_name,
+                "hour": h,
+                "label": f"{h:02d}:00",
+                "orders": cnt,
+                "revenue": rev,
+                "intensity_score": intensity
+            }
+            day_cells.append(cell_data)
+            if 7 <= h <= 22 and cnt > 0:
+                top_weekly_peaks.append(cell_data)
+
+        weekly_heatmap.append({
+            "day": day_name,
+            "day_idx": d_idx,
+            "total_orders": sum(c["orders"] for c in day_cells),
+            "total_revenue": round(sum(c["revenue"] for c in day_cells), 2),
+            "hours": day_cells
+        })
+
+    top_weekly_peaks.sort(key=lambda x: x["orders"], reverse=True)
+
     return {
         "hourly_stats": hourly_stats,
         "total_orders_analyzed": total_orders,
@@ -88,7 +127,9 @@ async def get_hourly_order_metrics(
             {"day": "Fri", "orders": day_of_week_counts[4]},
             {"day": "Sat", "orders": day_of_week_counts[5]},
             {"day": "Sun", "orders": day_of_week_counts[6]},
-        ]
+        ],
+        "weekly_heatmap": weekly_heatmap,
+        "top_weekly_peaks": top_weekly_peaks[:5]
     }
 
 

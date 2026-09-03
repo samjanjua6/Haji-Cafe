@@ -1,6 +1,6 @@
 "use client";
 import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
-import { Plus, ArrowLeft, Flame } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Order, OrdersResponse } from "@/types/order";

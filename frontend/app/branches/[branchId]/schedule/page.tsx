@@ -16,11 +16,15 @@ import {
   RefreshCw,
   Sliders,
   DollarSign,
-  ShieldCheck
+  ShieldCheck,
+  FileText
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
+import WeeklyRushHeatmap from "@/components/charts/WeeklyRushHeatmap";
+import { exportScheduleToPDF } from "@/lib/schedulePdfExport";
 
 interface OperatingHour {
   hour: number;
@@ -28,6 +32,11 @@ interface OperatingHour {
   total_orders: number;
   avg_orders_per_hr: number;
   hourly_revenue: number;
+  estimated_hourly_revenue?: number;
+  hourly_labor_cost?: number;
+  net_labor_profit?: number;
+  profit_margin_percent?: number;
+  margin_rating?: string;
   peak_intensity_score: number;
   effective_arrival_rate: number;
   recommended_staff: number;
@@ -41,6 +50,14 @@ interface PeakData {
   total_orders_analyzed: number;
   total_revenue_analyzed: number;
   operating_hours: OperatingHour[];
+  weekly_heatmap?: any[];
+  top_weekly_peaks?: any[];
+  financial_summary?: {
+    daily_projected_revenue: number;
+    daily_projected_labor_cost: number;
+    daily_projected_net_profit: number;
+    overall_profit_margin_percent: number;
+  };
   peak_summary: {
     top_rush_hour: string;
     morning_rush_window: string;
@@ -56,6 +73,8 @@ interface ShiftItem {
   badge_color: string;
   start_time: string;
   end_time: string;
+  display_date?: string;
+  day_name?: string;
   display_time: string;
   duration_hours: number;
   recommended_headcount: number;
@@ -72,7 +91,12 @@ interface ScheduleData {
   branch_id: number;
   branch_name: string;
   target_date: string;
+  target_date_formatted?: string;
+  day_name?: string;
   demand_multiplier: number;
+  optimization_generation?: number;
+  strategy_name?: string;
+  strategy_tag?: string;
   shifts: ShiftItem[];
   metrics: {
     total_shifts: number;
@@ -94,12 +118,14 @@ export default function BranchSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [peakData, setPeakData] = useState<PeakData | null>(null);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
 
   // What-If Demand Surge Simulation Slider (1.0x to 1.5x)
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
-  const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM">("SPLINE");
+  const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM" | "HEATMAP">("SPLINE");
+  const [rotationSeed, setRotationSeed] = useState(0);
   const [targetDate, setTargetDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -124,7 +150,7 @@ export default function BranchSchedulePage() {
   }, [branchId]);
 
   // 2. Generate AI Schedule
-  const generateSchedule = useCallback(async (multiplier = 1.0, date = targetDate) => {
+  const generateSchedule = useCallback(async (multiplier = demandMultiplier, date = targetDate, offset = rotationSeed) => {
     try {
       setGenerating(true);
       const res = await api.post<{ status: string; data: ScheduleData }>(
@@ -133,29 +159,38 @@ export default function BranchSchedulePage() {
           branch_id: branchId,
           target_date: date,
           demand_multiplier: multiplier,
+          rotation_offset: offset,
         }
       );
       if (res?.data) {
         setScheduleData(res.data);
-        toast.success("✨ AI Schedule optimized via Erlang-C Queueing Model!");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to generate AI schedule");
     } finally {
       setGenerating(false);
     }
-  }, [branchId, targetDate]);
+  }, [branchId, demandMultiplier, targetDate, rotationSeed]);
 
   useEffect(() => {
-    loadPeakHours(demandMultiplier);
-    generateSchedule(demandMultiplier, targetDate);
-  }, [branchId, loadPeakHours, generateSchedule]);
+    loadPeakHours(1.0);
+    generateSchedule(1.0, targetDate, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId]);
 
   // Handle Simulation Slider Change
   const handleSliderChange = (newVal: number) => {
     setDemandMultiplier(newVal);
     loadPeakHours(newVal);
-    generateSchedule(newVal, targetDate);
+    generateSchedule(newVal, targetDate, rotationSeed);
+  };
+
+  // Handle Regenerate Roster
+  const handleRegenerateRoster = async () => {
+    const nextSeed = rotationSeed + 1;
+    setRotationSeed(nextSeed);
+    await generateSchedule(demandMultiplier, targetDate, nextSeed);
+    toast.success(`✨ Generation #${nextSeed + 1}: Shift roles & duties re-optimized!`, { icon: "🔄" });
   };
 
   // Sync to Google Calendar
@@ -164,7 +199,8 @@ export default function BranchSchedulePage() {
     try {
       setSyncing(true);
       const res = await api.post<{ status: string; data: any }>("/scheduling/sync-calendar", {
-        cafe_id: parseInt(cafeId || "1", 10),
+        branch_id: branchId,
+        cafe_id: cafeId && cafeId !== "null" ? parseInt(cafeId, 10) : undefined,
         branch_name: scheduleData.branch_name,
         shifts: scheduleData.shifts,
       });
@@ -179,20 +215,55 @@ export default function BranchSchedulePage() {
     }
   };
 
-  // Export .ICS Calendar File
-  const handleExportICS = () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : "";
-    const url = `${apiBase}/scheduling/export-ics?branch_id=${branchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`;
-    
-    // Trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `shifts_branch_${branchId}_${targetDate}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("📥 Downloaded iCalendar (.ics) file!");
+  // Export .ICS Calendar File (Authenticated Blob Download)
+  const handleExportICS = async () => {
+    try {
+      setDownloading(true);
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const token = auth.getAccess();
+      const res = await fetch(`${apiBase}/scheduling/export-ics?branch_id=${branchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        throw new Error(`Download failed: ${res.statusText}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `shifts_branch_${branchId}_${targetDate}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("📥 Downloaded iCalendar (.ics) file!", { icon: "📅" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download .ICS file");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Export Professional Printable PDF Report
+  const handleExportPDF = async () => {
+    if (!scheduleData || !scheduleData.shifts) return;
+    try {
+      setDownloading(true);
+      await exportScheduleToPDF({
+        branchName: scheduleData.branch_name || `Branch #${branchId}`,
+        targetDate: targetDate,
+        demandMultiplier: demandMultiplier,
+        shifts: scheduleData.shifts,
+        metrics: scheduleData.metrics,
+        peakSummary: peakData?.peak_summary,
+        executiveRationale: scheduleData.executive_rationale,
+      });
+      toast.success("📄 Downloaded PDF Shift Schedule Report!", { icon: "📄" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate PDF report");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const hours = peakData?.operating_hours || [];
@@ -241,19 +312,29 @@ export default function BranchSchedulePage() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button
             className="btn btn-ghost btn-sm"
-            onClick={handleExportICS}
-            title="Download .ICS for Apple Calendar & Outlook"
+            onClick={handleExportPDF}
+            disabled={downloading || !scheduleData}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              color: "var(--accent)",
+              fontWeight: 600,
+            }}
+            title="Download Printable PDF Shift Schedule Report for Noticeboard"
           >
-            <Download size={14} /> Download .ICS
+            <FileText size={14} /> Export PDF
           </button>
 
           <button
-            className="btn btn-primary btn-sm"
-            onClick={handleSyncGoogleCalendar}
-            disabled={syncing || !scheduleData}
-            style={{ fontWeight: 600 }}
+            className="btn btn-ghost btn-sm"
+            onClick={handleExportICS}
+            disabled={downloading || !scheduleData}
+            title="Download .ICS for Apple Calendar & Outlook"
           >
-            <Calendar size={14} /> {syncing ? "Syncing..." : "Sync Google Calendar"}
+            <Download size={14} /> Download .ICS
           </button>
 
           <button
@@ -446,58 +527,122 @@ export default function BranchSchedulePage() {
         </div>
       </div>
 
-      {/* 3. 24-Hour Visual Hourly Peak Orders (Spline Curve / Histogram) */}
+      {/* 3. 24-Hour Visual Hourly Peak Orders (Spline Curve / Histogram / 7x24 Heatmap) */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
               <TrendingUp size={18} style={{ color: "var(--accent)" }} />
-              24-Hour Customer Order Peak Curve (Erlang-C Modeling)
+              {chartType === "HEATMAP"
+                ? "7×24 Day-of-Week Customer Traffic Heatmap Matrix"
+                : "24-Hour Customer Order Peak Curve (Erlang-C Modeling)"}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-              Historical customer order velocity used by Erlang-C queuing models to compute server staffing.
+              {chartType === "HEATMAP"
+                ? "Historical 7-day hourly density heatmap showing weekly rush bottlenecks and customer traffic patterns."
+                : "Historical customer order velocity used by Erlang-C queuing models to compute server staffing."}
             </div>
           </div>
 
-          {/* Toggle View & Legend */}
+          {/* Toggle View (Spline / Columns / 7x24 Heatmap) & Legend */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: 4, background: "var(--bg-surface)", padding: 3, borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
               <button
                 className={`btn btn-sm ${chartType === "SPLINE" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("SPLINE")}
-                style={{ padding: "4px 10px", fontSize: 12 }}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
               >
                 📈 Spline Curve
               </button>
               <button
                 className={`btn btn-sm ${chartType === "HISTOGRAM" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("HISTOGRAM")}
-                style={{ padding: "4px 10px", fontSize: 12 }}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
               >
                 📊 Columns
               </button>
+              <button
+                className={`btn btn-sm ${chartType === "HEATMAP" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setChartType("HEATMAP")}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
+              >
+                🔥 7×24 Heatmap
+              </button>
             </div>
 
-            <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
-                <span>Peak Rush</span>
+            {chartType !== "HEATMAP" && (
+              <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
+                  <span>Peak Rush</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
+                  <span>Moderate</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
+                  <span>Off-Peak</span>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
-                <span>Moderate</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
-                <span>Off-Peak</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Hourly Financial Efficiency & Profit Margin Strip */}
+        {peakData?.financial_summary && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              background: "rgba(16, 185, 129, 0.06)",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              borderRadius: "var(--radius-md)",
+              padding: "8px 14px",
+              marginBottom: 16,
+              fontSize: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#10b981", fontWeight: 700 }}>
+              <span>💰 Projected Financial Efficiency:</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "var(--text-primary)" }}>
+              <span>
+                Daily Projected Rev: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_revenue.toFixed(2)}</strong>
+              </span>
+              <span>
+                Labor Cost: <strong style={{ color: "var(--accent)" }}>${peakData.financial_summary.daily_projected_labor_cost.toFixed(2)}</strong> ($15/hr)
+              </span>
+              <span>
+                Net Labor Profit: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_net_profit.toFixed(2)}</strong>
+              </span>
+              <span
+                style={{
+                  background: "rgba(16, 185, 129, 0.15)",
+                  color: "#10b981",
+                  padding: "2px 8px",
+                  borderRadius: "var(--radius-sm)",
+                  fontWeight: 800,
+                }}
+              >
+                Overall Margin: {peakData.financial_summary.overall_profit_margin_percent}% 🟢
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Chart Display */}
         {chartType === "SPLINE" ? (
           <SplinePeakChart hours={hours} maxOrders={maxOrders} />
+        ) : chartType === "HEATMAP" ? (
+          <WeeklyRushHeatmap
+            heatmapData={peakData?.weekly_heatmap || []}
+            topPeaks={peakData?.top_weekly_peaks || []}
+            isLoading={loading}
+          />
         ) : (
           <div>
             {/* Histogram Bars */}
@@ -535,7 +680,7 @@ export default function BranchSchedulePage() {
                 return (
                   <div
                     key={h.hour}
-                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers`}
+                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers\nEstimated Revenue: $${(h.estimated_hourly_revenue || h.hourly_revenue).toFixed(2)}\nProfit Margin: ${h.profit_margin_percent || 80}%`}
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -609,27 +754,55 @@ export default function BranchSchedulePage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input
-              type="date"
-              className="input"
-              value={targetDate}
-              onChange={(e) => {
-                setTargetDate(e.target.value);
-                generateSchedule(demandMultiplier, e.target.value);
-              }}
-              style={{ width: "auto" }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Target Date:</span>
+              <input
+                type="date"
+                className="input"
+                value={targetDate}
+                onChange={(e) => {
+                  setTargetDate(e.target.value);
+                  generateSchedule(demandMultiplier, e.target.value, rotationSeed);
+                }}
+                style={{ width: "auto", padding: "4px 8px", fontSize: 13 }}
+              />
+            </div>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => generateSchedule(demandMultiplier, targetDate)}
+              onClick={handleRegenerateRoster}
               disabled={generating}
               style={{ fontWeight: 600 }}
             >
-              <Sparkles size={14} /> {generating ? "Optimizing..." : "Regenerate Roster"}
+              <Sparkles size={14} className={generating ? "animate-spin" : ""} />
+              {generating ? "Optimizing..." : "Regenerate Roster"}
             </button>
           </div>
         </div>
+
+        {/* Active AI Strategy Badge */}
+        {scheduleData?.strategy_name && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 14px",
+              borderRadius: "var(--radius-full)",
+              background: "var(--accent-glow)",
+              border: "1px solid var(--accent)",
+              color: "var(--accent)",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 16,
+            }}
+          >
+            <Sparkles size={13} />
+            <span>
+              Strategy: <strong>{scheduleData.strategy_name}</strong> • {scheduleData.strategy_tag} (Variant #{scheduleData.optimization_generation || 1})
+            </span>
+          </div>
+        )}
 
         {/* 3 Shift Cards Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
@@ -651,7 +824,10 @@ export default function BranchSchedulePage() {
                     <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
                       {shift.name}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 700, display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                      <Calendar size={13} /> {shift.display_date || scheduleData?.target_date_formatted || targetDate}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                       <Clock size={12} /> {shift.display_time} ({shift.duration_hours} hrs)
                     </div>
                   </div>
