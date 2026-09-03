@@ -214,16 +214,22 @@ async def incoming_whatsapp_webhook(
 
             # 2. UltraMsg / WAHA / Green-API format
             if not message_text:
-                data_obj = json_body.get("data") if isinstance(json_body.get("data"), dict) else json_body
-                message_text = (
-                    data_obj.get("body")
-                    or data_obj.get("message")
-                    or data_obj.get("text")
-                    or json_body.get("body")
-                    or json_body.get("message")
-                )
-                sender_phone = data_obj.get("from") or data_obj.get("phone") or json_body.get("from")
-                sender_name = data_obj.get("pushname") or data_obj.get("profile_name") or json_body.get("name")
+                data_obj = json_body.get("payload") or json_body.get("data") or json_body
+                if isinstance(data_obj, dict):
+                    # Ignore messages sent by ourselves to prevent loops
+                    if data_obj.get("fromMe") is True:
+                        return {"status": "ignored_self_message"}
+                    message_text = (
+                        data_obj.get("body")
+                        or data_obj.get("message")
+                        or data_obj.get("text")
+                    )
+                    sender_phone = data_obj.get("from") or data_obj.get("phone")
+                    sender_name = (
+                        data_obj.get("_data", {}).get("notifyName")
+                        if isinstance(data_obj.get("_data"), dict)
+                        else None
+                    ) or data_obj.get("pushName") or data_obj.get("pushname") or data_obj.get("profile_name") or data_obj.get("name")
 
         except Exception:
             pass
