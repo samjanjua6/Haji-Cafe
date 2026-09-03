@@ -147,7 +147,24 @@ export default function BranchOrdersPage() {
             </span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => router.push(`/branches/${branchId}/schedule?cafeId=${searchParams.get("cafeId") || ""}`)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 600,
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              color: "var(--accent)",
+            }}
+            title="Open AI Peak Hours, 7x24 Heatmap & Staff Scheduling"
+          >
+            <Flame size={14} color="var(--accent)" />
+            AI Peak Hours & Heatmap
+          </button>
           <ExportButtons orders={orders} branchId={branchId as string} disabled={isLoading} />
           <button
             className="btn btn-ghost btn-sm"

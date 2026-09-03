@@ -67,6 +67,21 @@ async def get_peak_hour_analysis(
 
         recommended = min(max_staff_cap, max(min_staff, erlang_result["recommended_staff"]))
 
+        # Hourly Profit Margin & Labor Efficiency
+        active_days = max(1, metrics.get("active_days_sampled", 1))
+        avg_hr_rev = round(h["hourly_revenue"] / active_days, 2)
+        effective_hourly_revenue = round(max(avg_hr_rev, effective_arrival_rate * 6.80) * demand_multiplier, 2)
+        labor_cost = round(recommended * 15.0, 2)
+        net_labor_profit = round(max(0.0, effective_hourly_revenue - labor_cost), 2)
+        profit_margin_percent = round((net_labor_profit / effective_hourly_revenue) * 100.0, 1) if effective_hourly_revenue > 0 else 0.0
+
+        if profit_margin_percent >= 80.0:
+            margin_rating = "HIGH_PROFIT"
+        elif profit_margin_percent >= 60.0:
+            margin_rating = "HEALTHY"
+        else:
+            margin_rating = "LEAN"
+
         hour_data = {
             **h,
             "effective_arrival_rate": round(effective_arrival_rate, 1),
@@ -75,7 +90,11 @@ async def get_peak_hour_analysis(
             "wait_probability_percent": erlang_result["wait_probability_percent"],
             "avg_wait_time_minutes": erlang_result["avg_wait_time_minutes"],
             "service_level_percent": erlang_result["service_level_percent"],
-            "hourly_labor_cost": round(recommended * 15.0, 2),
+            "hourly_labor_cost": labor_cost,
+            "estimated_hourly_revenue": effective_hourly_revenue,
+            "net_labor_profit": net_labor_profit,
+            "profit_margin_percent": profit_margin_percent,
+            "margin_rating": margin_rating,
             "rush_category": rush_cat
         }
         processed_hours.append(hour_data)
@@ -88,6 +107,11 @@ async def get_peak_hour_analysis(
     morning_peak = next((h for h in processed_hours if 8 <= h["hour"] <= 10 and h["rush_category"] == "PEAK_RUSH"), None)
     evening_peak = next((h for h in processed_hours if 16 <= h["hour"] <= 19 and h["rush_category"] == "PEAK_RUSH"), None)
 
+    total_operating_revenue = sum(h["estimated_hourly_revenue"] for h in processed_hours)
+    total_operating_labor = sum(h["hourly_labor_cost"] for h in processed_hours)
+    total_operating_profit = sum(h["net_labor_profit"] for h in processed_hours)
+    overall_margin = round((total_operating_profit / total_operating_revenue) * 100.0, 1) if total_operating_revenue > 0 else 0.0
+
     return {
         "branch_id": branch_id,
         "cafe_id": cafe_id,
@@ -96,6 +120,14 @@ async def get_peak_hour_analysis(
         "total_revenue_analyzed": metrics.get("total_revenue", 0.0),
         "operating_hours": processed_hours,
         "day_of_week_distribution": metrics.get("day_of_week_distribution", []),
+        "weekly_heatmap": metrics.get("weekly_heatmap", []),
+        "top_weekly_peaks": metrics.get("top_weekly_peaks", []),
+        "financial_summary": {
+            "daily_projected_revenue": round(total_operating_revenue, 2),
+            "daily_projected_labor_cost": round(total_operating_labor, 2),
+            "daily_projected_net_profit": round(total_operating_profit, 2),
+            "overall_profit_margin_percent": overall_margin
+        },
         "peak_summary": {
             "top_rush_hour": top_peak_hour["label"] if top_peak_hour else "09:00",
             "morning_rush_window": "08:00 - 10:30" if morning_peak else "08:30 - 10:00",

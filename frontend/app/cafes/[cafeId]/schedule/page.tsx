@@ -23,6 +23,7 @@ import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
+import WeeklyRushHeatmap from "@/components/charts/WeeklyRushHeatmap";
 import { exportScheduleToPDF } from "@/lib/schedulePdfExport";
 
 interface BranchOption {
@@ -36,6 +37,11 @@ interface OperatingHour {
   total_orders: number;
   avg_orders_per_hr: number;
   hourly_revenue: number;
+  estimated_hourly_revenue?: number;
+  hourly_labor_cost?: number;
+  net_labor_profit?: number;
+  profit_margin_percent?: number;
+  margin_rating?: string;
   peak_intensity_score: number;
   effective_arrival_rate: number;
   recommended_staff: number;
@@ -50,6 +56,14 @@ interface PeakData {
   total_orders_analyzed: number;
   total_revenue_analyzed: number;
   operating_hours: OperatingHour[];
+  weekly_heatmap?: any[];
+  top_weekly_peaks?: any[];
+  financial_summary?: {
+    daily_projected_revenue: number;
+    daily_projected_labor_cost: number;
+    daily_projected_net_profit: number;
+    overall_profit_margin_percent: number;
+  };
   peak_summary: {
     top_rush_hour: string;
     morning_rush_window: string;
@@ -115,7 +129,7 @@ export default function CafeOwnerSchedulePage() {
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
 
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
-  const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM">("SPLINE");
+  const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM" | "HEATMAP">("SPLINE");
   const [rotationSeed, setRotationSeed] = useState(0);
   const [targetDate, setTargetDate] = useState(() => {
     const tomorrow = new Date();
@@ -564,58 +578,122 @@ export default function CafeOwnerSchedulePage() {
         </div>
       </div>
 
-      {/* 4. 24-Hour Peak Distribution (Spline Curve / Histogram) */}
+      {/* 4. 24-Hour Peak Distribution (Spline Curve / Histogram / 7x24 Heatmap) */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
               <TrendingUp size={18} style={{ color: "var(--accent)" }} />
-              24-Hour Order Volume & Erlang-C Headcount
+              {chartType === "HEATMAP"
+                ? "7×24 Day-of-Week Customer Traffic Heatmap Matrix"
+                : "24-Hour Order Volume & Erlang-C Headcount"}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-              {selectedBranchId === "ALL" ? "Franchise-wide combined order frequency" : `Order frequency for ${branches.find(b => b.id === selectedBranchId)?.name || 'Selected Branch'}`}
+              {chartType === "HEATMAP"
+                ? "Historical 7-day hourly density heatmap showing weekly rush bottlenecks across selected franchise locations."
+                : selectedBranchId === "ALL" ? "Franchise-wide combined order frequency" : `Order frequency for ${branches.find(b => b.id === selectedBranchId)?.name || 'Selected Branch'}`}
             </div>
           </div>
 
-          {/* Toggle View & Legend */}
+          {/* Toggle View (Spline / Columns / 7x24 Heatmap) & Legend */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: 4, background: "var(--bg-surface)", padding: 3, borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
               <button
                 className={`btn btn-sm ${chartType === "SPLINE" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("SPLINE")}
-                style={{ padding: "4px 10px", fontSize: 12 }}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
               >
                 📈 Spline Curve
               </button>
               <button
                 className={`btn btn-sm ${chartType === "HISTOGRAM" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("HISTOGRAM")}
-                style={{ padding: "4px 10px", fontSize: 12 }}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
               >
                 📊 Columns
               </button>
+              <button
+                className={`btn btn-sm ${chartType === "HEATMAP" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setChartType("HEATMAP")}
+                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
+              >
+                🔥 7×24 Heatmap
+              </button>
             </div>
 
-            <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
-                <span>Peak Rush</span>
+            {chartType !== "HEATMAP" && (
+              <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} />
+                  <span>Peak Rush</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
+                  <span>Moderate</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
+                  <span>Off-Peak</span>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} />
-                <span>Moderate</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--border)" }} />
-                <span>Off-Peak</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Hourly Financial Efficiency & Profit Margin Strip */}
+        {peakData?.financial_summary && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              background: "rgba(16, 185, 129, 0.06)",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              borderRadius: "var(--radius-md)",
+              padding: "8px 14px",
+              marginBottom: 16,
+              fontSize: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#10b981", fontWeight: 700 }}>
+              <span>💰 Projected Financial Efficiency:</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "var(--text-primary)" }}>
+              <span>
+                Daily Projected Rev: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_revenue.toFixed(2)}</strong>
+              </span>
+              <span>
+                Labor Cost: <strong style={{ color: "var(--accent)" }}>${peakData.financial_summary.daily_projected_labor_cost.toFixed(2)}</strong> ($15/hr)
+              </span>
+              <span>
+                Net Labor Profit: <strong style={{ color: "#10b981" }}>${peakData.financial_summary.daily_projected_net_profit.toFixed(2)}</strong>
+              </span>
+              <span
+                style={{
+                  background: "rgba(16, 185, 129, 0.15)",
+                  color: "#10b981",
+                  padding: "2px 8px",
+                  borderRadius: "var(--radius-sm)",
+                  fontWeight: 800,
+                }}
+              >
+                Overall Margin: {peakData.financial_summary.overall_profit_margin_percent}% 🟢
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Chart Display */}
         {chartType === "SPLINE" ? (
           <SplinePeakChart hours={hours} maxOrders={maxOrders} />
+        ) : chartType === "HEATMAP" ? (
+          <WeeklyRushHeatmap
+            heatmapData={peakData?.weekly_heatmap || []}
+            topPeaks={peakData?.top_weekly_peaks || []}
+            isLoading={loading}
+          />
         ) : (
           <div>
             {/* Histogram Bars */}
@@ -653,7 +731,7 @@ export default function CafeOwnerSchedulePage() {
                 return (
                   <div
                     key={h.hour}
-                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers`}
+                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers\nEstimated Revenue: $${(h.estimated_hourly_revenue || h.hourly_revenue).toFixed(2)}\nProfit Margin: ${h.profit_margin_percent || 80}%`}
                     style={{
                       display: "flex",
                       flexDirection: "column",
