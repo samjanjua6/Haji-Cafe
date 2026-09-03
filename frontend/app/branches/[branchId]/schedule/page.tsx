@@ -181,7 +181,8 @@ export default function BranchSchedulePage() {
     try {
       setSyncing(true);
       const res = await api.post<{ status: string; data: any }>("/scheduling/sync-calendar", {
-        cafe_id: parseInt(cafeId || "1", 10),
+        branch_id: branchId,
+        cafe_id: cafeId && cafeId !== "null" ? parseInt(cafeId, 10) : undefined,
         branch_name: scheduleData.branch_name,
         shifts: scheduleData.shifts,
       });
