@@ -83,6 +83,9 @@ interface ScheduleData {
   cafe_name?: string;
   target_date: string;
   demand_multiplier: number;
+  optimization_generation?: number;
+  strategy_name?: string;
+  strategy_tag?: string;
   shifts: ShiftItem[];
   metrics: {
     total_shifts: number;
@@ -151,7 +154,7 @@ export default function CafeOwnerSchedulePage() {
   }, [cafeId]);
 
   // 3. Generate AI Schedule for active branch
-  const generateSchedule = useCallback(async (branch: number | "ALL", multiplier = 1.0, date = targetDate, offset = 0) => {
+  const generateSchedule = useCallback(async (branch: number | "ALL", multiplier = demandMultiplier, date = targetDate, offset = rotationSeed) => {
     try {
       setGenerating(true);
       const targetBranchId = branch === "ALL" ? (branches[0]?.id || 3) : branch;
@@ -172,12 +175,13 @@ export default function CafeOwnerSchedulePage() {
     } finally {
       setGenerating(false);
     }
-  }, [branches, targetDate]);
+  }, [branches, demandMultiplier, targetDate, rotationSeed]);
 
   useEffect(() => {
-    loadPeakHours(selectedBranchId, demandMultiplier);
-    generateSchedule(selectedBranchId, demandMultiplier, targetDate, rotationSeed);
-  }, [selectedBranchId, loadPeakHours, generateSchedule]);
+    loadPeakHours(selectedBranchId, 1.0);
+    generateSchedule(selectedBranchId, 1.0, targetDate, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId, cafeId]);
 
   const handleBranchChange = (newBranch: number | "ALL") => {
     setSelectedBranchId(newBranch);
@@ -191,11 +195,11 @@ export default function CafeOwnerSchedulePage() {
     generateSchedule(selectedBranchId, newVal, targetDate, rotationSeed);
   };
 
-  const handleRegenerateRoster = () => {
+  const handleRegenerateRoster = async () => {
     const nextSeed = rotationSeed + 1;
     setRotationSeed(nextSeed);
-    generateSchedule(selectedBranchId, demandMultiplier, targetDate, nextSeed);
-    toast.success("✨ AI Re-Optimized & Rotated Shift Roster!", { icon: "🔄" });
+    await generateSchedule(selectedBranchId, demandMultiplier, targetDate, nextSeed);
+    toast.success(`✨ Generation #${nextSeed + 1}: Shift roles & duties re-optimized!`, { icon: "🔄" });
   };
 
   // Sync to Google Calendar
@@ -751,6 +755,30 @@ export default function CafeOwnerSchedulePage() {
             </button>
           </div>
         </div>
+
+        {/* Active AI Strategy Badge */}
+        {scheduleData?.strategy_name && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 14px",
+              borderRadius: "var(--radius-full)",
+              background: "var(--accent-glow)",
+              border: "1px solid var(--accent)",
+              color: "var(--accent)",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 16,
+            }}
+          >
+            <Sparkles size={13} />
+            <span>
+              Strategy: <strong>{scheduleData.strategy_name}</strong> • {scheduleData.strategy_tag} (Variant #{scheduleData.optimization_generation || 1})
+            </span>
+          </div>
+        )}
 
         {/* 3 Shift Cards Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>

@@ -76,6 +76,9 @@ interface ScheduleData {
   branch_name: string;
   target_date: string;
   demand_multiplier: number;
+  optimization_generation?: number;
+  strategy_name?: string;
+  strategy_tag?: string;
   shifts: ShiftItem[];
   metrics: {
     total_shifts: number;
@@ -129,7 +132,7 @@ export default function BranchSchedulePage() {
   }, [branchId]);
 
   // 2. Generate AI Schedule
-  const generateSchedule = useCallback(async (multiplier = 1.0, date = targetDate, offset = 0) => {
+  const generateSchedule = useCallback(async (multiplier = demandMultiplier, date = targetDate, offset = rotationSeed) => {
     try {
       setGenerating(true);
       const res = await api.post<{ status: string; data: ScheduleData }>(
@@ -149,12 +152,13 @@ export default function BranchSchedulePage() {
     } finally {
       setGenerating(false);
     }
-  }, [branchId, targetDate]);
+  }, [branchId, demandMultiplier, targetDate, rotationSeed]);
 
   useEffect(() => {
-    loadPeakHours(demandMultiplier);
-    generateSchedule(demandMultiplier, targetDate, rotationSeed);
-  }, [branchId, loadPeakHours, generateSchedule]);
+    loadPeakHours(1.0);
+    generateSchedule(1.0, targetDate, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId]);
 
   // Handle Simulation Slider Change
   const handleSliderChange = (newVal: number) => {
@@ -164,11 +168,11 @@ export default function BranchSchedulePage() {
   };
 
   // Handle Regenerate Roster
-  const handleRegenerateRoster = () => {
+  const handleRegenerateRoster = async () => {
     const nextSeed = rotationSeed + 1;
     setRotationSeed(nextSeed);
-    generateSchedule(demandMultiplier, targetDate, nextSeed);
-    toast.success("✨ AI Re-Optimized & Rotated Shift Roster!", { icon: "🔄" });
+    await generateSchedule(demandMultiplier, targetDate, nextSeed);
+    toast.success(`✨ Generation #${nextSeed + 1}: Shift roles & duties re-optimized!`, { icon: "🔄" });
   };
 
   // Sync to Google Calendar
@@ -701,6 +705,30 @@ export default function BranchSchedulePage() {
             </button>
           </div>
         </div>
+
+        {/* Active AI Strategy Badge */}
+        {scheduleData?.strategy_name && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 14px",
+              borderRadius: "var(--radius-full)",
+              background: "var(--accent-glow)",
+              border: "1px solid var(--accent)",
+              color: "var(--accent)",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 16,
+            }}
+          >
+            <Sparkles size={13} />
+            <span>
+              Strategy: <strong>{scheduleData.strategy_name}</strong> • {scheduleData.strategy_tag} (Variant #{scheduleData.optimization_generation || 1})
+            </span>
+          </div>
+        )}
 
         {/* 3 Shift Cards Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
