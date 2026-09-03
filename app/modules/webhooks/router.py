@@ -24,6 +24,152 @@ async def verify_whatsapp_webhook(request: Request):
     return {"status": "active", "message": "WhatsApp webhook endpoint ready"}
 
 
+@router.get("/whatsapp/qr")
+async def view_whatsapp_qr_page():
+    """
+    Live auto-refreshing QR Code page for linking WhatsApp.
+    Auto-restarts session if expired, fetches fresh QR, and shows real-time status.
+    """
+    from fastapi.responses import HTMLResponse
+    html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haji Cafe — Link WhatsApp</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        h1 { font-size: 22px; margin: 0 0 8px; color: #38bdf8; }
+        p { color: #94a3b8; font-size: 14px; margin: 0 0 24px; line-height: 1.5; }
+        .qr-container { background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .qr-img { width: 260px; height: 260px; display: block; object-fit: contain; }
+        .status { font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 9999px; display: inline-block; margin-top: 8px; }
+        .status.scanning { background: #0284c7; color: #fff; }
+        .status.connected { background: #16a34a; color: #fff; font-size: 16px; }
+        .status.restarting { background: #d97706; color: #fff; }
+        .instructions { text-align: left; background: #0f172a; padding: 16px; border-radius: 8px; margin-top: 20px; font-size: 13px; color: #cbd5e1; }
+        .instructions ol { margin: 0; padding-left: 20px; }
+        .instructions li { margin-bottom: 6px; }
+        .btn-refresh { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+        .btn-refresh:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>☕ Haji Cafe — Link WhatsApp</h1>
+        <p>Scan this QR code with your phone's WhatsApp to activate live ordering.</p>
+        
+        <div class="qr-container">
+            <img id="qr-image" class="qr-img" src="/webhooks/whatsapp/qr/image" alt="Loading QR code...">
+        </div>
+
+        <br>
+        <div id="status-badge" class="status scanning">⏳ Generating Live QR Code...</div>
+
+        <div class="instructions">
+            <strong>📱 How to scan:</strong>
+            <ol>
+                <li>Open WhatsApp on your phone</li>
+                <li>Tap <b>Settings</b> (or 3 dots ⋮)</li>
+                <li>Tap <b>Linked Devices</b> &rarr; <b>Link a Device</b></li>
+                <li>Point your camera at this QR code</li>
+            </ol>
+        </div>
+
+        <button class="btn-refresh" onclick="forceRefreshQR()">🔄 Refresh QR Code</button>
+    </div>
+
+    <script>
+        let isConnected = false;
+        async function checkStatus() {
+            if (isConnected) return;
+            try {
+                const res = await fetch('/webhooks/whatsapp/qr/status');
+                const data = await res.json();
+                const badge = document.getElementById('status-badge');
+                const img = document.getElementById('qr-image');
+
+                if (data.status === 'WORKING') {
+                    isConnected = true;
+                    badge.className = 'status connected';
+                    badge.innerText = '🎉 WhatsApp Connected: ' + (data.phone ? '+' + data.phone : 'Active');
+                    img.style.display = 'none';
+                } else if (data.status === 'SCAN_QR_CODE') {
+                    badge.className = 'status scanning';
+                    badge.innerText = '📸 Ready to Scan! Point your camera';
+                } else {
+                    badge.className = 'status restarting';
+                    badge.innerText = '🔄 Generating fresh QR code...';
+                    forceRefreshQR();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function forceRefreshQR() {
+            try {
+                await fetch('/webhooks/whatsapp/qr/restart', { method: 'POST' });
+                setTimeout(() => {
+                    document.getElementById('qr-image').src = '/webhooks/whatsapp/qr/image?t=' + Date.now();
+                }, 1200);
+            } catch (e) {}
+        }
+
+        setInterval(checkStatus, 3500);
+        checkStatus();
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
+
+
+@router.get("/whatsapp/qr/image")
+async def proxy_qr_image():
+    """Proxy live QR code image directly from WAHA container."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get("http://localhost:3008/api/default/auth/qr")
+            if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image"):
+                return Response(content=resp.content, media_type="image/png")
+            # If not in scan mode or failed, restart session
+            await client.post("http://localhost:3008/api/sessions/default/restart")
+            return Response(content=b"", status_code=204)
+    except Exception:
+        return Response(content=b"", status_code=503)
+
+
+@router.get("/whatsapp/qr/status")
+async def get_waha_session_status():
+    """Check status of WAHA WhatsApp session."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get("http://localhost:3008/api/sessions/default")
+            if resp.status_code == 200:
+                data = resp.json()
+                st = data.get("status")
+                phone = data.get("me", {}).get("id", "").split("@")[0] if data.get("me") else ""
+                return {"status": st, "phone": phone}
+            return {"status": "UNKNOWN"}
+    except Exception as e:
+        return {"status": "ERROR", "detail": str(e)}
+
+
+@router.post("/webhooks/whatsapp/qr/restart")
+async def restart_waha_session():
+    """Restart WAHA session to produce a fresh QR code."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post("http://localhost:3008/api/sessions/default/restart")
+            return resp.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.post("/whatsapp")
 async def incoming_whatsapp_webhook(
     request: Request,
