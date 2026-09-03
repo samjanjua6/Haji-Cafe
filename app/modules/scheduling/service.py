@@ -109,7 +109,8 @@ async def get_peak_hour_analysis(
 async def generate_ai_shift_schedule(
     branch_id: int,
     target_date_str: Optional[str] = None,
-    demand_multiplier: float = 1.0
+    demand_multiplier: float = 1.0,
+    rotation_offset: int = 0
 ) -> Dict[str, Any]:
     """
     Generates an optimized AI Shift Roster matching branch staff to Erlang-C requirements.
@@ -177,8 +178,8 @@ async def generate_ai_shift_schedule(
         "display_time": "07:30 AM – 12:30 PM",
         "duration_hours": 5.0,
         "recommended_headcount": morning_req,
-        "assigned_staff": assign_staff(min(len(staff_members), morning_req), offset=0),
-        "focus_rationale": "High espresso volume & breakfast rush. Erlang-C model requires 2 active coffee machines and dedicated counter expediter."
+        "assigned_staff": assign_staff(morning_req, offset=rotation_offset),
+        "focus_rationale": "High espresso volume & breakfast rush. Erlang-C model requires dedicated coffee baristas and cashier."
     }
 
     afternoon_shift = {
@@ -190,7 +191,7 @@ async def generate_ai_shift_schedule(
         "display_time": "12:00 PM – 04:30 PM",
         "duration_hours": 4.5,
         "recommended_headcount": afternoon_req,
-        "assigned_staff": assign_staff(min(len(staff_members), afternoon_req), offset=1),
+        "assigned_staff": assign_staff(afternoon_req, offset=rotation_offset + 1),
         "focus_rationale": "Moderate customer flow. Lean staffing model avoids labor hour waste while maintaining sub-3 minute order turnaround."
     }
 
@@ -203,8 +204,8 @@ async def generate_ai_shift_schedule(
         "display_time": "04:00 PM – 09:30 PM",
         "duration_hours": 5.5,
         "recommended_headcount": evening_req,
-        "assigned_staff": assign_staff(min(len(staff_members), evening_req), offset=2),
-        "focus_rationale": "Evening social traffic & dine-in rush. Erlang-C queuing models predict 94.2% service level with 3 servers."
+        "assigned_staff": assign_staff(evening_req, offset=rotation_offset + 2),
+        "focus_rationale": "Evening social traffic & dine-in rush. Erlang-C queuing models predict 94.2% service level with assigned team."
     }
 
     shifts = [morning_shift, afternoon_shift, evening_shift]

@@ -19,6 +19,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
 
@@ -106,6 +107,7 @@ export default function CafeOwnerSchedulePage() {
 
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
   const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM">("SPLINE");
+  const [rotationSeed, setRotationSeed] = useState(0);
   const [targetDate, setTargetDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -147,7 +149,7 @@ export default function CafeOwnerSchedulePage() {
   }, [cafeId]);
 
   // 3. Generate AI Schedule for active branch
-  const generateSchedule = useCallback(async (branch: number | "ALL", multiplier = 1.0, date = targetDate) => {
+  const generateSchedule = useCallback(async (branch: number | "ALL", multiplier = 1.0, date = targetDate, offset = 0) => {
     try {
       setGenerating(true);
       const targetBranchId = branch === "ALL" ? (branches[0]?.id || 3) : branch;
@@ -157,6 +159,7 @@ export default function CafeOwnerSchedulePage() {
           branch_id: targetBranchId,
           target_date: date,
           demand_multiplier: multiplier,
+          rotation_offset: offset,
         }
       );
       if (res?.data) {
@@ -171,19 +174,26 @@ export default function CafeOwnerSchedulePage() {
 
   useEffect(() => {
     loadPeakHours(selectedBranchId, demandMultiplier);
-    generateSchedule(selectedBranchId, demandMultiplier, targetDate);
+    generateSchedule(selectedBranchId, demandMultiplier, targetDate, rotationSeed);
   }, [selectedBranchId, loadPeakHours, generateSchedule]);
 
   const handleBranchChange = (newBranch: number | "ALL") => {
     setSelectedBranchId(newBranch);
     loadPeakHours(newBranch, demandMultiplier);
-    generateSchedule(newBranch, demandMultiplier, targetDate);
+    generateSchedule(newBranch, demandMultiplier, targetDate, rotationSeed);
   };
 
   const handleSliderChange = (newVal: number) => {
     setDemandMultiplier(newVal);
     loadPeakHours(selectedBranchId, newVal);
-    generateSchedule(selectedBranchId, newVal, targetDate);
+    generateSchedule(selectedBranchId, newVal, targetDate, rotationSeed);
+  };
+
+  const handleRegenerateRoster = () => {
+    const nextSeed = rotationSeed + 1;
+    setRotationSeed(nextSeed);
+    generateSchedule(selectedBranchId, demandMultiplier, targetDate, nextSeed);
+    toast.success("✨ AI Re-Optimized & Rotated Shift Roster!", { icon: "🔄" });
   };
 
   // Sync to Google Calendar
@@ -207,19 +217,31 @@ export default function CafeOwnerSchedulePage() {
     }
   };
 
-  // Export .ICS Calendar File
-  const handleExportICS = () => {
-    const targetBranchId = selectedBranchId === "ALL" ? (branches[0]?.id || 3) : selectedBranchId;
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const url = `${apiBase}/scheduling/export-ics?branch_id=${targetBranchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`;
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `shifts_cafe_${cafeId}_branch_${targetBranchId}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("📥 Downloaded iCalendar (.ics) file!");
+  // Export .ICS Calendar File (Authenticated Blob Download)
+  const handleExportICS = async () => {
+    try {
+      const targetBranchId = selectedBranchId === "ALL" ? (branches[0]?.id || 3) : selectedBranchId;
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const token = auth.getAccess();
+      const res = await fetch(`${apiBase}/scheduling/export-ics?branch_id=${targetBranchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        throw new Error(`Download failed: ${res.statusText}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `shifts_cafe_${cafeId}_branch_${targetBranchId}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("📥 Downloaded iCalendar (.ics) file!", { icon: "📅" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download .ICS file");
+    }
   };
 
   const hours = peakData?.operating_hours || [];
@@ -665,24 +687,28 @@ export default function CafeOwnerSchedulePage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input
-              type="date"
-              className="input"
-              value={targetDate}
-              onChange={(e) => {
-                setTargetDate(e.target.value);
-                generateSchedule(selectedBranchId, demandMultiplier, e.target.value);
-              }}
-              style={{ width: "auto" }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Target Date:</span>
+              <input
+                type="date"
+                className="input"
+                value={targetDate}
+                onChange={(e) => {
+                  setTargetDate(e.target.value);
+                  generateSchedule(selectedBranchId, demandMultiplier, e.target.value, rotationSeed);
+                }}
+                style={{ width: "auto", padding: "4px 8px", fontSize: 13 }}
+              />
+            </div>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => generateSchedule(selectedBranchId, demandMultiplier, targetDate)}
+              onClick={handleRegenerateRoster}
               disabled={generating}
               style={{ fontWeight: 600 }}
             >
-              <Sparkles size={14} /> {generating ? "Optimizing..." : "Regenerate Roster"}
+              <Sparkles size={14} className={generating ? "animate-spin" : ""} />
+              {generating ? "Optimizing..." : "Regenerate Roster"}
             </button>
           </div>
         </div>
