@@ -158,14 +158,6 @@ async def process_whatsapp_order(
             if active_orders:
                 order_to_cancel = active_orders[0]
 
-        # Fallback: Find most recent PENDING order
-        if not order_to_cancel:
-            order_to_cancel = await db.order.find_first(
-                where={"branchId": target_branch_id, "status": "PENDING"},
-                order={"createdAt": "desc"},
-                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
-            )
-
         if not order_to_cancel or order_to_cancel.status == "CANCELLED":
             reply = (
                 f"You don't have any active pending orders right now.\n\n"
@@ -224,13 +216,6 @@ async def process_whatsapp_order(
             active_orders = await orders_repo.get_active_orders_by_customer(target_branch_id, customer_phone)
             if active_orders:
                 order_found = active_orders[0]
-
-        if not order_found:
-            order_found = await db.order.find_first(
-                where={"branchId": target_branch_id},
-                order={"createdAt": "desc"},
-                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
-            )
 
         if order_found:
             status_desc = {
