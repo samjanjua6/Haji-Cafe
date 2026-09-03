@@ -207,7 +207,9 @@ export default function CafeOwnerSchedulePage() {
     if (!scheduleData || !scheduleData.shifts) return;
     try {
       setSyncing(true);
+      const targetBranchId = selectedBranchId === "ALL" ? (branches[0]?.id || 3) : selectedBranchId;
       const res = await api.post<{ status: string; data: any }>("/scheduling/sync-calendar", {
+        branch_id: targetBranchId,
         cafe_id: cafeId,
         branch_name: scheduleData.branch_name || "Franchise",
         shifts: scheduleData.shifts,
