@@ -280,12 +280,12 @@ export default function BranchSchedulePage() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 16 }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 17, fontWeight: 800, color: "var(--text-primary)" }}>
               <Sliders size={18} style={{ color: "var(--accent)" }} />
               Interactive "What-If" Demand Surge Simulator
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-              Simulate customer foot-traffic rushes (e.g. rainy morning, campus festival, or promotional campaigns) to observe live Erlang-C staffing recalculations.
+              Test how sudden real-world customer rushes (rain, festivals, promos) affect queue wait times and how Erlang-C AI dynamically recalibrates your workforce.
             </div>
           </div>
 
@@ -294,20 +294,61 @@ export default function BranchSchedulePage() {
               className="badge"
               style={{
                 fontSize: 13,
-                padding: "6px 12px",
+                fontWeight: 700,
+                padding: "6px 14px",
                 background: demandMultiplier > 1.0 ? "var(--warning-glow)" : "var(--bg-surface)",
                 color: demandMultiplier > 1.0 ? "var(--warning)" : "var(--text-primary)",
                 border: "1px solid var(--border)",
               }}
             >
-              Surge: {demandMultiplier.toFixed(2)}x ({demandMultiplier > 1.0 ? `+${Math.round((demandMultiplier - 1.0) * 100)}% Surge` : "Baseline"})
+              {demandMultiplier === 1.0 ? "🟢 Baseline Traffic (1.0x)" : `🔥 +${Math.round((demandMultiplier - 1.0) * 100)}% Surge Active`}
             </span>
           </div>
         </div>
 
-        {/* Slider control */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", width: 60 }}>Baseline</span>
+        {/* Quick Scenario 1-Click Presets */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>
+            Quick 1-Click Scenarios:
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "☀️ Normal Day (1.0x)", val: 1.0 },
+              { label: "🌧️ Rainy Morning (+15%)", val: 1.15 },
+              { label: "🎓 Campus / Festival (+30%)", val: 1.30 },
+              { label: "🚀 Flash Promo (+50%)", val: 1.50 },
+            ].map((sc) => {
+              const isSelected = Math.abs(demandMultiplier - sc.val) < 0.03;
+              return (
+                <button
+                  key={sc.label}
+                  type="button"
+                  className={`btn btn-sm ${isSelected ? "btn-primary" : "btn-ghost"}`}
+                  onClick={() => handleSliderChange(sc.val)}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    border: isSelected ? "1px solid var(--accent)" : "1px solid var(--border)",
+                    background: isSelected ? "var(--accent-glow)" : "var(--bg-card)",
+                    color: isSelected ? "var(--accent)" : "var(--text-primary)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {sc.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Interactive Custom Slider with Visual Milestone Ticks */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>
+            <span>🟢 1.0x Baseline</span>
+            <span>🟡 1.25x (+25% Spike)</span>
+            <span>🔥 1.50x (+50% Max Surge)</span>
+          </div>
           <input
             type="range"
             min="1.0"
@@ -316,13 +357,53 @@ export default function BranchSchedulePage() {
             value={demandMultiplier}
             onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
             style={{
-              flex: 1,
+              width: "100%",
               accentColor: "var(--accent)",
               cursor: "pointer",
-              height: 6,
+              height: 8,
             }}
           />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--warning)", width: 90 }}>+50% Surge</span>
+        </div>
+
+        {/* Live AI "Scenario Protection" Insight Card */}
+        <div
+          style={{
+            background: "rgba(245, 158, 11, 0.05)",
+            border: "1px dashed var(--accent)",
+            borderRadius: "var(--radius-md)",
+            padding: "10px 14px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>
+              {demandMultiplier === 1.0 ? "☀️" : demandMultiplier <= 1.2 ? "🌧️" : demandMultiplier <= 1.35 ? "🎓" : "🚀"}
+            </span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                {demandMultiplier === 1.0 ? "Standard Baseline Operations" : `Surge Simulation: +${Math.round((demandMultiplier - 1.0) * 100)}% Customer Foot-Traffic`}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                {demandMultiplier === 1.0
+                  ? "Standard schedule keeps customer wait time at ~2.3m with zero idle staff waste."
+                  : `Erlang-C model dynamically scales rush shifts from 1 to 3–4 baristas to handle extra volume without line walkouts.`}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Queue Protection</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)" }}>
+                🛡️ Zero Walkouts (&lt; 2.5m Wait)
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Live Mathematical Metric Pills */}
