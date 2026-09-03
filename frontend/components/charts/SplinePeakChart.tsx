@@ -167,11 +167,11 @@ export default function SplinePeakChart({ hours, maxOrders }: SplinePeakChartPro
           if (isPeak) {
             dotColor = "#f59e0b";
             dotRadius = isHovered ? 7 : 5;
-            staffLabel = `${Math.max(3, h.recommended_staff || 1)}p`;
+            staffLabel = `${h.recommended_staff || 1}p`;
           } else if (isMod) {
             dotColor = "#3b82f6";
             dotRadius = isHovered ? 6 : 4;
-            staffLabel = `${Math.max(2, h.recommended_staff || 1)}p`;
+            staffLabel = `${h.recommended_staff || 1}p`;
           }
 
           return (

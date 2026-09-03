@@ -94,7 +94,8 @@ async def get_hourly_order_metrics(
 
 async def get_branch_staff_profiles(branch_id: int) -> List[Dict[str, Any]]:
     """
-    Fetches staff members and branch managers assigned to the specified branch.
+    Fetches ONLY operational front-line staff members assigned to the specified branch.
+    Strictly excludes Branch Managers, Cafe Owners, and Super Admins.
     """
     scopes = await db.userscope.find_many(
         where={"branchId": branch_id},
@@ -103,15 +104,19 @@ async def get_branch_staff_profiles(branch_id: int) -> List[Dict[str, Any]]:
 
     staff_profiles = []
     for s in scopes:
-        if s.user:
+        if s.user and s.user.role:
+            # Exclude management and administrative roles
+            if s.user.role.name in ["BRANCH_MANAGER", "CAFE_OWNER", "SUPER_ADMIN"]:
+                continue
+
             staff_profiles.append({
                 "id": s.user.id,
                 "email": s.user.email,
                 "display_name": getattr(s.user, "displayName", None) or s.user.email.split("@")[0].capitalize(),
-                "role": s.user.role.name if s.user.role else "STAFF",
+                "role": s.user.role.name,
             })
 
-    # If no specific scoped staff found, fetch all cafe staff as fallback
+    # If no specific scoped staff found, fetch operational staff from cafe level (excluding managers)
     if not staff_profiles:
         branch = await db.branch.find_unique(where={"id": branch_id})
         if branch and branch.cafeId:
@@ -120,12 +125,12 @@ async def get_branch_staff_profiles(branch_id: int) -> List[Dict[str, Any]]:
                 include={"user": {"include": {"role": True}}}
             )
             for cs in cafe_scopes:
-                if cs.user and not any(p["id"] == cs.user.id for p in staff_profiles):
+                if cs.user and cs.user.role and cs.user.role.name == "STAFF" and not any(p["id"] == cs.user.id for p in staff_profiles):
                     staff_profiles.append({
                         "id": cs.user.id,
                         "email": cs.user.email,
                         "display_name": getattr(cs.user, "displayName", None) or cs.user.email.split("@")[0].capitalize(),
-                        "role": cs.user.role.name if cs.user.role else "STAFF",
+                        "role": cs.user.role.name,
                     })
 
     return staff_profiles

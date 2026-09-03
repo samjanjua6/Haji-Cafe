@@ -582,12 +582,10 @@ export default function CafeOwnerSchedulePage() {
                   barBg = "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)";
                   barBorder = "1px solid #f59e0b";
                   labelColor = "#f59e0b";
-                  staffCount = Math.max(3, staffCount);
                 } else if (isMod) {
                   barBg = "linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)";
                   barBorder = "1px solid #3b82f6";
                   labelColor = "#3b82f6";
-                  staffCount = Math.max(2, staffCount);
                 }
 
                 return (

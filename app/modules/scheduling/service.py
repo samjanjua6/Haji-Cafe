@@ -26,6 +26,10 @@ async def get_peak_hour_analysis(
     metrics = await repository.get_hourly_order_metrics(branch_id=branch_id, cafe_id=cafe_id)
     raw_hourly = metrics.get("hourly_stats", [])
 
+    # Fetch available front-line staff count for branch (excluding managers)
+    available_staff = await repository.get_branch_staff_profiles(branch_id) if branch_id else []
+    max_staff_cap = len(available_staff) if available_staff else 4
+
     # Filter to standard operating hours (07:00 to 22:00)
     operating_hours = [h for h in raw_hourly if 7 <= h["hour"] <= 22]
 
@@ -41,15 +45,17 @@ async def get_peak_hour_analysis(
         if intensity >= 70.0 or effective_arrival_rate >= 15.0:
             rush_cat = "PEAK_RUSH"
             calc_rate = max(effective_arrival_rate, 22.0)
-            min_staff = 3 if demand_multiplier < 1.2 else 4
+            target_min = 3 if demand_multiplier < 1.2 else 4
         elif intensity >= 40.0 or effective_arrival_rate >= 8.0:
             rush_cat = "MODERATE"
             calc_rate = max(effective_arrival_rate, 12.0)
-            min_staff = 2 if demand_multiplier < 1.3 else 3
+            target_min = 2 if demand_multiplier < 1.3 else 3
         else:
             rush_cat = "OFF_PEAK"
             calc_rate = max(effective_arrival_rate, 3.0)
-            min_staff = 1
+            target_min = 1
+
+        min_staff = min(max_staff_cap, target_min)
 
         erlang_result = calculate_staffing_requirements(
             arrival_rate_orders_per_hr=calc_rate,
@@ -59,7 +65,7 @@ async def get_peak_hour_analysis(
             hourly_labor_rate=15.0
         )
 
-        recommended = max(min_staff, erlang_result["recommended_staff"])
+        recommended = min(max_staff_cap, max(min_staff, erlang_result["recommended_staff"]))
 
         hour_data = {
             **h,
@@ -143,14 +149,16 @@ async def generate_ai_shift_schedule(
     afternoon_hours = [h for h in hours if 12 <= h["hour"] <= 16]
     evening_hours = [h for h in hours if 16 <= h["hour"] <= 22]
 
-    morning_req = max((h["recommended_staff"] for h in morning_hours), default=3)
-    afternoon_req = max((h["recommended_staff"] for h in afternoon_hours), default=2)
-    evening_req = max((h["recommended_staff"] for h in evening_hours), default=3)
+    max_staff_available = len(staff_members)
+    morning_req = min(max_staff_available, max((h["recommended_staff"] for h in morning_hours), default=2))
+    afternoon_req = min(max_staff_available, max((h["recommended_staff"] for h in afternoon_hours), default=1))
+    evening_req = min(max_staff_available, max((h["recommended_staff"] for h in evening_hours), default=2))
 
     # Assign staff round-robin / role balanced
     def assign_staff(count: int, offset: int = 0):
         assigned = []
-        for i in range(count):
+        actual_count = min(count, len(staff_members))
+        for i in range(actual_count):
             member = staff_members[(offset + i) % len(staff_members)]
             assigned.append({
                 "user_id": member["id"],
