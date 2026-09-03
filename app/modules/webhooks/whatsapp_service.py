@@ -5,6 +5,8 @@ Fuzzy-matches parsed items against branch catalog, calls orders.service.place_or
 triggers zero-latency KDS WebSocket push, and formats WhatsApp receipt messages.
 """
 
+import os
+import httpx
 from decimal import Decimal
 import logging
 from typing import Dict, Any, List, Optional
@@ -16,6 +18,85 @@ from app.modules.webhooks.schemas import ParsedWhatsAppOrder, WhatsAppOrderRespo
 from app.modules.webhooks.whatsapp_parser import parse_customer_message
 
 logger = logging.getLogger("webhooks.whatsapp.service")
+
+
+async def send_meta_whatsapp_message(
+    to_phone: str,
+    message_text: str,
+    phone_number_id: Optional[str] = None,
+) -> bool:
+    """
+    Send an outbound message directly to customer's WhatsApp using Meta WhatsApp Cloud API.
+    Uses https://graph.facebook.com/v19.0/{phone_number_id}/messages
+    """
+    token = os.getenv("META_WHATSAPP_TOKEN")
+    phone_id = phone_number_id or os.getenv("META_PHONE_NUMBER_ID")
+
+    if not token or not phone_id or not to_phone:
+        logger.debug("Meta WhatsApp token or phone ID not configured, skipping outbound Graph API call.")
+        return False
+
+    url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_phone,
+        "type": "text",
+        "text": {"body": message_text},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code in [200, 201]:
+                logger.info(f"Meta WhatsApp reply successfully sent to {to_phone}")
+                return True
+            else:
+                logger.warning(f"Meta WhatsApp send failed: {resp.status_code} - {resp.text}")
+                return False
+    except Exception as e:
+        logger.warning(f"Error calling Meta WhatsApp Graph API: {e}")
+        return False
+
+
+async def send_waha_whatsapp_message(
+    chat_id: str,
+    message_text: str,
+    waha_url: Optional[str] = None,
+) -> bool:
+    """
+    Send an outbound message directly to customer's WhatsApp using WAHA (WhatsApp HTTP API).
+    Endpoint: POST {waha_url}/api/sendText
+    """
+    base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3008")
+    clean_id = chat_id.strip()
+
+    # If pure phone number without domain, normalize and append @c.us
+    if "@" not in clean_id:
+        clean_id = clean_id.replace("+", "").replace(" ", "").replace("-", "")
+        clean_id = f"{clean_id}@c.us"
+
+    url = f"{base_url.rstrip('/')}/api/sendText"
+    payload = {
+        "chatId": clean_id,
+        "text": message_text,
+        "session": "default",
+    }
+    logger.info(f"Dispatching WAHA WhatsApp reply to {clean_id}...")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code in [200, 201]:
+                logger.info(f"WAHA WhatsApp reply successfully sent to {clean_id}")
+                return True
+            else:
+                logger.error(f"WAHA send response error: {resp.status_code} - {resp.text}")
+                return False
+    except Exception as e:
+        logger.error(f"Error dispatching WAHA message: {e}")
+        return False
 
 
 async def process_whatsapp_order(
