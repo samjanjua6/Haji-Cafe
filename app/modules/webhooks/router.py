@@ -158,7 +158,7 @@ async def get_waha_session_status():
         return {"status": "ERROR", "detail": str(e)}
 
 
-@router.post("/webhooks/whatsapp/qr/restart")
+@router.post("/whatsapp/qr/restart")
 async def restart_waha_session():
     """Restart WAHA session to produce a fresh QR code."""
     import httpx
