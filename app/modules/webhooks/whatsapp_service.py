@@ -70,7 +70,7 @@ async def send_waha_whatsapp_message(
     Send an outbound message directly to customer's WhatsApp using WAHA (WhatsApp HTTP API).
     Endpoint: POST {waha_url}/api/sendText
     """
-    base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3000")
+    base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3008")
     clean_id = chat_id.replace("+", "").replace(" ", "").replace("-", "").strip()
     if not clean_id.endswith("@c.us") and not clean_id.endswith("@g.us"):
         clean_id = f"{clean_id}@c.us"
