@@ -8,6 +8,22 @@ from app.modules.webhooks import whatsapp_service
 router = APIRouter(prefix="/webhooks", tags=["WhatsApp & Twilio Webhooks"])
 
 
+@router.get("/whatsapp")
+async def verify_whatsapp_webhook(request: Request):
+    """
+    Webhook verification endpoint for Meta WhatsApp Cloud API.
+    Validates hub.challenge and returns it as plain text.
+    """
+    hub_mode = request.query_params.get("hub.mode")
+    hub_challenge = request.query_params.get("hub.challenge")
+    hub_verify_token = request.query_params.get("hub.verify_token")
+
+    if hub_mode == "subscribe" and hub_challenge:
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=hub_challenge)
+    return {"status": "active", "message": "WhatsApp webhook endpoint ready"}
+
+
 @router.post("/whatsapp")
 async def incoming_whatsapp_webhook(
     request: Request,
@@ -16,21 +32,53 @@ async def incoming_whatsapp_webhook(
     ProfileName: Optional[str] = Form(None),
 ):
     """
-    Standard Twilio WhatsApp Webhook.
-    Receives incoming customer WhatsApp messages, parses order with Groq GPT-OSS-120B,
-    creates order in database, broadcasts to Kitchen KDS, and returns TwiML response.
+    Universal WhatsApp Webhook.
+    Supports:
+    1. Meta Official WhatsApp Cloud API
+    2. UltraMsg / Green-API / WAHA (QR Code gateways)
+    3. Twilio WhatsApp Sandbox
+    4. Custom JSON webhook payloads
     """
-    # Support both url-encoded form (Twilio) and direct JSON payloads
     message_text = Body
     sender_phone = From
     sender_name = ProfileName
 
+    # If not form-encoded, parse incoming JSON across different provider formats
     if not message_text:
         try:
             json_body = await request.json()
-            message_text = json_body.get("body") or json_body.get("message")
-            sender_phone = json_body.get("from") or json_body.get("phone")
-            sender_name = json_body.get("profile_name") or json_body.get("name")
+
+            # 1. Meta WhatsApp Cloud API format
+            phone_number_id = None
+            try:
+                entry = json_body.get("entry", [])[0]
+                changes = entry.get("changes", [])[0]
+                value = changes.get("value", {})
+                phone_number_id = value.get("metadata", {}).get("phone_number_id")
+                messages = value.get("messages", [])
+                if messages:
+                    msg_obj = messages[0]
+                    message_text = msg_obj.get("text", {}).get("body")
+                    sender_phone = msg_obj.get("from")
+                    contacts = value.get("contacts", [])
+                    if contacts:
+                        sender_name = contacts[0].get("profile", {}).get("name")
+            except Exception:
+                pass
+
+            # 2. UltraMsg / WAHA / Green-API format
+            if not message_text:
+                data_obj = json_body.get("data") if isinstance(json_body.get("data"), dict) else json_body
+                message_text = (
+                    data_obj.get("body")
+                    or data_obj.get("message")
+                    or data_obj.get("text")
+                    or json_body.get("body")
+                    or json_body.get("message")
+                )
+                sender_phone = data_obj.get("from") or data_obj.get("phone") or json_body.get("from")
+                sender_name = data_obj.get("pushname") or data_obj.get("profile_name") or json_body.get("name")
+
         except Exception:
             pass
 
@@ -46,6 +94,15 @@ async def incoming_whatsapp_webhook(
         customer_phone=sender_phone,
         branch_id=1,
     )
+
+    # If incoming request was from Meta Cloud API, dispatch outbound reply via Graph API
+    if phone_number_id and sender_phone:
+        await whatsapp_service.send_meta_whatsapp_message(
+            to_phone=sender_phone,
+            message_text=result.reply_message,
+            phone_number_id=phone_number_id,
+        )
+        return {"status": "ok", "order_id": result.order_id, "reply": result.reply_message}
 
     # Return Twilio TwiML XML format for native WhatsApp rendering
     twiml_reply = f"""<?xml version="1.0" encoding="UTF-8"?>
