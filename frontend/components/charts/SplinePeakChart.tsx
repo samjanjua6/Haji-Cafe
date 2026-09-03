@@ -8,6 +8,11 @@ export interface OperatingHourItem {
   total_orders: number;
   avg_orders_per_hr: number;
   hourly_revenue: number;
+  estimated_hourly_revenue?: number;
+  hourly_labor_cost?: number;
+  net_labor_profit?: number;
+  profit_margin_percent?: number;
+  margin_rating?: string;
   peak_intensity_score: number;
   effective_arrival_rate: number;
   recommended_staff: number;
@@ -275,23 +280,59 @@ export default function SplinePeakChart({ hours, maxOrders }: SplinePeakChartPro
             pointerEvents: "none",
           }}
         >
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
-              {hoveredPoint.hour.label} Rush
-            </span>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 6 }}>
-              • {hoveredPoint.hour.total_orders} Orders (${hoveredPoint.hour.hourly_revenue.toFixed(2)})
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                {hoveredPoint.hour.label} Rush
+              </span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 6 }}>
+                • {hoveredPoint.hour.total_orders} Orders (${(hoveredPoint.hour.estimated_hourly_revenue || hoveredPoint.hour.hourly_revenue).toFixed(2)})
+              </span>
+            </div>
+
+            {/* Profit Margin Badge */}
+            {hoveredPoint.hour.profit_margin_percent !== undefined && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: "var(--radius-sm)",
+                  background:
+                    hoveredPoint.hour.profit_margin_percent >= 80
+                      ? "rgba(16, 185, 129, 0.15)"
+                      : hoveredPoint.hour.profit_margin_percent >= 60
+                      ? "rgba(245, 158, 11, 0.15)"
+                      : "rgba(100, 116, 139, 0.15)",
+                  color:
+                    hoveredPoint.hour.profit_margin_percent >= 80
+                      ? "#10b981"
+                      : hoveredPoint.hour.profit_margin_percent >= 60
+                      ? "#f59e0b"
+                      : "#94a3b8",
+                  border: `1px solid ${
+                    hoveredPoint.hour.profit_margin_percent >= 80
+                      ? "rgba(16, 185, 129, 0.3)"
+                      : hoveredPoint.hour.profit_margin_percent >= 60
+                      ? "rgba(245, 158, 11, 0.3)"
+                      : "rgba(100, 116, 139, 0.3)"
+                  }`,
+                }}
+              >
+                Margin: {hoveredPoint.hour.profit_margin_percent}% 🟢
+              </span>
+            )}
+
+            <span
+              className="badge"
+              style={{
+                background: hoveredPoint.hour.rush_category === "PEAK_RUSH" ? "var(--warning-glow)" : "var(--info-glow)",
+                color: hoveredPoint.hour.rush_category === "PEAK_RUSH" ? "var(--warning)" : "var(--info)",
+              }}
+            >
+              {hoveredPoint.hour.recommended_staff} Staff (${(hoveredPoint.hour.hourly_labor_cost || hoveredPoint.hour.recommended_staff * 15).toFixed(0)} labor)
             </span>
           </div>
-          <span
-            className="badge"
-            style={{
-              background: hoveredPoint.hour.rush_category === "PEAK_RUSH" ? "var(--warning-glow)" : "var(--info-glow)",
-              color: hoveredPoint.hour.rush_category === "PEAK_RUSH" ? "var(--warning)" : "var(--info)",
-            }}
-          >
-            Staff Required: {hoveredPoint.hour.recommended_staff} Baristas
-          </span>
         </div>
       )}
     </div>

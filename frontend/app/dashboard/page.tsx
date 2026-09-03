@@ -12,6 +12,8 @@ import {
   Flame,
   ArrowRight,
   Store,
+  TrendingUp,
+  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
@@ -254,6 +256,70 @@ export default function DashboardPage() {
 
           {/* KPI Metric Cards — Today's Revenue, Active Orders, Out of Stock, Low Stock */}
           <KpiCards />
+
+          {/* AI Peak Hours & 7x24 Rush Heatmap Intelligence Hub */}
+          {(user.role === "BRANCH_MANAGER" || user.role === "CAFE_OWNER" || user.role === "SUPER_ADMIN") && (
+            <Card
+              style={{
+                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(59, 130, 246, 0.06) 100%)",
+                border: "1px solid rgba(245, 158, 11, 0.25)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 16,
+                flexWrap: "wrap",
+                padding: "16px 20px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div
+                  style={{
+                    background: "var(--accent-glow)",
+                    borderRadius: 12,
+                    padding: 12,
+                    color: "var(--accent)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>AI Peak Hours & 7×24 Rush Heatmap</span>
+                    <span className="badge" style={{ background: "var(--accent-glow)", color: "var(--accent)", fontSize: 11 }}>
+                      <Sparkles size={11} style={{ marginRight: 3, display: "inline" }} /> Erlang-C AI
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                    Live customer demand velocity, 7-day rush heatmaps, hourly profit margins (88%+), and intelligent staff scheduling.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {user.role === "BRANCH_MANAGER" && user.scopes?.[0]?.branchId && (
+                  <Link
+                    href={`/branches/${user.scopes[0].branchId}/schedule?cafeId=${user.scopes[0].cafeId || ""}`}
+                    className="btn btn-primary btn-sm"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, padding: "8px 14px" }}
+                  >
+                    <Flame size={14} /> Open Branch Peak Heatmap & Roster <ArrowRight size={13} />
+                  </Link>
+                )}
+                {(user.role === "CAFE_OWNER" || user.role === "SUPER_ADMIN") && user.scopes?.[0]?.cafeId && (
+                  <Link
+                    href={`/cafes/${user.scopes[0].cafeId}/schedule`}
+                    className="btn btn-primary btn-sm"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, padding: "8px 14px" }}
+                  >
+                    <Flame size={14} /> Franchise Peak Analysis & Rosters <ArrowRight size={13} />
+                  </Link>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Google Calendar Connect Banner */}
           {user.role === "CAFE_OWNER" && (
