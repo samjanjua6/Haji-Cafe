@@ -13,6 +13,7 @@ class GenerateShiftsRequest(BaseModel):
     branch_id: int
     target_date: Optional[str] = None
     demand_multiplier: Optional[float] = 1.0
+    rotation_offset: Optional[int] = 0
 
 
 class SyncCalendarRequest(BaseModel):
@@ -98,7 +99,8 @@ async def generate_shifts(
     data = await service.generate_ai_shift_schedule(
         branch_id=body.branch_id,
         target_date_str=body.target_date,
-        demand_multiplier=body.demand_multiplier or 1.0
+        demand_multiplier=body.demand_multiplier or 1.0,
+        rotation_offset=body.rotation_offset or 0
     )
     return {"status": "success", "data": data}
 

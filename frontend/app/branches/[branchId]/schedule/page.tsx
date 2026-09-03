@@ -19,6 +19,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { auth } from "@/lib/auth";
 import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
 
@@ -94,12 +95,14 @@ export default function BranchSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [peakData, setPeakData] = useState<PeakData | null>(null);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
 
   // What-If Demand Surge Simulation Slider (1.0x to 1.5x)
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
   const [chartType, setChartType] = useState<"SPLINE" | "HISTOGRAM">("SPLINE");
+  const [rotationSeed, setRotationSeed] = useState(0);
   const [targetDate, setTargetDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -124,7 +127,7 @@ export default function BranchSchedulePage() {
   }, [branchId]);
 
   // 2. Generate AI Schedule
-  const generateSchedule = useCallback(async (multiplier = 1.0, date = targetDate) => {
+  const generateSchedule = useCallback(async (multiplier = 1.0, date = targetDate, offset = 0) => {
     try {
       setGenerating(true);
       const res = await api.post<{ status: string; data: ScheduleData }>(
@@ -133,11 +136,11 @@ export default function BranchSchedulePage() {
           branch_id: branchId,
           target_date: date,
           demand_multiplier: multiplier,
+          rotation_offset: offset,
         }
       );
       if (res?.data) {
         setScheduleData(res.data);
-        toast.success("✨ AI Schedule optimized via Erlang-C Queueing Model!");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to generate AI schedule");
@@ -148,14 +151,22 @@ export default function BranchSchedulePage() {
 
   useEffect(() => {
     loadPeakHours(demandMultiplier);
-    generateSchedule(demandMultiplier, targetDate);
+    generateSchedule(demandMultiplier, targetDate, rotationSeed);
   }, [branchId, loadPeakHours, generateSchedule]);
 
   // Handle Simulation Slider Change
   const handleSliderChange = (newVal: number) => {
     setDemandMultiplier(newVal);
     loadPeakHours(newVal);
-    generateSchedule(newVal, targetDate);
+    generateSchedule(newVal, targetDate, rotationSeed);
+  };
+
+  // Handle Regenerate Roster
+  const handleRegenerateRoster = () => {
+    const nextSeed = rotationSeed + 1;
+    setRotationSeed(nextSeed);
+    generateSchedule(demandMultiplier, targetDate, nextSeed);
+    toast.success("✨ AI Re-Optimized & Rotated Shift Roster!", { icon: "🔄" });
   };
 
   // Sync to Google Calendar
@@ -179,20 +190,33 @@ export default function BranchSchedulePage() {
     }
   };
 
-  // Export .ICS Calendar File
-  const handleExportICS = () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : "";
-    const url = `${apiBase}/scheduling/export-ics?branch_id=${branchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`;
-    
-    // Trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `shifts_branch_${branchId}_${targetDate}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("📥 Downloaded iCalendar (.ics) file!");
+  // Export .ICS Calendar File (Authenticated Blob Download)
+  const handleExportICS = async () => {
+    try {
+      setDownloading(true);
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const token = auth.getAccess();
+      const res = await fetch(`${apiBase}/scheduling/export-ics?branch_id=${branchId}&target_date=${targetDate}&multiplier=${demandMultiplier}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        throw new Error(`Download failed: ${res.statusText}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `shifts_branch_${branchId}_${targetDate}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("📥 Downloaded iCalendar (.ics) file!", { icon: "📅" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download .ICS file");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const hours = peakData?.operating_hours || [];
@@ -609,24 +633,28 @@ export default function BranchSchedulePage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input
-              type="date"
-              className="input"
-              value={targetDate}
-              onChange={(e) => {
-                setTargetDate(e.target.value);
-                generateSchedule(demandMultiplier, e.target.value);
-              }}
-              style={{ width: "auto" }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Target Date:</span>
+              <input
+                type="date"
+                className="input"
+                value={targetDate}
+                onChange={(e) => {
+                  setTargetDate(e.target.value);
+                  generateSchedule(demandMultiplier, e.target.value, rotationSeed);
+                }}
+                style={{ width: "auto", padding: "4px 8px", fontSize: 13 }}
+              />
+            </div>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => generateSchedule(demandMultiplier, targetDate)}
+              onClick={handleRegenerateRoster}
               disabled={generating}
               style={{ fontWeight: 600 }}
             >
-              <Sparkles size={14} /> {generating ? "Optimizing..." : "Regenerate Roster"}
+              <Sparkles size={14} className={generating ? "animate-spin" : ""} />
+              {generating ? "Optimizing..." : "Regenerate Roster"}
             </button>
           </div>
         </div>
