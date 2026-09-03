@@ -1,9 +1,15 @@
+import time
+import logging
 from typing import Optional
 from fastapi import APIRouter, Request, Form, Response, status
 from pydantic import BaseModel
 
 from app.modules.webhooks.schemas import WhatsAppSimulationRequest, WhatsAppOrderResponse
 from app.modules.webhooks import whatsapp_service
+
+logger = logging.getLogger("webhooks.router")
+_processed_message_ids = {}
+_DEDUP_TTL_SECONDS = 300  # 5 minutes cache
 
 router = APIRouter(prefix="/webhooks", tags=["WhatsApp & Twilio Webhooks"])
 
@@ -188,6 +194,8 @@ async def incoming_whatsapp_webhook(
     message_text = Body
     sender_phone = From
     sender_name = ProfileName
+    data_obj = None
+    msg_obj = None
 
     # If not form-encoded, parse incoming JSON across different provider formats
     if not message_text:
@@ -243,6 +251,26 @@ async def incoming_whatsapp_webhook(
             content="<Response><Message>Empty message received.</Message></Response>",
             media_type="application/xml",
         )
+
+    # Global Deduplication: Prevent duplicate processing across multiple webhook dispatches
+    message_id = None
+    if isinstance(data_obj, dict):
+        raw_id = data_obj.get("id")
+        message_id = raw_id if isinstance(raw_id, str) else (raw_id.get("_serialized") if isinstance(raw_id, dict) else None)
+    if not message_id and isinstance(msg_obj, dict):
+        message_id = msg_obj.get("id")
+
+    now = time.time()
+    # Prune expired keys (5 min TTL)
+    for k in [k for k, v in _processed_message_ids.items() if now - v > _DEDUP_TTL_SECONDS]:
+        _processed_message_ids.pop(k, None)
+
+    dedup_key = message_id or (f"{sender_phone}_{message_text.strip().lower()}" if sender_phone and message_text else None)
+    if dedup_key:
+        if dedup_key in _processed_message_ids:
+            logger.info(f"Deduplication: Dropped duplicate WhatsApp message (key={dedup_key})")
+            return {"status": "ignored_duplicate_message", "key": dedup_key}
+        _processed_message_ids[dedup_key] = now
 
     result = await whatsapp_service.process_whatsapp_order(
         message_text=message_text,
