@@ -212,6 +212,10 @@ async def incoming_whatsapp_webhook(
             except Exception:
                 pass
 
+            # Ignore duplicate message.any event from WAHA
+            if json_body.get("event") == "message.any":
+                return {"status": "ignored_duplicate_event"}
+
             # 2. UltraMsg / WAHA / Green-API format
             if not message_text:
                 data_obj = json_body.get("payload") or json_body.get("data") or json_body

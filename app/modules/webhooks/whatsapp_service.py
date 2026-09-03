@@ -71,8 +71,11 @@ async def send_waha_whatsapp_message(
     Endpoint: POST {waha_url}/api/sendText
     """
     base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3008")
-    clean_id = chat_id.replace("+", "").replace(" ", "").replace("-", "").strip()
-    if not clean_id.endswith("@c.us") and not clean_id.endswith("@g.us"):
+    clean_id = chat_id.strip()
+
+    # If pure phone number without domain, normalize and append @c.us
+    if "@" not in clean_id:
+        clean_id = clean_id.replace("+", "").replace(" ", "").replace("-", "")
         clean_id = f"{clean_id}@c.us"
 
     url = f"{base_url.rstrip('/')}/api/sendText"
@@ -81,6 +84,7 @@ async def send_waha_whatsapp_message(
         "text": message_text,
         "session": "default",
     }
+    logger.info(f"Dispatching WAHA WhatsApp reply to {clean_id}...")
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(url, json=payload)
@@ -88,10 +92,10 @@ async def send_waha_whatsapp_message(
                 logger.info(f"WAHA WhatsApp reply successfully sent to {clean_id}")
                 return True
             else:
-                logger.debug(f"WAHA send response: {resp.status_code} - {resp.text}")
+                logger.error(f"WAHA send response error: {resp.status_code} - {resp.text}")
                 return False
     except Exception as e:
-        logger.debug(f"WAHA outbound call skipped/unavailable: {e}")
+        logger.error(f"Error dispatching WAHA message: {e}")
         return False
 
 
