@@ -162,6 +162,8 @@ model Order {
   id              Int         @id @default(autoincrement())
   branchId        Int         @map("branch_id")
   createdByUserId Int?        @map("created_by_user_id")
+  customerPhone   String?     @map("customer_phone")
+  customerName    String?     @map("customer_name")
   status          OrderStatus @default(PENDING)
   totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
   createdAt       DateTime    @default(now()) @map("created_at")
@@ -172,6 +174,7 @@ model Order {
   orderItems OrderItem[]
 
   @@index([branchId, status, createdAt])
+  @@index([customerPhone, status])
   @@index([createdAt])
   @@index([status, createdAt])
   @@map("orders")

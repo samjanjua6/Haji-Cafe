@@ -13,6 +13,7 @@ from typing import Dict, Any, List, Optional
 
 from app.database import db
 from app.modules.orders import service as orders_service
+from app.modules.orders import repository as orders_repo
 from app.modules.orders.schemas import OrderItemCreate
 from app.modules.webhooks.schemas import ParsedWhatsAppOrder, WhatsAppOrderResponse
 from app.modules.webhooks.whatsapp_parser import parse_customer_message
@@ -119,65 +120,219 @@ async def process_whatsapp_order(
     branch = await db.branch.find_unique(where={"id": target_branch_id}, include={"cafe": True})
     branch_name = branch.name if branch else f"Branch #{target_branch_id}"
 
-    # Handle Inquiries
-    if parsed.intent == "MENU_INQUIRY":
-        branch_items = await db.branchmenuitem.find_many(
-            where={"branchId": target_branch_id, "isActive": True, "isInStock": True},
-            include={"masterItem": True},
-            take=6,
-        )
-        menu_lines = []
-        for bi in branch_items:
-            price = bi.priceOverride if bi.priceOverride is not None else bi.masterItem.basePrice
-            menu_lines.append(f"• {bi.masterItem.name}: ${price:.2f}")
-        menu_str = "\n".join(menu_lines) or "• Spanish Latte: $4.75\n• Americano: $3.25\n• Butter Croissant: $3.50"
+    # 1. Handle Kitchen Queue Inquiry
+    if parsed.intent == "QUEUE_STATUS":
+        queue_summary = await orders_repo.get_branch_queue_summary(target_branch_id)
+        total_q = queue_summary["total_active"]
+        wait_m = queue_summary["estimated_wait_minutes"]
+        in_prep = queue_summary["in_prep_count"]
+        pending = queue_summary["pending_count"]
 
         reply = (
-            f"☕ Welcome to Haji Cafe ({branch_name})!\n\n"
-            f"Here are our most popular items available right now:\n{menu_str}\n\n"
-            f"To place an order, just reply with what you'd like, e.g.:\n"
-            f"\"Can I get 2 Spanish Lattes and 1 Croissant?\""
+            f"📊 *Kitchen Queue Status* ({branch_name})\n\n"
+            f"• Active orders in preparation: *{total_q}*\n"
+            f"  - On espresso bar: {in_prep}\n"
+            f"  - Queued for prep: {pending}\n"
+            f"• Estimated wait time for new orders: *~{wait_m} minutes*\n\n"
+            f"Ready to order? Just reply with what you'd like, e.g.:\n"
+            f"👉 _\"Can I get 2 Spanish Lattes and 1 Croissant?\"_"
         )
         return WhatsAppOrderResponse(
-            status="INFO",
+            status="QUEUE_INFO",
+            branch_id=target_branch_id,
+            reply_message=reply,
+            prep_time_minutes=wait_m,
+        )
+
+    # 2. Handle Order Cancellation
+    if parsed.intent == "CANCEL_ORDER":
+        order_to_cancel = None
+        if parsed.order_id_reference:
+            order_to_cancel = await db.order.find_first(
+                where={"id": parsed.order_id_reference, "branchId": target_branch_id},
+                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
+            )
+
+        if not order_to_cancel and customer_phone:
+            active_orders = await orders_repo.get_active_orders_by_customer(target_branch_id, customer_phone)
+            if active_orders:
+                order_to_cancel = active_orders[0]
+
+        # Fallback: Find most recent PENDING order
+        if not order_to_cancel:
+            order_to_cancel = await db.order.find_first(
+                where={"branchId": target_branch_id, "status": "PENDING"},
+                order={"createdAt": "desc"},
+                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
+            )
+
+        if not order_to_cancel or order_to_cancel.status == "CANCELLED":
+            reply = (
+                f"You don't have any active pending orders right now.\n\n"
+                f"Would you like to view our menu or place a new order? Reply with *'menu'* anytime!"
+            )
+            return WhatsAppOrderResponse(status="NOT_FOUND", branch_id=target_branch_id, reply_message=reply)
+
+        if order_to_cancel.status == "IN_PREPARATION":
+            reply = (
+                f"⚠️ *Order #{order_to_cancel.id} is already in preparation!* \n"
+                f"Our barista is currently brewing your items on the bar. If you need to urgently modify or cancel, please speak directly to the counter barista."
+            )
+            return WhatsAppOrderResponse(status="IN_PREPARATION", branch_id=target_branch_id, reply_message=reply)
+
+        if order_to_cancel.status == "COMPLETED":
+            reply = (
+                f"Order #{order_to_cancel.id} has already been completed and is ready at the counter for pickup."
+            )
+            return WhatsAppOrderResponse(status="COMPLETED", branch_id=target_branch_id, reply_message=reply)
+
+        # Cancel the order and restore stock
+        cancelled = await orders_repo.update_order_status(order_to_cancel.id, "CANCELLED", user_id=None)
+
+        # Broadcast cancel event to KDS via WebSockets
+        try:
+            from app.modules.realtime.manager import order_ws_manager
+            await order_ws_manager.broadcast_to_branch(
+                branch_id=target_branch_id,
+                event_type="ORDER_CANCELLED",
+                payload={"order_id": order_to_cancel.id, "reason": "Customer cancelled via WhatsApp"},
+            )
+        except Exception as e:
+            logger.debug(f"KDS cancel broadcast skipped: {e}")
+
+        reply = (
+            f"❌ *Order #{order_to_cancel.id} Cancelled*\n\n"
+            f"Your order has been cancelled successfully and removed from our kitchen queue. No charges were made.\n\n"
+            f"We hope to serve you again soon! Let us know if you'd like to order anything else."
+        )
+        return WhatsAppOrderResponse(
+            status="CANCELLED",
+            order_id=order_to_cancel.id,
             branch_id=target_branch_id,
             reply_message=reply,
         )
 
-    # Handle Order Status
-    if parsed.intent == "ORDER_STATUS":
-        recent_order = await db.order.find_first(
-            where={"branchId": target_branch_id},
-            order={"createdAt": "desc"},
-            include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
-        )
-        if recent_order:
+    # 3. Handle Personal Order Status
+    if parsed.intent == "MY_ORDER_STATUS":
+        order_found = None
+        if parsed.order_id_reference:
+            order_found = await db.order.find_first(
+                where={"id": parsed.order_id_reference, "branchId": target_branch_id},
+                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
+            )
+        if not order_found and customer_phone:
+            active_orders = await orders_repo.get_active_orders_by_customer(target_branch_id, customer_phone)
+            if active_orders:
+                order_found = active_orders[0]
+
+        if not order_found:
+            order_found = await db.order.find_first(
+                where={"branchId": target_branch_id},
+                order={"createdAt": "desc"},
+                include={"orderItems": {"include": {"branchMenuItem": {"include": {"masterItem": True}}}}},
+            )
+
+        if order_found:
             status_desc = {
-                "PENDING": "queued and sent to the kitchen",
-                "IN_PREPARATION": "being freshly prepared by our barista",
-                "COMPLETED": "ready for pickup at the counter!",
-                "CANCELLED": "cancelled",
-            }.get(recent_order.status, "in progress")
+                "PENDING": "⏳ Queued (waiting for barista to begin)",
+                "IN_PREPARATION": "☕ In Preparation (being freshly brewed)",
+                "COMPLETED": "✅ Ready for Pickup at the counter!",
+                "CANCELLED": "❌ Cancelled",
+            }.get(order_found.status, order_found.status)
+
+            item_lines = []
+            for it in order_found.orderItems:
+                item_lines.append(f"• {it.quantity}x {it.branchMenuItem.masterItem.name}")
+            item_str = "\n".join(item_lines) or "Specialty Items"
+
             reply = (
-                f"🧾 Order #{recent_order.id} Status: {recent_order.status}\n"
-                f"Your order is currently {status_desc}.\n"
-                f"Total: ${recent_order.totalAmount:.2f}."
+                f"🧾 *Order #{order_found.id} Status*\n"
+                f"📍 Branch: {branch_name}\n"
+                f"Status: *{status_desc}*\n\n"
+                f"Items:\n{item_str}\n\n"
+                f"💵 Total: ${order_found.totalAmount:.2f}"
             )
         else:
-            reply = "You don't have any recent active orders. Reply with what you'd like to order!"
+            reply = "You don't have any recent orders. Reply with what you'd like to order today!"
 
         return WhatsAppOrderResponse(
             status="STATUS",
+            order_id=order_found.id if order_found else None,
             branch_id=target_branch_id,
             reply_message=reply,
         )
 
-    # Handle Order Creation
-    if not parsed.items:
+    # 4. Handle Categorized Menu Inquiries
+    if parsed.intent == "MENU_INQUIRY":
+        branch_items = await db.branchmenuitem.find_many(
+            where={"branchId": target_branch_id, "isActive": True, "isInStock": True},
+            include={"masterItem": {"include": {"category": True}}},
+            order={"id": "asc"},
+        )
+
+        categories_map: Dict[str, List[str]] = {}
+        for bi in branch_items:
+            cat_name = bi.masterItem.category.name if bi.masterItem.category else "Specialties"
+            price = bi.priceOverride if bi.priceOverride is not None else bi.masterItem.basePrice
+            if cat_name not in categories_map:
+                categories_map[cat_name] = []
+            categories_map[cat_name].append(f"• {bi.masterItem.name} — ${price:.2f}")
+
+        menu_sections = []
+        for cat, items in categories_map.items():
+            cat_lower = cat.lower()
+            icon = "☕" if any(w in cat_lower for w in ["coffee", "espresso", "latte", "brew"]) else ("🥐" if any(w in cat_lower for w in ["pastry", "bakery", "cake", "muffin"]) else "🥪")
+            menu_sections.append(f"*{icon} {cat}*\n" + "\n".join(items))
+
+        menu_text = "\n\n".join(menu_sections) if menu_sections else (
+            "☕ *Specialty Coffee*\n• Spanish Latte — $4.75\n• Americano — $3.25\n• Nitro Cold Brew — $4.50\n\n"
+            "🥐 *Bakery & Food*\n• Butter Croissant — $3.50\n• Blueberry Muffin — $3.75\n• Grilled Chicken Panini — $7.50"
+        )
+
         reply = (
-            f"👋 Hello {customer_name or 'there'}! Welcome to Haji Cafe.\n\n"
-            f"What would you like to order today? You can type naturally, for example:\n"
-            f"👉 \"Send 2 Spanish Lattes and 1 Butter Croissant for pickup.\""
+            f"📜 *Haji Cafe Menu* ({branch_name})\n\n"
+            f"{menu_text}\n\n"
+            f"🛒 *How to order:* Just type naturally!\n"
+            f"👉 _\"Send 2 Spanish Lattes and 1 Butter Croissant for pickup.\"_"
+        )
+        return WhatsAppOrderResponse(status="MENU", branch_id=target_branch_id, reply_message=reply)
+
+    # 5. Handle Recommendations
+    if parsed.intent == "RECOMMENDATION":
+        reply = (
+            f"⭐ *Haji Cafe House Favorites* ({branch_name}):\n\n"
+            f"1. ☕ *Spanish Latte ($4.75)* — Our signature drink with rich espresso, condensed milk, and velvety foam.\n"
+            f"2. 🥐 *Butter Croissant ($3.50)* — Classic Parisian flaky pastry baked fresh every morning.\n"
+            f"3. 🧊 *Nitro Cold Brew ($4.50)* — Steeped 18 hours, infused with nitrogen for a silky-smooth finish.\n"
+            f"4. 🥪 *Chicken Pesto Panini ($7.50)* — Grilled artisan sourdough with fresh mozzarella and basil pesto.\n\n"
+            f"Ready to order? Just reply with your choice!"
+        )
+        return WhatsAppOrderResponse(status="RECOMMENDATION", branch_id=target_branch_id, reply_message=reply)
+
+    # 6. Handle Store Info
+    if parsed.intent == "STORE_INFO":
+        loc = branch.location if branch and branch.location else "Main Boulevard, Downtown"
+        reply = (
+            f"☕ *Haji Cafe Information* ({branch_name}):\n\n"
+            f"• 📍 *Location:* {loc}\n"
+            f"• ⏰ *Hours:* Open Daily from 7:00 AM – 11:00 PM\n"
+            f"• 📶 *Wi-Fi:* Free High-Speed Wi-Fi available for all guests\n"
+            f"• 🚗 *Service:* Dine-in, Takeaway & Express WhatsApp Counter Pickup\n\n"
+            f"Can I get an order started for you? Reply anytime!"
+        )
+        return WhatsAppOrderResponse(status="STORE_INFO", branch_id=target_branch_id, reply_message=reply)
+
+    # 7. General Greetings / Help
+    if not parsed.items or parsed.intent == "HELP":
+        reply = (
+            f"👋 Hello {customer_name or 'there'}! Welcome to Haji Cafe ({branch_name}).\n\n"
+            f"Here is how I can help you today:\n"
+            f"• 🛍️ *Order:* _\"Can I get 2 Spanish Lattes and 1 Croissant?\"_\n"
+            f"• 📜 *Menu:* _\"Show me the menu\"_\n"
+            f"• ⏳ *Queue:* _\"How many orders are in queue?\"_\n"
+            f"• 🔍 *Status:* _\"Where is my order?\"_\n"
+            f"• ❌ *Cancel:* _\"Cancel my order\"_\n\n"
+            f"What would you like to enjoy today?"
         )
         return WhatsAppOrderResponse(
             status="HELP",
@@ -227,11 +382,13 @@ async def process_whatsapp_order(
             reply_message=reply,
         )
 
-    # Create real order in PostgreSQL (which automatically broadcasts ORDER_CREATED to KDS!)
+    # Create real order in PostgreSQL with customerPhone linked!
     placed_order = await orders_service.place_order(
         branch_id=target_branch_id,
-        user_id=None,  # WhatsApp customer
+        user_id=None,
         items=items_to_order,
+        customer_phone=customer_phone,
+        customer_name=customer_name,
     )
 
     order_id = placed_order.id

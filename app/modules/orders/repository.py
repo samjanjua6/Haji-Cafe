@@ -11,19 +11,32 @@ async def get_branch_menu_items_by_ids(branch_id: int, item_ids: List[int]):
     )
 
 
-async def create_order(branch_id: int, user_id: Optional[int], total_amount, items_data: list):
+async def create_order(
+    branch_id: int,
+    user_id: Optional[int],
+    total_amount,
+    items_data: list,
+    customer_phone: Optional[str] = None,
+    customer_name: Optional[str] = None,
+):
     """Create an order and deduct inventory in a single atomic transaction."""
     async with db.tx() as transaction:
+        create_payload = {
+            "branchId": branch_id,
+            "createdByUserId": user_id,
+            "totalAmount": total_amount,
+            "orderItems": {
+                "create": items_data,
+            },
+        }
+        if customer_phone is not None:
+            create_payload["customerPhone"] = customer_phone
+        if customer_name is not None:
+            create_payload["customerName"] = customer_name
+
         # Create order
         order = await transaction.order.create(
-            data={
-                "branchId": branch_id,
-                "createdByUserId": user_id,
-                "totalAmount": total_amount,
-                "orderItems": {
-                    "create": items_data,
-                },
-            },
+            data=create_payload,
             include={
                 "orderItems": {
                     "include": {
@@ -205,3 +218,46 @@ async def get_orders_by_cafe(cafe_id: int, skip: int = 0, take: int = 25, where:
     )
     
     return {"data": data, "meta": {"total": total, "skip": skip, "take": take}}
+
+
+async def get_active_orders_by_customer(branch_id: int, customer_phone: str):
+    """Fetch active (PENDING or IN_PREPARATION) orders placed by a customer phone."""
+    clean_phone = customer_phone.strip()
+    return await db.order.find_many(
+        where={
+            "branchId": branch_id,
+            "customerPhone": clean_phone,
+            "status": {"in": ["PENDING", "IN_PREPARATION"]},
+        },
+        order={"createdAt": "desc"},
+        include={
+            "orderItems": {
+                "include": {
+                    "branchMenuItem": {
+                        "include": {
+                            "masterItem": True
+                        }
+                    }
+                }
+            }
+        },
+    )
+
+
+async def get_branch_queue_summary(branch_id: int):
+    """Get count of active orders and estimate prep queue time."""
+    pending_count = await db.order.count(
+        where={"branchId": branch_id, "status": "PENDING"}
+    )
+    in_prep_count = await db.order.count(
+        where={"branchId": branch_id, "status": "IN_PREPARATION"}
+    )
+    total_active = pending_count + in_prep_count
+    # Estimate wait time: 4 minutes per active order (minimum 5 mins)
+    est_wait_minutes = max(5, total_active * 4)
+    return {
+        "pending_count": pending_count,
+        "in_prep_count": in_prep_count,
+        "total_active": total_active,
+        "estimated_wait_minutes": est_wait_minutes,
+    }

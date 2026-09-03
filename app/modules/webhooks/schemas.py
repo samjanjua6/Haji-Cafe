@@ -9,10 +9,11 @@ class ParsedOrderItem(BaseModel):
 
 
 class ParsedWhatsAppOrder(BaseModel):
-    intent: str = "ORDER"  # ORDER, MENU_INQUIRY, ORDER_STATUS, HELP
+    intent: str = "ORDER"  # ORDER, CANCEL_ORDER, QUEUE_STATUS, MY_ORDER_STATUS, MENU_INQUIRY, RECOMMENDATION, STORE_INFO, HELP
     customer_name: Optional[str] = None
     branch_id: int = 1
     items: List[ParsedOrderItem] = []
+    order_id_reference: Optional[int] = None
     inquiry_topic: Optional[str] = None
 
 
