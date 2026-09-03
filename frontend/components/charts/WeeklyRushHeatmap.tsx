@@ -55,13 +55,25 @@ export default function WeeklyRushHeatmap({
     return "#ffffff";
   };
 
-  if (isLoading) {
-    return (
-      <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
-        Loading 7×24 weekly rush heatmap...
-      </div>
-    );
-  }
+  const daysLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const displayDays =
+    heatmapData && heatmapData.length > 0
+      ? heatmapData
+      : daysLabels.map((d, idx) => ({
+          day: d,
+          day_idx: idx,
+          total_orders: 0,
+          total_revenue: 0,
+          hours: operatingHours.map((h) => ({
+            day_idx: idx,
+            day: d,
+            hour: h,
+            label: `${h < 10 ? "0" + h : h}:00`,
+            orders: 0,
+            revenue: 0,
+            intensity_score: 0,
+          })),
+        }));
 
   return (
     <div style={{ width: "100%", position: "relative" }}>
@@ -131,7 +143,7 @@ export default function WeeklyRushHeatmap({
           </div>
 
           {/* Day Rows */}
-          {heatmapData.map((dayData) => {
+          {displayDays.map((dayData) => {
             const isWeekend = dayData.day === "Sat" || dayData.day === "Sun";
             return (
               <div

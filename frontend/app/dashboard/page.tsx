@@ -41,8 +41,8 @@ export default function DashboardPage() {
   }, []);
 
   const [dashChartType, setDashChartType] = React.useState<"HEATMAP" | "SPLINE" | "HISTOGRAM">("HEATMAP");
-  const branchId = user?.scopes?.[0]?.branchId;
-  const cafeId = user?.scopes?.[0]?.cafeId;
+  const branchId = user?.scopes?.[0]?.branchId || user?.defaultBranchId || (user?.role === "BRANCH_MANAGER" ? 3 : undefined);
+  const cafeId = user?.scopes?.[0]?.cafeId || user?.defaultCafeId || (user?.role === "CAFE_OWNER" ? 2 : undefined);
 
   const { data: peakDataRes, isLoading: loadingPeaks } = useQuery({
     queryKey: ["dashboard-peaks", branchId, cafeId],
@@ -54,7 +54,7 @@ export default function DashboardPage() {
         : `/scheduling/peak-hours`;
       return api.get<{ status: string; data: any }>(query);
     },
-    enabled: !!(branchId || cafeId),
+    enabled: !!user,
   });
   const peakData = peakDataRes?.data;
   const hours = peakData?.operating_hours || [];
