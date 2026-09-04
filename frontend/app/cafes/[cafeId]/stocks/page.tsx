@@ -19,6 +19,7 @@ import { Card } from "@/components/Card";
 import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import EmptyState from "@/components/EmptyState";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 
 interface Cafe {
   id: number;
@@ -286,6 +287,7 @@ export default function CafeStocksPage() {
 
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} cafeName={cafe?.name} />
       {/* ── Page Header ── */}
       <div className="page-header" style={{ flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -416,10 +418,10 @@ export default function CafeStocksPage() {
             onChange={(e) => setSelectedBranchId(e.target.value)}
             style={{ width: "100%", cursor: "pointer" }}
           >
-            <option value="all">🏢 All Branches ({stockItems.length} items)</option>
+            <option value="all">All Branches ({stockItems.length} items)</option>
             {branches.map((b) => (
               <option key={b.id} value={String(b.id)}>
-                📍 {b.name} ({branchCounts[b.id] || 0} items)
+                {b.name} ({branchCounts[b.id] || 0} items)
               </option>
             ))}
           </select>
@@ -433,10 +435,10 @@ export default function CafeStocksPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{ width: "100%", cursor: "pointer" }}
           >
-            <option value="all">🏷️ All Statuses</option>
-            <option value="in_stock">🟢 In Stock</option>
-            <option value="low_stock">🟡 Low Stock</option>
-            <option value="sold_out">🔴 Sold Out</option>
+            <option value="all">All Statuses</option>
+            <option value="in_stock">In Stock</option>
+            <option value="low_stock">Low Stock</option>
+            <option value="sold_out">Sold Out</option>
           </select>
         </div>
 

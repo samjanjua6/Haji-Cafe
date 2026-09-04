@@ -82,7 +82,8 @@ export default function Sidebar() {
   const dynamicLinks = [...navItems];
   if (user?.role === "SUPER_ADMIN") {
     dynamicLinks.push({ href: "/cafes", label: "All Cafés", icon: Store });
-    dynamicLinks.push({ href: "/admin/users", label: "User Management", icon: LayoutDashboard });
+    dynamicLinks.push({ href: "/kitchen", label: "Kitchen KDS", icon: Flame });
+    dynamicLinks.push({ href: "/admin/users", label: "User Management", icon: Users });
   }
 
   return (
@@ -222,6 +223,14 @@ export default function Sidebar() {
                 icon={Flame}
                 active={pathname.includes(`/branches/${scope.branchId}/kitchen`)}
               />
+              {user?.role === "BRANCH_MANAGER" && (
+                <NavLink
+                  href={`/branches/${scope.branchId}/stock?cafeId=${scope.cafeId}`}
+                  label="Stock & Inventory"
+                  icon={Package}
+                  active={pathname.includes(`/branches/${scope.branchId}/stock`)}
+                />
+              )}
               <NavLink
                 href={`/branches/${scope.branchId}/schedule?cafeId=${scope.cafeId}`}
                 label="AI Shifts & Peak Hours"

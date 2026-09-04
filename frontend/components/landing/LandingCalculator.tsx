@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Calculator, Clock, DollarSign, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
 
 interface LandingCalculatorProps {
   onOpenAuth: (tab: "login" | "register") => void;
@@ -39,23 +39,6 @@ export default function LandingCalculator({ onOpenAuth }: LandingCalculatorProps
       >
         {/* Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 48px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--accent-muted)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <Calculator size={14} /> ROI &amp; EFFICIENCY CALCULATOR
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",

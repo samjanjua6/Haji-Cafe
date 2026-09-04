@@ -20,6 +20,10 @@ import {
   Search,
   Check,
   ShieldCheck,
+  Cookie,
+  Cake,
+  Utensils,
+  CupSoda,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -31,7 +35,7 @@ type ShowcaseTab = "pos" | "kds" | "analytics" | "voice";
 
 export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
   const [activeTab, setActiveTab] = useState<ShowcaseTab>("pos");
-  const [selectedCategory, setSelectedCategory] = useState("All Coffees");
+  const [selectedCategory, setSelectedCategory] = useState("All Menu");
   const [searchQuery, setSearchQuery] = useState("");
 
   const playKitchenBell = () => {
@@ -53,24 +57,26 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
       osc1.start(now);
       osc1.stop(now + 0.6);
 
-      toast.success("🔔 KDS Kitchen Bell Chime Played!", { icon: "🛎️" });
+      toast.success("KDS Kitchen Bell Chime Played!");
     } catch {
-      toast.success("🔔 Order Bell Triggered!");
+      toast.success("Order Bell Triggered!");
     }
   };
 
   const posItems = [
-    { name: "Spanish Latte", category: "Coffee", price: 4.5, icon: "☕", stock: "94 in stock", popular: true },
-    { name: "Iced Caramel Macchiato", category: "Coffee", price: 5.2, icon: "🧊", stock: "68 in stock", popular: true },
-    { name: "Butter Croissant", category: "Bakery", price: 3.5, icon: "🥐", stock: "32 in stock", popular: false },
-    { name: "Blueberry Cheesecake", category: "Bakery", price: 6.0, icon: "🍰", stock: "18 in stock", popular: false },
-    { name: "Artisan Turkey Panini", category: "Snacks", price: 7.5, icon: "🥪", stock: "24 in stock", popular: false },
-    { name: "Matcha Fusion Latte", category: "Tea", price: 5.0, icon: "🍵", stock: "45 in stock", popular: true },
+    { name: "Spanish Latte", category: "Coffee", price: 4.5, icon: Coffee, stock: "94 in stock", popular: true },
+    { name: "Iced Caramel Macchiato", category: "Coffee", price: 5.2, icon: Sparkles, stock: "68 in stock", popular: true },
+    { name: "Vanilla Oat Cortado", category: "Coffee", price: 4.2, icon: Coffee, stock: "52 in stock", popular: false },
+    { name: "Butter Croissant", category: "Bakery", price: 3.5, icon: Cookie, stock: "32 in stock", popular: false },
+    { name: "Blueberry Cheesecake", category: "Bakery", price: 6.0, icon: Cake, stock: "18 in stock", popular: false },
+    { name: "Belgian Chocolate Muffin", category: "Bakery", price: 3.8, icon: Cookie, stock: "40 in stock", popular: true },
+    { name: "Artisan Turkey Panini", category: "Snacks", price: 7.5, icon: Utensils, stock: "24 in stock", popular: false },
+    { name: "Matcha Fusion Latte", category: "Tea", price: 5.0, icon: CupSoda, stock: "45 in stock", popular: true },
   ];
 
   const filteredItems = posItems.filter(
     (item) =>
-      (selectedCategory === "All Coffees" || item.category === selectedCategory || (selectedCategory === "Popular" && item.popular)) &&
+      (selectedCategory === "All Menu" || item.category === selectedCategory || (selectedCategory === "Popular" && item.popular)) &&
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -78,7 +84,7 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
     <section
       style={{
         position: "relative",
-        padding: "36px 24px 60px 24px",
+        padding: "48px 24px 60px 24px",
         overflow: "hidden",
       }}
     >
@@ -109,40 +115,24 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
       >
         {/* Main Hero Header */}
         <div style={{ textAlign: "center", maxWidth: "860px", margin: "0 auto 36px auto" }}>
-          {/* Badge */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--bg-surface)",
-              border: "1px solid var(--accent)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              boxShadow: "0 2px 12px var(--accent-glow)",
-              animation: "fadeIn 0.5s ease-out",
-            }}
-          >
-            <Sparkles size={14} /> All-in-One Cloud POS • Kitchen Display • Live Voice AI
-          </div>
-
           {/* Heading */}
           <h1
             style={{
-              fontSize: "clamp(26px, 4vw, 46px)",
+              fontSize: "clamp(28px, 4.2vw, 48px)",
               fontWeight: 900,
-              lineHeight: 1.15,
+              lineHeight: 1.2,
               letterSpacing: "-0.03em",
-              marginBottom: "16px",
+              marginBottom: "18px",
               color: "var(--text-primary)",
             }}
           >
-            Run Your Entire Cafe &amp; Franchise with{" "}
-            <span className="landing-gradient-text">Lightning POS &amp; Live Voice AI</span>
+            Run Your Entire Cafe &amp; Franchise
+            <span
+              className="landing-gradient-text"
+              style={{ display: "block", marginTop: "6px" }}
+            >
+              with Lightning POS &amp; Live Voice AI
+            </span>
           </h1>
 
           {/* Subheading */}
@@ -168,7 +158,6 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
               alignItems: "center",
               justifyContent: "center",
               gap: "12px",
-              marginBottom: "24px",
             }}
           >
             <button
@@ -198,33 +187,6 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
             >
               <Store size={16} color="var(--accent)" /> Sign In to POS Dashboard
             </button>
-          </div>
-
-          {/* Trust Badges */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "18px",
-              color: "var(--text-muted)",
-              fontSize: "12.5px",
-              fontWeight: 500,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle2 size={15} color="var(--success)" /> 100% Browser &amp; Tablet Ready
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle2 size={15} color="var(--success)" /> Real-Time KDS WebSockets
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle2 size={15} color="var(--success)" /> LiveKit Voice WebRTC (48kHz)
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle2 size={15} color="var(--success)" /> Scoped Multi-Branch Security
-            </div>
           </div>
         </div>
 
@@ -270,27 +232,6 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                 <Store size={16} color="var(--accent)" />
                 <span style={{ fontSize: "13px", fontWeight: 700 }}>Haji Cafe - Downtown Branch #01</span>
               </div>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  color: "var(--success)",
-                  fontWeight: 600,
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    backgroundColor: "var(--success)",
-                    boxShadow: "0 0 8px var(--success)",
-                  }}
-                />
-                Live Network Active
-              </span>
             </div>
 
             {/* 4-View Switcher Tabs */}
@@ -388,7 +329,7 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
 
                 {/* Category Filter Pills */}
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  {["All Coffees", "Popular", "Bakery", "Tea", "Snacks"].map((cat) => (
+                  {["All Menu", "Popular", "Coffee", "Bakery", "Tea", "Snacks"].map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
@@ -402,6 +343,7 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                         fontSize: "12px",
                         fontWeight: 600,
                         cursor: "pointer",
+                        transition: "all 0.15s ease",
                       }}
                     >
                       {cat}
@@ -414,14 +356,29 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                  gap: "14px",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "16px",
                   marginBottom: "20px",
                 }}
               >
                 {filteredItems.map((item, idx) => (
                   <div
                     key={idx}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      toast.success(`Added 1x ${item.name} ($${item.price.toFixed(2)}) to Order Ticket!`, {
+                        icon: "☕",
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toast.success(`Added 1x ${item.name} ($${item.price.toFixed(2)}) to Order Ticket!`, {
+                          icon: "☕",
+                        });
+                      }
+                    }}
                     style={{
                       backgroundColor: "var(--bg-surface)",
                       border: "1px solid var(--border)",
@@ -430,9 +387,21 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
-                      gap: "8px",
-                      transition: "all 0.2s ease",
+                      gap: "10px",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                       position: "relative",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent)";
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.boxShadow = "0 10px 24px -6px var(--accent-glow)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)";
                     }}
                   >
                     {item.popular && (
@@ -445,21 +414,36 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                           fontWeight: 800,
                           backgroundColor: "var(--accent-muted)",
                           color: "var(--accent)",
-                          padding: "2px 6px",
+                          padding: "2px 7px",
                           borderRadius: "4px",
                           border: "1px solid var(--accent)",
+                          letterSpacing: "0.04em",
                         }}
                       >
                         TOP SELLER
                       </span>
                     )}
 
-                    <div style={{ fontSize: "32px", marginBottom: "4px" }}>{item.icon}</div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        background: "var(--accent-muted)",
+                        color: "var(--accent)",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <item.icon size={22} />
+                    </div>
                     <div>
                       <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
                         {item.name}
                       </div>
-                      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "3px" }}>
                         {item.stock}
                       </div>
                     </div>
@@ -470,24 +454,27 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                         alignItems: "center",
                         justifyContent: "space-between",
                         borderTop: "1px solid var(--border-subtle)",
-                        paddingTop: "10px",
+                        paddingTop: "12px",
                         marginTop: "4px",
                       }}
                     >
-                      <span style={{ fontSize: "15px", fontWeight: 900, color: "var(--accent)" }}>
+                      <span style={{ fontSize: "16px", fontWeight: 900, color: "var(--accent)" }}>
                         ${item.price.toFixed(2)}
                       </span>
                       <span
                         style={{
                           fontSize: "11px",
-                          fontWeight: 600,
-                          backgroundColor: "var(--bg-card)",
-                          padding: "3px 8px",
+                          fontWeight: 700,
+                          backgroundColor: "var(--accent-muted)",
+                          padding: "4px 9px",
                           borderRadius: "6px",
-                          color: "var(--text-muted)",
+                          color: "var(--accent)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
                         }}
                       >
-                        POS Ready
+                        + Add to Ticket
                       </span>
                     </div>
                   </div>
@@ -513,7 +500,7 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                     Shift Active: <strong>Cashier Ali</strong>
                   </span>
                   <span>•</span>
-                  <span>Terminal: <strong>Register #01 (Thermal ESC/POS Linked)</strong></span>
+                  <span>Register: <strong>Register #01 (Receipt Printer Connected)</strong></span>
                 </div>
                 <button
                   onClick={() => onOpenAuth("login")}
@@ -552,7 +539,7 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                       border: "1px solid var(--success)33",
                     }}
                   >
-                    ● 3 Tickets Active
+                    3 Tickets Active
                   </span>
                 </div>
 
@@ -923,9 +910,9 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                       <Mic size={20} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "15px", fontWeight: 800 }}>LiveKit WebRTC Voice Pipeline</div>
-                      <div style={{ fontSize: "12px", color: "var(--success)", fontWeight: 600 }}>
-                        ● 48kHz Full-Duplex Audio Engine Connected
+                      <div style={{ fontSize: "15px", fontWeight: 800 }}>AI Voice Order Assistant</div>
+                      <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>
+                        Hands-free voice ordering for fast counter service
                       </div>
                     </div>
                   </div>
@@ -940,40 +927,29 @@ export default function LandingHero({ onOpenAuth }: LandingHeroProps) {
                       border: "1px solid var(--accent)",
                     }}
                   >
-                    GEMINI &amp; GROQ LLM
+                    HAJI CAFE AI
                   </span>
                 </div>
 
-                {/* Voice Pipeline 4-Stage Breakdown */}
+                {/* Spoken Voice Order Demonstration */}
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    backgroundColor: "var(--bg-card)",
+                    padding: "18px 20px",
+                    borderRadius: "12px",
+                    border: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
                     gap: "12px",
                   }}
                 >
-                  <div style={{ backgroundColor: "var(--bg-card)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--accent)" }}>01. VOICE VAD</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginTop: "2px" }}>Silero Neural VAD</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Directional noise suppression</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "10px", fontSize: "14px" }}>
+                    <span style={{ fontWeight: 700, color: "var(--accent)" }}>Spoken Order:</span>
+                    <span style={{ color: "var(--text-primary)" }}>&quot;Two Iced Spanish Lattes with Oat Milk and one Butter Croissant&quot;</span>
                   </div>
-
-                  <div style={{ backgroundColor: "var(--bg-card)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--info)" }}>02. SPEECH-TO-TEXT</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginTop: "2px" }}>Deepgram Nova-2</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>&lt;150ms speech transcription</div>
-                  </div>
-
-                  <div style={{ backgroundColor: "var(--bg-card)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--warning)" }}>03. REASONING ENGINE</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginTop: "2px" }}>Groq / Gemini LLM</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Direct DB inventory &amp; order tools</div>
-                  </div>
-
-                  <div style={{ backgroundColor: "var(--bg-card)", padding: "14px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--success)" }}>04. VOICE SYNTHESIS</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginTop: "2px" }}>ElevenLabs TTS</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Natural conversational audio</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "10px", fontSize: "13px" }}>
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>Instant Action:</span>
+                    <span style={{ color: "var(--text-muted)" }}>Order routed directly to Barista Kitchen Display (KDS) &bull; Bill Total: $12.50</span>
                   </div>
                 </div>
               </div>

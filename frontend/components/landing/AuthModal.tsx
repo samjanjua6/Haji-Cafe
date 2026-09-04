@@ -334,7 +334,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           }}
         >
           <ShieldCheck size={14} color="var(--success)" />
-          <span>256-bit Encrypted SSL • Fast Tokenized Auth</span>
+          <span>Bank-Grade Security • Instant Sign-In</span>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { TableSkeleton } from "@/components/LoadingSkeleton";
 import EmptyState from "@/components/EmptyState";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 
 interface MenuItem { id: number; name: string; description: string | null; basePrice: number; isDeleted: boolean; category: { name: string } | null; }
 interface Category { id: number; name: string; }
@@ -69,6 +70,7 @@ export default function MasterMenuPage() {
 
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} />
       <div className="page-header">
         <div>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>

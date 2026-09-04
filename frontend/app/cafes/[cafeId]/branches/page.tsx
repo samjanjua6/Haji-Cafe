@@ -23,6 +23,7 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { Card } from "@/components/Card";
 import { Skeleton } from "@/components/LoadingSkeleton";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 import EmptyState from "@/components/EmptyState";
 import { formatDate } from "@/lib/format";
 
@@ -287,6 +288,7 @@ export default function BranchesManagementPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} />
       {/* ── Header ── */}
       <div className="page-header" style={{ flexWrap: "wrap", gap: 12 }}>
         <div>

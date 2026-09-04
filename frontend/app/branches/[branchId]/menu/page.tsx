@@ -8,6 +8,7 @@ import BranchMenuTable from "@/components/menu/BranchMenuTable";
 import BranchMenuModals, { BranchMenuFormState } from "@/components/menu/BranchMenuModals";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import BranchSubnav from "@/components/branches/BranchSubnav";
 
 export default function BranchMenuPage() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function BranchMenuPage() {
 
   return (
     <div>
+      <BranchSubnav branchId={branchId} />
       <div className="page-header">
         <div>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>

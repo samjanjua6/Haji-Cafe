@@ -26,6 +26,9 @@ import {
   Lock,
   Copy,
   Send,
+  Smartphone,
+  ChefHat,
+  BarChart3,
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { auth } from "@/lib/auth";
@@ -175,36 +178,17 @@ export default function LandingNavbar({ onOpenAuth }: LandingNavbarProps) {
             >
               <img src="/logo.png" alt="Haji Cafe Logo" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span
-                style={{
-                  fontSize: "14.5px",
-                  fontWeight: 800,
-                  color: "var(--text-primary)",
-                  letterSpacing: "-0.02em",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Haji Cafe
-              </span>
-              <span
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  padding: "1px 5px",
-                  borderRadius: "99px",
-                  background: "var(--accent-muted)",
-                  color: "var(--accent)",
-                  border: "1px solid var(--accent)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "2px",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Sparkles size={8} /> AI POS
-              </span>
-            </div>
+            <span
+              style={{
+                fontSize: "15px",
+                fontWeight: 800,
+                color: "var(--text-primary)",
+                letterSpacing: "-0.02em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Haji Cafe
+            </span>
           </Link>
 
           {/* Liquid Desktop Tabs (Center) */}
@@ -489,7 +473,7 @@ function SecurityIslandContent() {
     kitchen: {
       title: "Kitchen & Barista Staff",
       scope: "Kitchen Display System (KDS)",
-      allowed: ["Real-Time Order Ticket Queue", "Preparation Status Updates (In Prep ➔ Ready)", "Audio Chime Rush Notifications", "Zero Access to Pricing & Margins"],
+      allowed: ["Real-Time Order Ticket Queue", "Preparation Status Updates (In Prep → Ready)", "Audio Chime Rush Notifications", "Zero Access to Pricing & Margins"],
     },
   };
 
@@ -498,10 +482,10 @@ function SecurityIslandContent() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 800, color: "var(--accent)", textTransform: "uppercase", marginBottom: "3px" }}>
-            <ShieldCheck size={12} /> Enterprise Security &amp; RBAC Architecture
+            <ShieldCheck size={12} /> Staff Permissions &amp; Data Security
           </div>
           <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-            Scoped Multi-Tenant Security &amp; Immutable Audit Logs
+            Multi-Branch Security &amp; Accurate Audit Records
           </h3>
         </div>
       </div>
@@ -549,23 +533,23 @@ function SecurityIslandContent() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)" }}>
           <Key size={14} color="var(--accent)" />
-          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Dual-Token JWT Auth</div>
-          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>15m access + rotating refresh tokens</div>
+          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Secure Staff Login</div>
+          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>PIN &amp; session timeout protection</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)" }}>
           <History size={14} color="var(--info)" />
-          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Price Immutability</div>
-          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>`price_at_purchase` locking</div>
+          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Permanent Sales Accuracy</div>
+          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>Locked historical order &amp; tax totals</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)" }}>
           <Database size={14} color="var(--warning)" />
-          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>PostgreSQL ACID</div>
-          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>Prisma relational transaction safety</div>
+          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Reliable Cloud Storage</div>
+          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>Zero lost orders with automatic backups</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)" }}>
           <Lock size={14} color="var(--success)" />
-          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>256-Bit TLS 1.3</div>
-          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>Encrypted WebRTC &amp; WebSockets</div>
+          <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "3px" }}>Bank-Grade Encryption</div>
+          <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "1px" }}>Protected orders, payments &amp; voice streams</div>
         </div>
       </div>
     </div>
@@ -586,7 +570,7 @@ function FaqIslandContent() {
     },
     {
       q: "How does the Live Voice AI Assistant operate during noisy peak hours?",
-      a: "The Voice Assistant uses LiveKit WebRTC with directional noise suppression and Gemini processing. Baristas can speak via tablet mics, hands-free earpieces, or counter mics without espresso machine noise interference.",
+      a: "The Voice Assistant uses directional noise suppression. Baristas can speak via tablet mics, hands-free earpieces, or counter mics without espresso machine noise interference.",
     },
     {
       q: "Can I manage multiple cafe branches with different prices and staff?",
@@ -722,7 +706,7 @@ function PricingIslandContent({ onOpenAuth, onClose }: { onOpenAuth: (t: "login"
     {
       name: "Enterprise",
       price: annual ? 159 : 199,
-      desc: "For multi-location restaurant groups and franchises.",
+      desc: "For multi-location cafe groups and franchises.",
       features: ["Unlimited Branches", "Custom Voice Workflows", "Dedicated Account Lead", "24/7 VIP Phone SLA"],
       popular: false,
     },
@@ -844,7 +828,7 @@ function VoiceIslandContent({ onOpenAuth, onClose }: { onOpenAuth: (t: "login" |
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
         <div>
           <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-            LiveKit WebRTC Voice AI Operations
+            Hands-Free AI Voice Assistant
           </h3>
           <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px" }}>
             Hands-free voice order entry, inventory lookups, and sales inquiries.
@@ -867,11 +851,11 @@ function VoiceIslandContent({ onOpenAuth, onClose }: { onOpenAuth: (t: "login" |
         <div style={{ fontSize: "12.5px", fontWeight: 800, color: "var(--text-primary)" }}>Sample Voice Commands:</div>
         <div style={{ backgroundColor: "var(--bg-card)", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "12px" }}>
           <span style={{ color: "var(--accent)", fontWeight: 700 }}>Barista Spoken:</span> &quot;Create order: 2 Iced Spanish Lattes with Oat Milk for Table 4&quot;
-          <div style={{ color: "var(--text-muted)", fontSize: "10.5px", marginTop: "2px" }}>➔ Dispatches instant kitchen ticket to Barista KDS display</div>
+          <div style={{ color: "var(--text-muted)", fontSize: "10.5px", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}><ArrowRight size={10}/> Dispatches instant kitchen ticket to Barista KDS display</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-card)", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "12px" }}>
           <span style={{ color: "var(--accent)", fontWeight: 700 }}>Manager Spoken:</span> &quot;What are today&apos;s total sales across all 3 branches?&quot;
-          <div style={{ color: "var(--text-muted)", fontSize: "10.5px", marginTop: "2px" }}>➔ &quot;Total gross sales is $4,850.20 (+22% vs yesterday)&quot;</div>
+          <div style={{ color: "var(--text-muted)", fontSize: "10.5px", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}><ArrowRight size={10}/> &quot;Total gross sales is $4,850.20 (+22% vs yesterday)&quot;</div>
         </div>
       </div>
     </div>
@@ -886,12 +870,12 @@ function TourIslandContent({ onOpenAuth, onClose }: { onOpenAuth: (t: "login" | 
     <div style={{ animation: "fadeIn 0.2s ease-out" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
         <div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "var(--accent)", textTransform: "uppercase", marginBottom: "4px" }}>
+            <Sparkles size={13} /> Unified System Showcase
+          </div>
           <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-            Unified System Showcase
-          </h3>
-          <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px" }}>
             The 4 operational pillars of Haji Cafe POS.
-          </p>
+          </h3>
         </div>
         <button
           onClick={() => {
@@ -908,24 +892,32 @@ function TourIslandContent({ onOpenAuth, onClose }: { onOpenAuth: (t: "login" | 
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: "20px" }}>📱</div>
-          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "4px" }}>1. Counter POS</div>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--accent-muted)", color: "var(--accent)" }}>
+            <Smartphone size={18} />
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "8px" }}>1. Counter POS</div>
           <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>1-tap billing, drink modifiers, thermal printing</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: "20px" }}>🍳</div>
-          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "4px" }}>2. Kitchen KDS</div>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--accent-muted)", color: "var(--accent)" }}>
+            <ChefHat size={18} />
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "8px" }}>2. Kitchen KDS</div>
           <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Preparation timers, priority tags, audio chimes</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: "20px" }}>📊</div>
-          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "4px" }}>3. Analytics Hub</div>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--accent-muted)", color: "var(--accent)" }}>
+            <BarChart3 size={18} />
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "8px" }}>3. Analytics Hub</div>
           <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Daily revenue, peak hours, PDF/Excel export</div>
         </div>
         <div style={{ backgroundColor: "var(--bg-surface)", padding: "12px", borderRadius: "10px", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: "20px" }}>🎙️</div>
-          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "4px" }}>4. Voice AI</div>
-          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Hands-free voice orders via LiveKit WebRTC</div>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--accent-muted)", color: "var(--accent)" }}>
+            <Mic size={18} />
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: 800, marginTop: "8px" }}>4. Voice AI</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Hands-free voice orders &amp; counter assistant</div>
         </div>
       </div>
     </div>
@@ -988,8 +980,8 @@ function ContactIslandContent() {
   const [msg, setMsg] = useState("");
   const [sent, setSent] = useState(false);
 
-  const contactEmail = "support@chatbot.com";
-  const contactPhone = "+92 (300) 123-4567";
+  const contactEmail = "support@mychatbot.codes";
+  const contactPhone = "+92 340 6001884";
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

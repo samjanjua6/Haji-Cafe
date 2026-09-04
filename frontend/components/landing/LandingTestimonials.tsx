@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Star, Quote, CheckCircle2, Sparkles } from "lucide-react";
+import { Star, Quote, CheckCircle2 } from "lucide-react";
 
 export default function LandingTestimonials() {
   const reviews = [
@@ -10,8 +10,9 @@ export default function LandingTestimonials() {
       role: "Founder & Master Roaster",
       cafe: "Roastery & Co. (3 Branches)",
       avatar: "SJ",
+      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
       quote:
-        "Haji Cafe completely transformed our morning peak rush. The LiveKit Voice Assistant allows our baristas to punch in complicated drink modifiers while steaming milk—cutting customer wait time in half!",
+        "Haji Cafe completely transformed our morning peak rush. The AI Voice Assistant allows our baristas to punch in complicated drink modifiers while steaming milk—cutting customer wait time in half!",
       rating: 5,
     },
     {
@@ -19,6 +20,7 @@ export default function LandingTestimonials() {
       role: "Operations Director",
       cafe: "Artisan Bean Chain (5 Outlets)",
       avatar: "TM",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
       quote:
         "The multi-branch dashboard and automated low-stock alerts have saved us thousands of dollars in bean and syrup wastage. I can monitor live revenue across all branches right from my phone.",
       rating: 5,
@@ -28,6 +30,7 @@ export default function LandingTestimonials() {
       role: "General Manager",
       cafe: "Velvet Espresso Bar",
       avatar: "ER",
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
       quote:
         "The cleanest and most intuitive POS we have ever deployed. We trained 4 new seasonal cashiers in less than 10 minutes. The instant receipt printing and daily PDF reports are second to none.",
       rating: 5,
@@ -49,23 +52,6 @@ export default function LandingTestimonials() {
       >
         {/* Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 56px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <Sparkles size={14} /> PROVEN SUCCESS STORIES
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",
@@ -154,20 +140,38 @@ export default function LandingTestimonials() {
               >
                 <div
                   style={{
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     borderRadius: "50%",
+                    overflow: "hidden",
+                    border: "2px solid var(--border)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                    flexShrink: 0,
+                    position: "relative",
                     backgroundColor: "var(--accent-muted)",
-                    color: "var(--accent)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: 800,
                     fontSize: "14px",
-                    border: "1px solid var(--accent)",
+                    color: "var(--accent)",
                   }}
                 >
-                  {r.avatar}
+                  <span style={{ position: "absolute", zIndex: 1 }}>{r.avatar}</span>
+                  <img
+                    src={r.image}
+                    alt={r.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      position: "relative",
+                      zIndex: 2,
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 </div>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

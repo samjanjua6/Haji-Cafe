@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  MessageSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -25,9 +24,8 @@ export default function LandingContact() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
-  const contactEmail = "support@chatbot.com";
-  const contactPhone = "+92 (300) 123-4567";
-  const tollFreePhone = "+1 (800) 555-HAJI";
+  const contactEmail = "support@mychatbot.codes";
+  const contactPhone = "+92 340 6001884";
 
   const handleCopy = (text: string, type: "email" | "phone") => {
     navigator.clipboard.writeText(text);
@@ -48,7 +46,7 @@ export default function LandingContact() {
     setTimeout(() => {
       setLoading(false);
       toast.success(
-        `🎉 Thank you ${name || "there"}! Our support team at support@chatbot.com has received your message.`
+        `Thank you ${name || "there"}! Our support team at support@mychatbot.codes has received your message.`
       );
       setName("");
       setEmail("");
@@ -73,23 +71,6 @@ export default function LandingContact() {
       >
         {/* Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 56px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <MessageSquare size={14} /> WE ARE HERE TO HELP
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",
@@ -234,28 +215,17 @@ export default function LandingContact() {
                 <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
                   Direct Phone &amp; WhatsApp Helpline
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", margin: "4px 0" }}>
+                <div style={{ margin: "6px 0" }}>
                   <a
                     href={`tel:${contactPhone.replace(/[^0-9+]/g, "")}`}
                     style={{
-                      fontSize: "17px",
+                      fontSize: "18px",
                       fontWeight: 800,
                       color: "var(--text-primary)",
                       textDecoration: "none",
                     }}
                   >
                     {contactPhone}
-                  </a>
-                  <a
-                    href={`tel:${tollFreePhone.replace(/[^0-9+]/g, "")}`}
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "var(--text-muted)",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {tollFreePhone} (Toll-Free)
                   </a>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
@@ -280,7 +250,7 @@ export default function LandingContact() {
                     {copiedPhone ? "Copied!" : "Copy Phone"}
                   </button>
                   <span style={{ fontSize: "12px", color: "var(--success)", fontWeight: 600 }}>
-                    ● Lines Open Now
+                    Available on WhatsApp &amp; Call
                   </span>
                 </div>
               </div>
@@ -452,7 +422,7 @@ export default function LandingContact() {
                   </>
                 ) : (
                   <>
-                    <Send size={16} /> Send Inquiry to support@chatbot.com
+                    <Send size={16} /> Send Inquiry to support@mychatbot.codes
                   </>
                 )}
               </button>

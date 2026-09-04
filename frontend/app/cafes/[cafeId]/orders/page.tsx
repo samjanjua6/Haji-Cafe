@@ -15,6 +15,7 @@ import OrdersFilterBar from "@/components/orders/OrdersFilterBar";
 import OrderTable from "@/components/orders/OrderTable";
 import { ExportButtons } from "@/components/orders/ExportButtons";
 import OrderReceiptModal from "@/components/orders/OrderReceiptModal";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 
 interface Cafe {
   id: number;
@@ -169,6 +170,7 @@ export default function CafeOrdersPage() {
 
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} cafeName={cafe?.name} />
       {/* ── Page Header ── */}
       <div className="page-header" style={{ flexWrap: "wrap", gap: 12 }}>
         <div>
