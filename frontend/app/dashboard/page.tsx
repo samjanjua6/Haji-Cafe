@@ -154,11 +154,19 @@ export default function DashboardPage() {
                   color: "#0f172a",
                 }}
               >
-                {user.email.slice(0, 2).toUpperCase()}
+                {user.displayName?.trim()
+                  ? user.displayName
+                      .trim()
+                      .split(/\s+/)
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()
+                  : user.email.slice(0, 2).toUpperCase()}
               </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>
-                  {user.email}
+                  {user.displayName?.trim() || user.email}
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center", flexWrap: "wrap" }}>
                   <span
@@ -175,8 +183,13 @@ export default function DashboardPage() {
                     <Shield size={10} style={{ marginRight: 4, display: "inline" }} />
                     {user.role.replace("_", " ")}
                   </span>
+                  {user.displayName?.trim() && (
+                    <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+                      {user.email}
+                    </span>
+                  )}
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                    Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
+                    {user.displayName?.trim() ? "• " : ""}Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
                   </span>
                 </div>
               </div>

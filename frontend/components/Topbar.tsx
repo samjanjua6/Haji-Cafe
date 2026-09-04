@@ -47,8 +47,16 @@ function useBreadcrumbs() {
 
 
 // User avatar with initials
-function UserAvatar({ email, role }: { email: string; role: string }) {
-  const initials = email.slice(0, 2).toUpperCase();
+function UserAvatar({ email, name, role }: { email: string; name?: string | null; role: string }) {
+  const initials = name?.trim()
+    ? name
+        .trim()
+        .split(/\s+/)
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : email.slice(0, 2).toUpperCase();
 
   const roleColors: Record<string, { bg: string; color: string }> = {
     SUPER_ADMIN: { bg: "var(--danger-glow)", color: "var(--danger)" },
@@ -91,7 +99,7 @@ function UserAvatar({ email, role }: { email: string; role: string }) {
         cursor: "default",
         boxShadow: "0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-glow)",
       }}
-        title={email}
+        title={name ? `${name} (${email})` : email}
       >
         {initials}
       </div>
@@ -204,7 +212,7 @@ export default function Topbar() {
         </button>
         {user && (
           <Link href="/settings" style={{ textDecoration: "none" }}>
-            <UserAvatar email={user.email} role={user.role} />
+            <UserAvatar email={user.email} name={user.displayName} role={user.role} />
           </Link>
         )}
       </div>
