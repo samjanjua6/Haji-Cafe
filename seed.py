@@ -85,12 +85,22 @@ async def main():
     cat_espresso = await db.category.create(data={
         "cafeId": cafe.id,
         "name": "Espresso Bar",
-        "description": "Hot & cold espresso drinks"
+        "description": "Hot & specialty espresso coffees"
+    })
+    cat_cold = await db.category.create(data={
+        "cafeId": cafe.id,
+        "name": "Cold Brew & Iced Coffee",
+        "description": "Chilled, draft, and cold-brew specialty beverages"
+    })
+    cat_tea = await db.category.create(data={
+        "cafeId": cafe.id,
+        "name": "Teas & Refreshers",
+        "description": "Artisan loose-leaf teas, matcha, and iced coolers"
     })
     cat_pastries = await db.category.create(data={
         "cafeId": cafe.id,
-        "name": "Pastries",
-        "description": "Freshly baked goods"
+        "name": "Pastries & Bakery",
+        "description": "Freshly baked goods and Parisian pastries"
     })
 
     master_latte = await db.mastermenuitem.create(data={
@@ -107,11 +117,60 @@ async def main():
         "description": "Espresso over hot water",
         "basePrice": Decimal("3.00")
     })
+    master_spanish_latte = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_espresso.id,
+        "name": "Spanish Latte",
+        "description": "Rich espresso, condensed milk, and velvety steamed milk foam",
+        "basePrice": Decimal("4.75")
+    })
+    master_cappuccino = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_espresso.id,
+        "name": "Cappuccino",
+        "description": "Equal parts bold espresso, steamed milk, and dense foam",
+        "basePrice": Decimal("4.25")
+    })
+    master_flat_white = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_espresso.id,
+        "name": "Flat White",
+        "description": "Double ristretto topped with micro-foamed velvety milk",
+        "basePrice": Decimal("4.50")
+    })
+    master_caramel_macchiato = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_espresso.id,
+        "name": "Caramel Macchiato",
+        "description": "Vanilla steamed milk marked with espresso and caramel drizzle",
+        "basePrice": Decimal("5.00")
+    })
+    master_nitro = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_cold.id,
+        "name": "Nitro Cold Brew",
+        "description": "Slow-steeped 18 hours with cascading draft nitrogen crema",
+        "basePrice": Decimal("4.75")
+    })
+    master_iced_spanish = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_cold.id,
+        "name": "Iced Spanish Latte",
+        "description": "Signature sweet condensed milk espresso poured over clear ice",
+        "basePrice": Decimal("4.95")
+    })
+    master_matcha = await db.mastermenuitem.create(data={
+        "cafeId": cafe.id,
+        "categoryId": cat_tea.id,
+        "name": "Matcha Latte",
+        "description": "Ceremonial Japanese Uji green tea with creamy oat milk",
+        "basePrice": Decimal("5.25")
+    })
     master_croissant = await db.mastermenuitem.create(data={
         "cafeId": cafe.id,
         "categoryId": cat_pastries.id,
         "name": "Butter Croissant",
-        "description": "Flaky French pastry",
+        "description": "Flaky French pastry baked fresh daily",
         "basePrice": Decimal("3.50")
     })
 
