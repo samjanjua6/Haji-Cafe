@@ -70,7 +70,7 @@ async def send_waha_whatsapp_message(
 ) -> bool:
     """
     Send an outbound message directly to customer's WhatsApp using WAHA (WhatsApp HTTP API).
-    Supports interactive quick-reply buttons via POST /api/sendButtons with fallback to POST /api/sendText.
+    Uses POST /api/sendText for guaranteed universal message delivery across all WhatsApp iOS, Android, and Web versions.
     """
     base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3008")
     clean_id = chat_id.strip()
@@ -80,39 +80,18 @@ async def send_waha_whatsapp_message(
         clean_id = clean_id.replace("+", "").replace(" ", "").replace("-", "")
         clean_id = f"{clean_id}@c.us"
 
+    url = f"{base_url.rstrip('/')}/api/sendText"
+    payload = {
+        "chatId": clean_id,
+        "text": message_text,
+        "session": "default",
+    }
+    logger.info(f"Dispatching WAHA WhatsApp text message to {clean_id}...")
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # 1. If buttons are provided, dispatch via /api/sendButtons
-            if buttons:
-                btn_url = f"{base_url.rstrip('/')}/api/sendButtons"
-                btn_payload = {
-                    "session": "default",
-                    "chatId": clean_id,
-                    "title": message_text,
-                    "footer": "Haji Cafe ☕",
-                    "buttons": buttons,
-                }
-                logger.info(f"Dispatching WAHA interactive buttons to {clean_id}...")
-                try:
-                    btn_resp = await client.post(btn_url, json=btn_payload)
-                    if btn_resp.status_code in [200, 201]:
-                        logger.info(f"WAHA interactive buttons successfully sent to {clean_id}")
-                        return True
-                    else:
-                        logger.warning(f"WAHA sendButtons returned {btn_resp.status_code}, falling back to sendText: {btn_resp.text}")
-                except Exception as e:
-                    logger.warning(f"WAHA sendButtons failed: {e}, falling back to sendText")
-
-            # 2. Standard text message fallback
-            text_url = f"{base_url.rstrip('/')}/api/sendText"
-            text_payload = {
-                "chatId": clean_id,
-                "text": message_text,
-                "session": "default",
-            }
-            resp = await client.post(text_url, json=text_payload)
+            resp = await client.post(url, json=payload)
             if resp.status_code in [200, 201]:
-                logger.info(f"WAHA WhatsApp text successfully sent to {clean_id}")
+                logger.info(f"WAHA WhatsApp message successfully sent to {clean_id}")
                 return True
             else:
                 logger.error(f"WAHA send response error: {resp.status_code} - {resp.text}")
@@ -227,7 +206,10 @@ async def process_whatsapp_order(
             f"• *Order #{order_to_cancel.id} Status:* ⏳ Queued\n"
             f"• *Items:*\n{items_str}\n"
             f"• *Total:* ${order_to_cancel.totalAmount:.2f}\n\n"
-            f"Please tap a button below or reply with *\"Yes\"* or *\"No\"*."
+            f"Please reply with:\n"
+            f"1️⃣ *Yes* (cancel order)\n"
+            f"2️⃣ *No* (keep order)\n\n"
+            f"_(Or simply reply *1* or *2*)_"
         )
         buttons = [
             {"id": "confirm_cancel_yes", "text": "✅ Yes, Cancel"},

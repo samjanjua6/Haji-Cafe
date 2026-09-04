@@ -59,10 +59,23 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
     clean_lower = message_text.strip().lower()
 
     # Fast-path for Interactive Button IDs and Confirmation replies (0ms latency)
-    if clean_lower in ["confirm_cancel_yes", "yes, cancel", "yes", "haan", "ha", "confirm", "yes cancel", "cancel yes"]:
+    yes_matches = {
+        "1", "1.", "1️⃣", "option 1", "opt 1", "choice 1",
+        "yes", "yes please", "yes cancel", "cancel yes", "yes, cancel", "y",
+        "haan", "ha", "ji haan", "haan cancel kardo",
+        "confirm", "confirm cancel", "confirm_cancel_yes"
+    }
+    no_matches = {
+        "2", "2.", "2️⃣", "option 2", "opt 2", "choice 2",
+        "no", "no please", "no, keep order", "no keep", "keep", "keep order", "n",
+        "nahi", "ji nahi", "rehne do", "keep it", "mat karo",
+        "confirm_cancel_no"
+    }
+
+    if clean_lower in yes_matches:
         return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_YES", branch_id=default_branch_id)
 
-    if clean_lower in ["confirm_cancel_no", "no, keep order", "no", "nahi", "keep", "keep order", "no keep"]:
+    if clean_lower in no_matches:
         return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_NO", branch_id=default_branch_id)
 
     if clean_lower in ["btn_track_status", "track status", "track order"]:
@@ -141,10 +154,23 @@ def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedW
     """Deterministic heuristic parser when LLM is unavailable."""
     lower = text.strip().lower()
 
-    if lower in ["confirm_cancel_yes", "yes, cancel", "yes", "haan", "ha", "confirm", "yes cancel", "cancel yes"]:
+    yes_matches = {
+        "1", "1.", "1️⃣", "option 1", "opt 1", "choice 1",
+        "yes", "yes please", "yes cancel", "cancel yes", "yes, cancel", "y",
+        "haan", "ha", "ji haan", "haan cancel kardo",
+        "confirm", "confirm cancel", "confirm_cancel_yes"
+    }
+    no_matches = {
+        "2", "2.", "2️⃣", "option 2", "opt 2", "choice 2",
+        "no", "no please", "no, keep order", "no keep", "keep", "keep order", "n",
+        "nahi", "ji nahi", "rehne do", "keep it", "mat karo",
+        "confirm_cancel_no"
+    }
+
+    if lower in yes_matches:
         return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_YES", branch_id=default_branch_id)
 
-    if lower in ["confirm_cancel_no", "no, keep order", "no", "nahi", "keep", "keep order", "no keep"]:
+    if lower in no_matches:
         return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_NO", branch_id=default_branch_id)
 
     if lower in ["btn_track_status", "track status", "track order"]:
