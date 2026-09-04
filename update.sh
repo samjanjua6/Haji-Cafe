@@ -8,10 +8,11 @@ set -e
 PROJECT_DIR=/home/ubuntu/Haji-Cafe
 cd $PROJECT_DIR
 
-echo "==> Pulling latest code from feature/livekit-chatbot..."
+BRANCH=${1:-main}
+echo "==> Pulling latest code from $BRANCH..."
 git fetch origin
-git checkout feature/livekit-chatbot
-git pull origin feature/livekit-chatbot
+git checkout $BRANCH
+git pull origin $BRANCH
 
 echo "==> Updating Python dependencies..."
 source venv/bin/activate
