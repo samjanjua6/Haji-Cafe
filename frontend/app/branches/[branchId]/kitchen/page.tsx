@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Order, OrderStatus } from "@/types/order";
 import StatusBadge from "@/components/StatusBadge";
+import BranchSubnav from "@/components/branches/BranchSubnav";
 
 // Synthesize a clean hotel-desk bell chime using Web Audio API
 function playKitchenBell() {
@@ -203,11 +204,10 @@ export default function KitchenDisplayPage() {
             }
 
             const toastTitle = newOrder.orderType === "DELIVERY"
-              ? `🛵 Delivery Ticket #${newOrder.id}`
-              : `🍽️ Dine-in ${newOrder.tableNumber ? `(${newOrder.tableNumber})` : ""} Ticket #${newOrder.id}`;
+              ? `Delivery Ticket #${newOrder.id}`
+              : `Dine-in ${newOrder.tableNumber ? `(${newOrder.tableNumber})` : ""} Ticket #${newOrder.id}`;
             toast.success(`${toastTitle}: ${itemSummary || "Incoming order"}`, {
               duration: 5000,
-              icon: "☕",
             });
 
             setOrders((prev) => {
@@ -284,6 +284,7 @@ export default function KitchenDisplayPage() {
 
   return (
     <div>
+      <BranchSubnav branchId={branchId} cafeId={cafeId} />
       {/* 1. Page Header (Strictly matching project .page-header) */}
       <div className="page-header">
         <div>
@@ -331,7 +332,7 @@ export default function KitchenDisplayPage() {
             onClick={() => {
               playKitchenBell();
               announceOrderVoice("Haji Cafe Kitchen Voice Alert is Active and Ready!");
-              toast.success("🔊 Audio & Voice Unlocked! Testing speaker sound.");
+              toast.success("Audio & Voice Unlocked! Testing speaker sound.");
             }}
             style={{ color: "var(--accent)" }}
             title="Test speaker sound & unlock browser audio"

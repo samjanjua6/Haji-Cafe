@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, Phone, Sparkles, Send, ShieldCheck, Heart } from "lucide-react";
+import { Mail, Phone, Sparkles, Send, Heart } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function LandingFooter() {
@@ -62,21 +62,21 @@ export default function LandingFooter() {
             </div>
 
             <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "18px" }}>
-              The all-in-one cloud POS and LiveKit Voice AI platform empowering coffee shops, bakeries, and restaurant
+              The all-in-one cloud POS and AI Voice platform empowering coffee shops, bakeries, and cafe
               franchises worldwide.
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                 <Mail size={15} color="var(--accent)" />
-                <a href="mailto:support@chatbot.com" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
-                  support@chatbot.com
+                <a href="mailto:support@mychatbot.codes" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
+                  support@mychatbot.codes
                 </a>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                 <Phone size={15} color="var(--success)" />
-                <a href="tel:+923001234567" style={{ color: "var(--text-primary)", textDecoration: "none" }}>
-                  +92 (300) 123-4567
+                <a href="tel:+923406001884" style={{ color: "var(--text-primary)", textDecoration: "none" }}>
+                  +92 340 6001884
                 </a>
               </div>
             </div>
@@ -182,37 +182,14 @@ export default function LandingFooter() {
             borderTop: "1px solid var(--border)",
             paddingTop: "24px",
             display: "flex",
-            flexWrap: "wrap",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: "16px",
+            justifyContent: "center",
             fontSize: "12px",
             color: "var(--text-muted)",
+            textAlign: "center",
           }}
         >
-          <div>
-            © 2026 Haji Cafe Management Platform. All rights reserved.
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: "var(--success)",
-                  boxShadow: "0 0 6px var(--success)",
-                }}
-              />
-              <span style={{ color: "var(--success)", fontWeight: 600 }}>All Systems Operational (99.99% SLA)</span>
-            </div>
-            <span>•</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <ShieldCheck size={14} color="var(--accent)" />
-              <span>PCI-DSS &amp; SSL Compliant</span>
-            </div>
-          </div>
+          © 2026 Haji Cafe Management Platform. All rights reserved.
         </div>
       </div>
     </footer>

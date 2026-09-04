@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Sparkles, Zap, ArrowRight, ShieldCheck } from "lucide-react";
+import { Check, Sparkles, ArrowRight, ShieldCheck } from "lucide-react";
 
 interface LandingPricingProps {
   onOpenAuth: (tab: "login" | "register") => void;
@@ -23,7 +23,7 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
         "Fast POS Billing & Receipt Printing",
         "Basic Inventory & Raw Ingredient Tracking",
         "Standard Daily Sales Summary",
-        "Email Support (support@chatbot.com)",
+        "Email Support (support@mychatbot.codes)",
       ],
       popular: false,
       buttonText: "Start 14-Day Free Trial",
@@ -36,7 +36,7 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
       desc: "Engineered for high-volume cafes and expanding boutique coffee chains.",
       features: [
         "Up to 3 Cafe Branches",
-        "Live Voice AI Assistant (LiveKit & Gemini)",
+        "Hands-Free Voice AI Order Assistant",
         "Automated Low-Stock Threshold Alerts",
         "Predictive Sales Analytics & Forecasting",
         "1-Click PDF & Excel Reports Export",
@@ -51,7 +51,7 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
       badge: "UNLIMITED SCALE",
       priceMonthly: 199,
       priceAnnual: 159,
-      desc: "For multi-location restaurant groups and nationwide franchise operations.",
+      desc: "For multi-location cafe groups and nationwide franchise operations.",
       features: [
         "Unlimited Cafe Branches & Outlets",
         "Enterprise Multi-Branch Revenue Analytics",
@@ -84,23 +84,6 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
       >
         {/* Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 48px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--accent-muted)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <Zap size={14} /> TRANSPARENT PRICING
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",
@@ -248,7 +231,9 @@ export default function LandingPricing({ onOpenAuth }: LandingPricingProps) {
                       boxShadow: "0 2px 10px var(--accent-glow)",
                     }}
                   >
-                    ★ RECOMMENDED FOR MOST CAFES
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <Sparkles size={11} /> RECOMMENDED FOR MOST CAFES
+                    </span>
                   </div>
                 )}
 

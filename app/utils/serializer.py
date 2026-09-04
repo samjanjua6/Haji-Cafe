@@ -27,6 +27,8 @@ def to_jsonable(value: Any) -> Any:
         return value.value
     if isinstance(value, list):
         return [to_jsonable(v) for v in value]
+    if isinstance(value, dict):
+        return {k: to_jsonable(v) for k, v in value.items()}
     if hasattr(value, "__dict__"):
         return prisma_to_dict(value)
     return value
@@ -34,7 +36,7 @@ def to_jsonable(value: Any) -> Any:
 
 def prisma_to_dict(obj: Any) -> Any:
     """
-    Recursively convert a Prisma model object (or list thereof) to a plain
+    Recursively convert a Prisma model object (or list/dict thereof) to a plain
     camelCase dict. Skips private/dunder attributes and any relation that
     Prisma left as None (i.e. not included in the query).
     """
@@ -42,6 +44,8 @@ def prisma_to_dict(obj: Any) -> Any:
         return None
     if isinstance(obj, list):
         return [prisma_to_dict(item) for item in obj]
+    if isinstance(obj, dict):
+        return {k: prisma_to_dict(v) for k, v in obj.items()}
     if not hasattr(obj, "__dict__"):
         return to_jsonable(obj)
 

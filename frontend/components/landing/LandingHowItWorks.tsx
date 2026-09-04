@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { UserPlus, Coffee, Terminal, LineChart, Sparkles, ArrowRight } from "lucide-react";
+import { UserPlus, Coffee, Store, LineChart, ArrowRight } from "lucide-react";
 
 interface LandingHowItWorksProps {
   onOpenAuth: (tab: "login" | "register") => void;
@@ -23,8 +23,8 @@ export default function LandingHowItWorks({ onOpenAuth }: LandingHowItWorksProps
     },
     {
       step: "03",
-      icon: Terminal,
-      title: "Launch POS & Voice Terminal",
+      icon: Store,
+      title: "Launch Counter POS & Ordering",
       desc: "Run on any browser, tablet, or iPad. Tap items or speak voice commands to dispatch orders straight to kitchen printers.",
     },
     {
@@ -51,23 +51,6 @@ export default function LandingHowItWorks({ onOpenAuth }: LandingHowItWorksProps
       >
         {/* Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 56px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <Sparkles size={14} /> SIMPLE ONBOARDING
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",

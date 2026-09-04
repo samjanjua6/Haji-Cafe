@@ -542,8 +542,8 @@ export default function ChatbotWidget() {
               <Bot size={20} />
               <strong style={{ fontSize: "16px" }}>Assistant</strong>
               {isSpeaking && !isLiveMode && (
-                <span style={{ fontSize: "11px", color: "var(--accent)", fontStyle: "italic" }}>
-                  🔊 Speaking...
+                <span style={{ fontSize: "11px", color: "var(--accent)", fontStyle: "italic", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <Volume2 size={12} /> Speaking...
                 </span>
               )}
             </div>
@@ -690,9 +690,9 @@ export default function ChatbotWidget() {
             {isTranscribing && (
               <div style={{
                 alignSelf: "flex-end", fontSize: "13px", color: "var(--accent)",
-                fontStyle: "italic", padding: "4px 8px",
+                fontStyle: "italic", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 5
               }}>
-                🎙️ Transcribing...
+                <Mic size={13} /> Transcribing...
               </div>
             )}
             <div ref={messagesEndRef} />

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, HelpCircle, Sparkles } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export default function LandingFaq() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
@@ -13,7 +13,7 @@ export default function LandingFaq() {
     },
     {
       q: "How does the Live Voice AI Assistant operate during noisy cafe peak hours?",
-      a: "The built-in Voice Assistant uses LiveKit WebRTC with advanced directional noise suppression and Gemini speech processing. Baristas can interact via tablet mics, hands-free wireless earpieces, or counter microphones without background espresso grinder interference.",
+      a: "The built-in Voice Assistant features advanced directional noise suppression. Baristas can interact via tablet mics, hands-free wireless earpieces, or counter microphones without background espresso grinder interference.",
     },
     {
       q: "Can I manage multiple cafe branches with different prices and staff?",
@@ -25,11 +25,11 @@ export default function LandingFaq() {
     },
     {
       q: "How secure is my financial data and employee audit trail?",
-      a: "Enterprise-grade security is baked into every layer. We utilize 256-bit token encryption, granular role-based permissions (Super Admin, Cafe Owner, Branch Manager, Cashier), and permanent chronological audit logs for all sensitive actions.",
+      a: "Enterprise-grade security is baked into every layer. We utilize bank-grade data encryption, granular role-based permissions (Super Admin, Cafe Owner, Branch Manager, Cashier), and permanent chronological audit logs for all sensitive actions.",
     },
     {
       q: "Can your support team assist with migrating my existing menu items?",
-      a: "Absolutely! Our team is available 24/7 at support@chatbot.com or via phone at +92 (300) 123-4567 to help you import your entire menu, configure categories, and set up your branches in no time.",
+      a: "Absolutely! Our team is available 24/7 at support@mychatbot.codes or via phone at +92 340 6001884 to help you import your entire menu, configure categories, and set up your branches in no time.",
     },
   ];
 
@@ -52,23 +52,6 @@ export default function LandingFaq() {
       >
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--accent-muted)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <HelpCircle size={14} /> GOT QUESTIONS?
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 40px)",

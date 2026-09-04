@@ -10,6 +10,7 @@ import { Order } from "@/types/order";
 
 import { Card } from "@/components/Card";
 import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
+import { getOrderItemsSummary } from "@/lib/orders";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["IN_PREPARATION", "CANCELLED"],
@@ -65,7 +66,7 @@ export default function OrderTable({
   return (
     <Card padding="none">
       {loading ? (
-        <TableSkeleton rows={5} cols={branchMode ? 5 : 6} />
+        <TableSkeleton rows={5} cols={branchMode ? 6 : 7} />
       ) : orders.length === 0 ? (
         hasFiltersActive ? (
           <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -90,6 +91,7 @@ export default function OrderTable({
               <SortableHeader sticky label="ID" field="id" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               {!branchMode && <TableCell isHeader>Branch</TableCell>}
               <TableCell isHeader>Service</TableCell>
+              <TableCell isHeader>Items</TableCell>
               <SortableHeader label="Status" field="status" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Total" field="totalAmount" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Date" field="createdAt" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
@@ -108,11 +110,11 @@ export default function OrderTable({
                 <TableCell style={{ fontSize: 13, fontWeight: 500 }}>
                   {order.orderType === "DELIVERY" ? (
                     <span style={{ color: "#3b82f6", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      🛵 Delivery
+                      Delivery
                     </span>
                   ) : (
                     <span style={{ color: "#f59e0b", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      🍽️ {order.tableNumber || "Dine-in"}
+                      {order.tableNumber || "Dine-in"}
                     </span>
                   )}
                   {order.customerName && (
@@ -120,6 +122,9 @@ export default function OrderTable({
                       {order.customerName}
                     </div>
                   )}
+                </TableCell>
+                <TableCell style={{ maxWidth: 220, fontSize: 12, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={getOrderItemsSummary(order, 10)}>
+                  {getOrderItemsSummary(order, 2)}
                 </TableCell>
                 <TableCell><StatusBadge status={order.status} /></TableCell>
                 <TableCell style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(order.totalAmount).toFixed(2)}</TableCell>

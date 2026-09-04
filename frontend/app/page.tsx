@@ -56,7 +56,7 @@ function LandingPageContent() {
         flexDirection: "column",
         backgroundColor: "var(--bg-base)",
         color: "var(--text-primary)",
-        paddingTop: "74px", // Space for the floating dynamic island navbar
+        paddingTop: "92px", // Ample clearance for the floating dynamic island navbar
       }}
     >
       {/* Apple Dynamic Island Floating Liquid Navbar */}

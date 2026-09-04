@@ -1,9 +1,12 @@
 "use client";
-import React from "react";
-import { Printer, X, Coffee, MapPin } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Printer, X, Coffee, MapPin, Copy, Check, User } from "lucide-react";
 import { Order } from "@/types/order";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { normalizeOrderItems, formatTextReceipt, NormalizedOrderItem } from "@/lib/orders";
+import { api } from "@/lib/api";
+import toast from "react-hot-toast";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["IN_PREPARATION", "CANCELLED"],
@@ -25,18 +28,69 @@ export default function OrderReceiptModal({
   onClose,
   onStatusChange,
 }: OrderReceiptModalProps) {
+  const [activeOrder, setActiveOrder] = useState<Order | null>(order);
+  const [fetching, setFetching] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  // Sync state with order prop and fetch detail if items are not preloaded
+  useEffect(() => {
+    setActiveOrder(order);
+    if (!order) return;
+
+    const existingItems =
+      (order as any).orderItems ||
+      (order as any).orderLines ||
+      (order as any).items ||
+      [];
+
+    // If order has no line items loaded and valid branchId, fetch single order detail
+    if (existingItems.length === 0 && order.id && order.branchId) {
+      setFetching(true);
+      api
+        .get<Order>(`/branches/${order.branchId}/orders/${order.id}`)
+        .then((res: any) => {
+          if (res) {
+            setActiveOrder(res);
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not fetch detailed order lines:", err);
+        })
+        .finally(() => {
+          setFetching(false);
+        });
+    }
+  }, [order]);
+
   if (!order) return null;
+
+  const currentOrder = activeOrder || order;
+  const branchName = (currentOrder as any).branch?.name || "Main Branch";
+  const branchLocation = (currentOrder as any).branch?.location;
+  const placedBy = (currentOrder as any).placedBy?.name || (currentOrder as any).placedBy?.email;
+  const orderLines: NormalizedOrderItem[] = normalizeOrderItems(currentOrder);
+
+  const totalItemsCount = orderLines.reduce((sum, line) => sum + line.quantity, 0);
+  const nextTransitions = STATUS_TRANSITIONS[currentOrder.status] || [];
 
   const handlePrint = () => {
     window.print();
   };
 
-  const branchName = (order as any).branch?.name || "Main Branch";
-  const branchLocation = (order as any).branch?.location;
-  const orderLines = order.orderLines || [];
+  const handleCopy = () => {
+    const txt = formatTextReceipt(currentOrder, cafeName);
+    navigator.clipboard.writeText(txt);
+    setCopied(true);
+    toast.success("Receipt copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const totalItemsCount = orderLines.reduce((sum, line) => sum + (line.quantity || 1), 0);
-  const nextTransitions = STATUS_TRANSITIONS[order.status] || [];
+  const handleStatusClick = (newStatus: string) => {
+    setActiveOrder({ ...currentOrder, status: newStatus as any });
+    if (onStatusChange) {
+      onStatusChange(currentOrder, newStatus);
+    }
+  };
 
   return (
     <div
@@ -85,7 +139,7 @@ export default function OrderReceiptModal({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 16 }}>
             <Printer size={18} color="var(--accent)" />
-            Order Receipt #{order.id}
+            Order Receipt #{currentOrder.id}
           </div>
           <button
             onClick={onClose}
@@ -98,6 +152,7 @@ export default function OrderReceiptModal({
               padding: 4,
               borderRadius: 6,
             }}
+            title="Close modal"
           >
             <X size={18} />
           </button>
@@ -135,17 +190,22 @@ export default function OrderReceiptModal({
           </div>
 
           {/* Receipt Meta */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: 12 }}>
             <div>
               <div style={{ color: "var(--text-muted)" }}>
-                Receipt / Order: <strong style={{ color: "var(--text-primary)", fontFamily: "monospace" }}>#{order.id}</strong>
+                Receipt / Order: <strong style={{ color: "var(--text-primary)", fontFamily: "monospace" }}>#{currentOrder.id}</strong>
               </div>
               <div style={{ color: "var(--text-faint)", marginTop: 2 }}>
-                {formatDateTime(order.createdAt)}
+                {formatDateTime(currentOrder.createdAt)}
               </div>
+              {placedBy && (
+                <div style={{ color: "var(--text-faint)", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                  <User size={10} /> {placedBy}
+                </div>
+              )}
             </div>
             <div>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={currentOrder.status} />
             </div>
           </div>
 
@@ -187,13 +247,21 @@ export default function OrderReceiptModal({
                 </tr>
               </thead>
               <tbody>
-                {orderLines.length > 0 ? (
+                {fetching ? (
+                  [1, 2, 3].map((k) => (
+                    <tr key={k} style={{ borderBottom: "1px dashed var(--border-subtle)" }}>
+                      <td colSpan={4} style={{ padding: "10px 0" }}>
+                        <div style={{ height: 14, background: "var(--bg-card)", borderRadius: 4, opacity: 0.6 }} />
+                      </td>
+                    </tr>
+                  ))
+                ) : orderLines.length > 0 ? (
                   orderLines.map((line, idx) => (
                     <tr key={line.id || idx} style={{ borderBottom: "1px dashed var(--border-subtle)" }}>
                       <td style={{ padding: "8px 0", fontWeight: 600, color: "var(--text-primary)" }}>
-                        {line.branchMenuItem?.masterItem?.name || line.itemName || `Item #${line.branchMenuItemId}`}
+                        <div>{line.name}</div>
                         {line.notes && (
-                          <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", fontWeight: 400 }}>
+                          <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", fontWeight: 400, marginTop: 2 }}>
                             Note: {line.notes}
                           </div>
                         )}
@@ -205,14 +273,14 @@ export default function OrderReceiptModal({
                         {formatCurrency(line.unitPrice)}
                       </td>
                       <td style={{ padding: "8px 0", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: "var(--text-primary)" }}>
-                        {formatCurrency(line.lineTotal || (line.unitPrice * line.quantity))}
+                        {formatCurrency(line.lineTotal)}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} style={{ padding: "12px 0", textAlign: "center", color: "var(--text-muted)", fontStyle: "italic" }}>
-                      1x Standard Order Batch
+                    <td colSpan={4} style={{ padding: "14px 0", textAlign: "center", color: "var(--text-muted)", fontStyle: "italic" }}>
+                      No items recorded for this order
                     </td>
                   </tr>
                 )}
@@ -224,11 +292,11 @@ export default function OrderReceiptModal({
           <div style={{ borderTop: "1px dashed var(--border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
             <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
               <span>Total Items:</span>
-              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{totalItemsCount || 1}</span>
+              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{totalItemsCount}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
               <span>Subtotal:</span>
-              <span style={{ fontFamily: "monospace" }}>{formatCurrency(order.totalAmount)}</span>
+              <span style={{ fontFamily: "monospace" }}>{formatCurrency(currentOrder.totalAmount)}</span>
             </div>
             <div
               style={{
@@ -242,7 +310,7 @@ export default function OrderReceiptModal({
             >
               <span style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>GRAND TOTAL:</span>
               <span style={{ fontWeight: 800, fontSize: 20, color: "var(--accent)", fontFamily: "monospace" }}>
-                {formatCurrency(order.totalAmount)}
+                {formatCurrency(currentOrder.totalAmount)}
               </span>
             </div>
           </div>
@@ -275,9 +343,9 @@ export default function OrderReceiptModal({
                   key={status}
                   className="btn btn-ghost btn-sm"
                   style={{ fontSize: 12, padding: "4px 8px" }}
-                  onClick={() => onStatusChange(order, status)}
+                  onClick={() => handleStatusClick(status)}
                 >
-                  → {status.replace(/_/g, " ")}
+                  &rarr; {status.replace(/_/g, " ")}
                 </button>
               ))}
             </div>
@@ -290,25 +358,47 @@ export default function OrderReceiptModal({
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             gap: 10,
             padding: "14px 20px",
             borderTop: "1px solid var(--border)",
             background: "var(--bg-card)",
           }}
         >
-          <button className="btn btn-secondary" onClick={onClose}>
-            Close
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={handleCopy}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}
+            title="Copy receipt as formatted text for WhatsApp / SMS"
+          >
+            {copied ? <Check size={14} style={{ color: "var(--success)" }} /> : <Copy size={14} />}
+            <span>{copied ? "Copied Slip!" : "Copy Text Slip"}</span>
           </button>
-          <button className="btn btn-primary" onClick={handlePrint} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <Printer size={15} /> Print Receipt
-          </button>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+            <button className="btn btn-primary" onClick={handlePrint} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Printer size={15} /> Print Receipt
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Print Specific Global CSS ── */}
+      {/* ── Print Specific Global CSS (Supports 80mm & 58mm Thermal Printers) ── */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -316,20 +406,22 @@ export default function OrderReceiptModal({
             visibility: visible !important;
           }
           #printable-receipt {
-            position: fixed !important;
+            position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            max-width: 380px !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
             margin: 0 auto !important;
-            padding: 16px !important;
+            padding: 8mm 6mm !important;
             background: #ffffff !important;
             color: #000000 !important;
-            border: 1px dashed #cccccc !important;
+            border: none !important;
             box-shadow: none !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace !important;
           }
           #printable-receipt * {
             color: #000000 !important;
+            background: transparent !important;
           }
           .no-print {
             display: none !important;

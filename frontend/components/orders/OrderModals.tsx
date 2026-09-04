@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
 import StatusBadge from "@/components/StatusBadge";
 import { api } from "@/lib/api";
@@ -116,7 +116,9 @@ export default function OrderModals({
                   <input type="number" min="1" value={line.quantity} onChange={e => updateLine(idx, "quantity", parseInt(e.target.value))} required />
                 </div>
                 {orderLines.length > 1 && (
-                  <button type="button" onClick={() => removeLine(idx)} className="btn btn-danger btn-sm" style={{ marginTop: 22 }}>✕</button>
+                  <button type="button" onClick={() => removeLine(idx)} className="btn btn-danger btn-sm" style={{ marginTop: 22 }} title="Remove item">
+                    <Trash2 size={13} />
+                  </button>
                 )}
               </div>
               <div>
