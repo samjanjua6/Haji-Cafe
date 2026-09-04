@@ -377,21 +377,59 @@ async def process_whatsapp_order(
             buttons=buttons,
         )
 
-    # 4. Handle Categorized Menu Inquiries
+    # 4. Handle Categorized Menu Inquiries & Specific Item Questions
     if parsed.intent == "MENU_INQUIRY":
         branch_items = await db.branchmenuitem.find_many(
-            where={"branchId": target_branch_id, "isActive": True, "isInStock": True},
+            where={"branchId": target_branch_id, "isActive": True},
             include={"masterItem": {"include": {"category": True}}},
             order={"id": "asc"},
         )
 
+        # Check if the customer asked about a specific item (e.g. "How much latte do you have", "price of croissant")
+        inquiry_target = parsed.inquiry_topic
+        if not inquiry_target:
+            lower_query = message_text.lower()
+            for bi in branch_items:
+                if bi.masterItem.name.lower() in lower_query:
+                    inquiry_target = bi.masterItem.name
+                    break
+
+        if inquiry_target:
+            matched_bi = _find_best_menu_match(inquiry_target, branch_items)
+            if matched_bi:
+                price = matched_bi.priceOverride if matched_bi.priceOverride is not None else matched_bi.masterItem.basePrice
+                avail = matched_bi.availableQuantity
+                is_out = not matched_bi.isInStock or (avail is not None and avail <= 0)
+                status_str = "⚠️ *Currently Sold Out*" if is_out else (f"✅ *In Stock* (~{avail} available)" if avail is not None else "✅ *In Stock & Freshly Brewed*")
+                cat_name = matched_bi.masterItem.category.name if matched_bi.masterItem.category else "Specialty Bar"
+                desc = matched_bi.masterItem.description or "Handcrafted freshly by our baristas."
+
+                order_cta = f"🛒 *To order, reply:*\n👉 _\"Send 1 {matched_bi.masterItem.name}\"_" if not is_out else "Would you like to try our *Latte* ($4.00) or *Americano* ($3.00) instead?"
+
+                reply = (
+                    f"☕ *{matched_bi.masterItem.name}* ({branch_name})\n\n"
+                    f"• *Price:* ${price:.2f}\n"
+                    f"• *Category:* {cat_name}\n"
+                    f"• *Status:* {status_str}\n"
+                    f"• *Description:* {desc}\n\n"
+                    f"{order_cta}"
+                )
+                buttons = [
+                    {"id": "btn_view_menu", "text": "📜 View Full Menu"},
+                    {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+                ]
+                return WhatsAppOrderResponse(status="MENU", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
+
+        # General Full Menu listing
         categories_map: Dict[str, List[str]] = {}
         for bi in branch_items:
             cat_name = bi.masterItem.category.name if bi.masterItem.category else "Specialties"
             price = bi.priceOverride if bi.priceOverride is not None else bi.masterItem.basePrice
+            is_sold_out = not bi.isInStock or (bi.availableQuantity is not None and bi.availableQuantity <= 0)
+            tag = " _(Sold Out)_" if is_sold_out else ""
             if cat_name not in categories_map:
                 categories_map[cat_name] = []
-            categories_map[cat_name].append(f"• {bi.masterItem.name} — ${price:.2f}")
+            categories_map[cat_name].append(f"• {bi.masterItem.name} — ${price:.2f}{tag}")
 
         menu_sections = []
         for cat, items in categories_map.items():
@@ -400,7 +438,7 @@ async def process_whatsapp_order(
             menu_sections.append(f"*{icon} {cat}*\n" + "\n".join(items))
 
         menu_text = "\n\n".join(menu_sections) if menu_sections else (
-            "☕ *Specialty Coffee*\n• Spanish Latte — $4.75\n• Americano — $3.25\n• Nitro Cold Brew — $4.50\n\n"
+            "☕ *Specialty Coffee*\n• Spanish Latte — $4.75\n• Americano — $3.25\n• Nitro Cold Brew — $4.75\n\n"
             "🥐 *Bakery & Food*\n• Butter Croissant — $3.50\n• Blueberry Muffin — $3.75\n• Grilled Chicken Panini — $7.50"
         )
 
@@ -408,7 +446,7 @@ async def process_whatsapp_order(
             f"📜 *Haji Cafe Menu* ({branch_name})\n\n"
             f"{menu_text}\n\n"
             f"🛒 *How to order:* Just type naturally!\n"
-            f"👉 _\"Send 2 Spanish Lattes and 1 Butter Croissant for pickup.\"_"
+            f"👉 _\"Send 1 Nitro Cold Brew and 1 Butter Croissant for pickup.\"_"
         )
         buttons = [
             {"id": "btn_recommendations", "text": "⭐ House Favorites"},
@@ -521,11 +559,15 @@ async def process_whatsapp_order(
 
     items_to_order: List[OrderItemCreate] = []
     items_summary = []
+    out_of_stock_names: List[str] = []
+    unrecognized_names: List[str] = []
 
     for req_item in parsed.items:
         match = _find_best_menu_match(req_item.name, all_branch_items)
         if match:
-            if not match.isInStock or (match.availableQuantity is not None and match.availableQuantity < req_item.quantity):
+            avail = match.availableQuantity
+            if not match.isInStock or (avail is not None and avail < req_item.quantity):
+                out_of_stock_names.append(match.masterItem.name)
                 continue
             effective_p = match.priceOverride if match.priceOverride is not None else match.masterItem.basePrice
             items_to_order.append(
@@ -542,13 +584,34 @@ async def process_whatsapp_order(
                 "subtotal": float(effective_p * req_item.quantity),
                 "notes": req_item.notes,
             })
+        else:
+            unrecognized_names.append(req_item.name)
 
     if not items_to_order:
-        reply = (
-            f"Sorry, we couldn't find the requested items in stock at {branch_name}.\n"
-            f"Our favorites: Spanish Latte ($4.75), Americano ($3.25), Butter Croissant ($3.50).\n"
-            f"Reply with an item name to order!"
-        )
+        if out_of_stock_names:
+            items_str = ", ".join(f"*{name}*" for name in out_of_stock_names)
+            reply = (
+                f"⚠️ Sorry, {items_str} is currently sold out at {branch_name}.\n\n"
+                f"Would you like to try something else from our bar?\n"
+                f"• *Latte* ($4.00)\n"
+                f"• *Americano* ($3.00)\n"
+                f"• *Butter Croissant* ($3.50)\n\n"
+                f"Reply with an item name to order!"
+            )
+        elif unrecognized_names:
+            items_str = ", ".join(f"\"{name}\"" for name in unrecognized_names)
+            reply = (
+                f"Sorry, we couldn't find {items_str} on our menu at {branch_name}.\n\n"
+                f"Reply with *'menu'* to see our full selection, or order our favorites:\n"
+                f"• *Latte* ($4.00)\n"
+                f"• *Americano* ($3.00)\n"
+                f"• *Butter Croissant* ($3.50)"
+            )
+        else:
+            reply = (
+                f"Sorry, we couldn't find the requested items in stock at {branch_name}.\n\n"
+                f"Reply with *'menu'* to view our full menu, or reply with an item name to order!"
+            )
         buttons = [
             {"id": "btn_view_menu", "text": "📜 View Menu"},
             {"id": "btn_recommendations", "text": "⭐ House Favorites"},

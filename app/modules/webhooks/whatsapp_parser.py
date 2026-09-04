@@ -50,6 +50,10 @@ RULES:
 6. Never classify "Cancel my order" as ORDER — it must be CANCEL_ORDER.
 7. If the customer introduces themselves (e.g. "I am Sam", "My name is Bilal", "Mera naam Ali hai"), extract their name into "customer_name", otherwise null.
 8. Return strictly valid JSON.
+9. CRITICAL INTENT DISTINCTION:
+- Questions about pricing, availability, stock, or ingredients (e.g. "how much is a latte?", "how much latte do you have?", "do you have cold brew?", "is croissant available?", "latte kitne ka hai?", "kya cold brew hai?") MUST BE CLASSIFIED AS "MENU_INQUIRY" with "inquiry_topic" set to the item name, and "items" MUST BE [].
+- Only classify as "ORDER" if the customer clearly instructs to order/buy/send/get items (e.g. "send 1 latte", "can I get 2 cold brews", "1 nitro cold brew", "1 latte please", "1 latte bhej do", "1 latte chahiye").
+- When intent is NOT "ORDER", always return "items": [] (empty array, never null).
 """
 
 
@@ -111,15 +115,17 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
         data = json.loads(raw_json)
 
         items_list = []
-        for it in data.get("items", []):
-            if isinstance(it, dict) and it.get("name"):
-                items_list.append(
-                    ParsedOrderItem(
-                        name=str(it["name"]).strip(),
-                        quantity=max(1, int(it.get("quantity", 1))),
-                        notes=it.get("notes"),
+        raw_items = data.get("items")
+        if isinstance(raw_items, list):
+            for it in raw_items:
+                if isinstance(it, dict) and it.get("name"):
+                    items_list.append(
+                        ParsedOrderItem(
+                            name=str(it["name"]).strip(),
+                            quantity=max(1, int(it.get("quantity", 1))),
+                            notes=it.get("notes"),
+                        )
                     )
-                )
 
         intent = data.get("intent", "HELP").upper()
         # Sanity check: If intent is ORDER but items are empty, check for cancellation or queue keywords
@@ -206,9 +212,31 @@ def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedW
         ref_id = int(num_match.group(1)) if num_match else None
         return ParsedWhatsAppOrder(intent="MY_ORDER_STATUS", branch_id=default_branch_id, order_id_reference=ref_id)
 
-    # 4. Menu Inquiry
-    if any(q in lower for q in ["menu", "price", "kya hai", "what do you have", "list", "items"]):
-        return ParsedWhatsAppOrder(intent="MENU_INQUIRY", branch_id=default_branch_id)
+    # 4. Questions & Inquiries (Price, Stock, Availability, Menu) -> MENU_INQUIRY
+    question_triggers = [
+        "how much", "how many", "price", "cost", "rate", "kitne", "kitna",
+        "do you have", "is there", "available", "kya hai", "hai kya", "available hai",
+        "menu", "what do you have", "list", "items"
+    ]
+    if any(q in lower for q in question_triggers):
+        topic = None
+        for key, formal_name in [
+            ("spanish latte", "Spanish Latte"),
+            ("nitro cold brew", "Nitro Cold Brew"),
+            ("cold brew", "Nitro Cold Brew"),
+            ("americano", "Americano"),
+            ("latte", "Latte"),
+            ("cappuccino", "Cappuccino"),
+            ("croissant", "Butter Croissant"),
+            ("panini", "Grilled Chicken Pesto Panini"),
+            ("muffin", "Blueberry Crumble Muffin"),
+            ("lemonade", "Fresh Mint Lemonade"),
+            ("matcha", "Matcha Latte"),
+        ]:
+            if key in lower:
+                topic = formal_name
+                break
+        return ParsedWhatsAppOrder(intent="MENU_INQUIRY", branch_id=default_branch_id, inquiry_topic=topic)
 
     # 5. Recommendation
     if any(q in lower for q in ["recommend", "best", "special", "popular", "kya acha hai"]):
@@ -221,21 +249,32 @@ def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedW
     # 7. Item Matching for Order
     known_items = [
         ("spanish latte", "Spanish Latte"),
+        ("nitro cold brew", "Nitro Cold Brew"),
+        ("cold brew", "Nitro Cold Brew"),
         ("americano", "Americano"),
         ("latte", "Latte"),
         ("cappuccino", "Cappuccino"),
         ("croissant", "Butter Croissant"),
         ("panini", "Grilled Chicken Pesto Panini"),
-        ("cold brew", "Nitro Cold Brew"),
         ("muffin", "Blueberry Crumble Muffin"),
+        ("lemonade", "Fresh Mint Lemonade"),
+        ("matcha", "Matcha Latte"),
     ]
+
+    # Explicit ordering signals required to trigger an actual order
+    order_signals = ["send", "want", "order", "get", "give", "bhej", "chahiye", "dena", "lao", "pack", "please", "can i get", "can i have"]
+    has_order_signal = any(w in lower for w in order_signals)
 
     items = []
     for key, formal_name in known_items:
         if key in lower:
             qty_match = re.search(rf"(\d+)\s*(?:x\s*)?{key}", lower)
-            qty = int(qty_match.group(1)) if qty_match else 1
-            items.append(ParsedOrderItem(name=formal_name, quantity=qty))
+            has_qty = bool(qty_match)
+            # Only classify as order if there is an explicit quantity or order intent word, or the message is only the item name
+            is_exact_item = lower.strip() == key
+            if has_order_signal or has_qty or is_exact_item:
+                qty = int(qty_match.group(1)) if qty_match else 1
+                items.append(ParsedOrderItem(name=formal_name, quantity=qty))
 
     name_match = re.search(r"(?:my name is|i am|i'm|mera naam|this is)\s+([A-Za-z]+)", text, re.IGNORECASE)
     detected_name = name_match.group(1).capitalize() if name_match else None
