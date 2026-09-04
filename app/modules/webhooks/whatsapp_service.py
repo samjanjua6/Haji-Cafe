@@ -103,7 +103,7 @@ async def send_waha_whatsapp_message(
 
 async def process_whatsapp_order(
     message_text: str,
-    customer_name: Optional[str] = "WhatsApp Customer",
+    customer_name: Optional[str] = None,
     customer_phone: Optional[str] = None,
     branch_id: int = 1,
 ) -> WhatsAppOrderResponse:
@@ -117,6 +117,31 @@ async def process_whatsapp_order(
     """
     parsed = await parse_customer_message(message_text, default_branch_id=branch_id)
     target_branch_id = parsed.branch_id or branch_id
+
+    # Dynamic Customer Name Resolution:
+    # 1. Prefer name explicitly introduced in the current message (e.g. "I am Ali", "Sam here")
+    if parsed.customer_name and parsed.customer_name.strip():
+        customer_name = parsed.customer_name.strip()
+
+    # 2. If name is not provided in payload or message, check previous order history for this phone
+    if (not customer_name or customer_name.strip().lower() in ["valued guest", "valued customer", "whatsapp customer", "customer"]) and customer_phone:
+        try:
+            prev_order = await db.order.find_first(
+                where={"customerPhone": customer_phone, "customerName": {"not": None}},
+                order={"createdAt": "desc"},
+            )
+            if prev_order and prev_order.customerName and prev_order.customerName.strip():
+                prev_candidate = prev_order.customerName.strip()
+                if prev_candidate.lower() not in ["valued guest", "valued customer", "whatsapp customer", "customer"]:
+                    customer_name = prev_candidate
+        except Exception as e:
+            logger.debug(f"Could not retrieve previous customer name: {e}")
+
+    # Sanitize customer_name (strip any placeholders)
+    if customer_name:
+        customer_name = customer_name.strip()
+        if customer_name.lower() in ["valued guest", "valued customer", "whatsapp customer", "customer", "null", "undefined", "none"]:
+            customer_name = None
 
     branch = await db.branch.find_unique(where={"id": target_branch_id}, include={"cafe": True})
     branch_name = branch.name if branch else f"Branch #{target_branch_id}"
@@ -426,8 +451,9 @@ async def process_whatsapp_order(
 
     # 7. General Greetings / Help
     if not parsed.items or parsed.intent == "HELP":
+        greeting_line = f"👋 Hello {customer_name}! Welcome to Haji Cafe ({branch_name})." if customer_name else f"👋 Hello and welcome to Haji Cafe ({branch_name})!"
         reply = (
-            f"👋 Hello {customer_name or 'there'}! Welcome to Haji Cafe ({branch_name}).\n\n"
+            f"{greeting_line}\n\n"
             f"Here is how I can help you today:\n"
             f"• 🛍️ *Order:* _\"Can I get 2 Spanish Lattes and 1 Croissant?\"_\n"
             f"• 📜 *Menu:* _\"Show me the menu\"_\n"
@@ -553,9 +579,10 @@ async def process_whatsapp_order(
         lines.append(f"• {it['quantity']}x {it['item_name']}{note_str} — ${it['subtotal']:.2f}")
 
     receipt_items_str = "\n".join(lines)
+    cust_line = f"\n👤 Customer: *{customer_name}*" if customer_name else ""
     reply_receipt = (
         f"🎉 Order Confirmed! Order #{order_id}\n"
-        f"📍 Branch: {branch_name}\n\n"
+        f"📍 Branch: {branch_name}{cust_line}\n\n"
         f"Order Summary:\n{receipt_items_str}\n\n"
         f"💵 Total: ${total_amt:.2f}\n"
         f"⏱️ Estimated Prep Time: ~10 minutes\n\n"

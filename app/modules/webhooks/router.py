@@ -237,11 +237,29 @@ async def incoming_whatsapp_webhook(
                         or data_obj.get("text")
                     )
                     sender_phone = data_obj.get("from") or data_obj.get("phone")
+                    # Check all possible fields where WhatsApp / WAHA stores user display name
+                    raw_data = data_obj.get("_data") if isinstance(data_obj.get("_data"), dict) else {}
+                    raw_sender = data_obj.get("sender") if isinstance(data_obj.get("sender"), dict) else {}
+                    raw_contact = data_obj.get("contact") if isinstance(data_obj.get("contact"), dict) else {}
+                    raw_info = raw_data.get("Info") if isinstance(raw_data.get("Info"), dict) else {}
+
                     sender_name = (
-                        data_obj.get("_data", {}).get("notifyName")
-                        if isinstance(data_obj.get("_data"), dict)
-                        else None
-                    ) or data_obj.get("pushName") or data_obj.get("pushname") or data_obj.get("profile_name") or data_obj.get("name")
+                        data_obj.get("pushName")
+                        or data_obj.get("pushname")
+                        or raw_data.get("notifyName")
+                        or raw_data.get("pushName")
+                        or raw_info.get("Pushname")
+                        or raw_sender.get("pushName")
+                        or raw_sender.get("name")
+                        or raw_contact.get("pushName")
+                        or raw_contact.get("name")
+                        or data_obj.get("name")
+                        or json_body.get("pushName")
+                    )
+                    if sender_name and isinstance(sender_name, str):
+                        sender_name = sender_name.strip()
+                        if sender_name.lower() in ["valued guest", "valued customer", "whatsapp customer", "null", "undefined", "unknown"]:
+                            sender_name = None
 
                     # Check for interactive button click responses
                     button_id = (
@@ -281,9 +299,11 @@ async def incoming_whatsapp_webhook(
             return {"status": "ignored_duplicate_message", "key": dedup_key}
         _processed_message_ids[dedup_key] = now
 
+    logger.info(f"Processing WhatsApp message from {sender_phone} (Display Name: {sender_name!r}): '{message_text}'")
+
     result = await whatsapp_service.process_whatsapp_order(
         message_text=message_text,
-        customer_name=sender_name or "Valued Guest",
+        customer_name=sender_name,
         customer_phone=sender_phone,
         branch_id=1,
     )
