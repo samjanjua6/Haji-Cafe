@@ -82,6 +82,21 @@ async def get_branch_menu(
     return await service.get_branch_menu(branch_id)
 
 
+@router.get("/branches/{branch_id}/master-menu")
+async def get_branch_master_menu(
+    branch_id: int,
+    _=Depends(require_branch_access()),
+):
+    """[BRANCH_MANAGER, STAFF, SUPER_ADMIN] Get the master menu items for the café that owns this branch."""
+    from app.modules.cafes.repository import get_branch_by_id
+    from app.core.exceptions import NotFoundException
+    branch = await get_branch_by_id(branch_id)
+    if not branch:
+        raise NotFoundException("Branch not found.")
+    items = await service.get_master_items(branch.cafeId)
+    return prisma_to_dict(items)
+
+
 @router.patch("/branches/{branch_id}/menu/{item_id}")
 async def patch_branch_menu_item(
     branch_id: int,

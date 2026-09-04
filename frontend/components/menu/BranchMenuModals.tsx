@@ -4,11 +4,8 @@ import Modal from "@/components/Modal";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { BranchMenuItem, MasterMenuItem } from "@/types/menu";
-import { Cafe } from "@/types/cafe";
 import { Dispatch, SetStateAction } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useSearchParams } from "next/navigation";
 
 export interface BranchMenuFormState {
   masterItemId: string;
@@ -40,25 +37,10 @@ export default function BranchMenuModals({
   setForm,
   onSuccess,
 }: BranchMenuModalsProps) {
-  const { data: user } = useCurrentUser();
-  const searchParams = useSearchParams();
-  const urlCafeId = searchParams.get("cafeId");
-  
-  const branchScope = user?.scopes?.find((s) => String(s.branchId) === String(branchId));
-
-  // If SUPER_ADMIN without specific scope, fetch all cafes to deduce the cafeId
-  const { data: cafes } = useQuery({
-    queryKey: ["all-cafes-for-branch-deduction"],
-    queryFn: () => api.get<Cafe[]>("/cafes"),
-    enabled: !urlCafeId && user?.role === "SUPER_ADMIN" && !branchScope,
-  });
-
-  const cafeId = urlCafeId || branchScope?.cafeId || cafes?.find((c) => c.branches?.some((b) => String(b.id) === String(branchId)))?.id;
-
   const { data: masterMenu = [], isLoading: loadingMaster } = useQuery({
-    queryKey: ["masterMenu", cafeId],
-    queryFn: () => api.get<MasterMenuItem[]>(`/cafes/${cafeId}/menu`),
-    enabled: !!cafeId,
+    queryKey: ["branchMasterMenu", branchId],
+    queryFn: () => api.get<MasterMenuItem[]>(`/branches/${branchId}/master-menu`),
+    enabled: !!branchId,
   });
 
   const upsertMutation = useMutation({
@@ -116,10 +98,16 @@ export default function BranchMenuModals({
               style={{ width: "100%", padding: 10, background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)" }}
               disabled={loadingMaster}
             >
-              <option value="">Select an item from the Master Menu...</option>
+              <option value="">
+                {loadingMaster
+                  ? "Loading Master Menu items..."
+                  : masterMenu.length === 0
+                  ? "No Master Menu items found (please create items in Master Menu first)"
+                  : "Select an item from the Master Menu..."}
+              </option>
               {masterMenu.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name} (${item.basePrice.toFixed(2)})
+                  {item.name} (${Number(item.basePrice).toFixed(2)})
                 </option>
               ))}
             </select>
