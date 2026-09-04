@@ -31,6 +31,7 @@ INTENTS:
 RESPONSE FORMAT (STRICT JSON ONLY, NO MARKDOWN, NO COMMENTARY):
 {
   "intent": "ORDER",
+  "customer_name": "Sam",
   "branch_id": 1,
   "items": [
     {"name": "Spanish Latte", "quantity": 2, "notes": "extra hot"},
@@ -47,7 +48,8 @@ RULES:
 4. Support Roman Urdu phrases natively (e.g. 'do latte bhej do', 'order cancel kardo', 'kitna rush hai').
 5. Never classify "How many orders are in queue" as ORDER or MY_ORDER_STATUS — it must be QUEUE_STATUS.
 6. Never classify "Cancel my order" as ORDER — it must be CANCEL_ORDER.
-7. Return strictly valid JSON.
+7. If the customer introduces themselves (e.g. "I am Sam", "My name is Bilal", "Mera naam Ali hai"), extract their name into "customer_name", otherwise null.
+8. Return strictly valid JSON.
 """
 
 
@@ -235,5 +237,8 @@ def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedW
             qty = int(qty_match.group(1)) if qty_match else 1
             items.append(ParsedOrderItem(name=formal_name, quantity=qty))
 
+    name_match = re.search(r"(?:my name is|i am|i'm|mera naam|this is)\s+([A-Za-z]+)", text, re.IGNORECASE)
+    detected_name = name_match.group(1).capitalize() if name_match else None
+
     intent = "ORDER" if items else "HELP"
-    return ParsedWhatsAppOrder(intent=intent, branch_id=default_branch_id, items=items)
+    return ParsedWhatsAppOrder(intent=intent, branch_id=default_branch_id, items=items, customer_name=detected_name)
