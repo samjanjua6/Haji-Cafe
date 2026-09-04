@@ -43,6 +43,10 @@ haji-cafe.mychatbot.codes {
 api.haji-cafe.mychatbot.codes {
     reverse_proxy localhost:8000
 }
+
+research.mychatbot.codes {
+    reverse_proxy localhost:8002
+}
 EOF
 sudo systemctl reload caddy
 
