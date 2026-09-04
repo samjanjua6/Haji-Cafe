@@ -426,6 +426,13 @@ Caddy automatically handles HTTPS certificates and reverse proxies:
 
 ---
 
-## 📄 License
+## 📄 License & Restrictions
 
-This project is proprietary and intended for the Haji Café franchise platform.
+Copyright &copy; 2026 Shaheer ul Hassan. All Rights Reserved.
+
+This repository, source code, and associated documentation are strictly **proprietary**:
+- **No Unauthorized Use**: No permission is granted to copy, modify, distribute, or run this software for commercial or non-commercial purposes without express written consent.
+- **Strict Anti-AI / Machine Learning Prohibition**: Use of this codebase or its contents for training, fine-tuning, evaluating, or indexing into Artificial Intelligence (AI) models, Large Language Models (LLMs), neural networks, or machine learning datasets is strictly prohibited.
+- **Text & Data Mining (TDM) Rights Reserved**: Expressly reserved under EU Directive (EU) 2019/790 Article 4(3) and international copyright frameworks.
+
+For full legal terms, see the [LICENSE](file:///d:/zylo/cafe-project/LICENSE) file.

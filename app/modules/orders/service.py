@@ -7,7 +7,13 @@ from app.modules.orders import repository
 from app.modules.orders.schemas import OrderItemCreate, OrderStatusEnum, VALID_TRANSITIONS
 
 
-async def place_order(branch_id: int, user_id: Optional[int], items: List[OrderItemCreate]):
+async def place_order(
+    branch_id: int,
+    user_id: Optional[int],
+    items: List[OrderItemCreate],
+    customer_phone: Optional[str] = None,
+    customer_name: Optional[str] = None,
+):
     """
     Place a new order. Business rules enforced:
     1. All items must belong to this branch
@@ -56,7 +62,14 @@ async def place_order(branch_id: int, user_id: Optional[int], items: List[OrderI
             "notes": item.notes,
         })
 
-    order = await repository.create_order(branch_id, user_id, total, items_data)
+    order = await repository.create_order(
+        branch_id=branch_id,
+        user_id=user_id,
+        total_amount=total,
+        items_data=items_data,
+        customer_phone=customer_phone,
+        customer_name=customer_name,
+    )
 
     # Real-time WebSocket broadcast (non-blocking)
     try:
