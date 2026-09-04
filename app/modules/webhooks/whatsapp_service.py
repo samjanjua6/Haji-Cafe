@@ -869,16 +869,16 @@ async def process_whatsapp_order(
                     buttons=[{"id": "btn_view_menu", "text": "📜 View Menu"}],
                 )
 
-    # 0. Handle Customer Rating & Experience Feedback (e.g. "5", "⭐⭐⭐⭐⭐", "4", "Loved it!", "Great coffee")
-    rating_match = re.match(r"^([1-5])(\s*(star|stars|/5|\.0))?$", clean_msg)
-    is_star_emoji = any(c in clean_msg for c in ["⭐", "🌟", "✨"]) and len(clean_msg) <= 10
-    is_positive_praise = clean_lower in [
-        "loved it", "loved it!", "great coffee", "great", "excellent", "awesome",
-        "amazing", "good", "nice", "very good", "best coffee", "shukriya", "thanks", "thank you"
-    ]
+    # 0. Handle Customer Rating & Experience Feedback (e.g. "5", "⭐⭐⭐⭐⭐", "4", "Loved it!", "Great coffee", "5 ⭐ Loved the coffee!")
+    rating_match = re.search(r"\b([1-5])\s*(/5|\.0|⭐|star|stars)?\b", clean_msg, re.IGNORECASE) if len(clean_msg) < 50 else None
+    is_star_emoji = any(c in clean_msg for c in ["⭐", "🌟", "✨"])
+    is_positive_praise = any(p in clean_lower for p in [
+        "loved it", "great coffee", "excellent", "awesome",
+        "amazing", "good service", "nice coffee", "best coffee", "loved the coffee"
+    ]) or clean_lower in ["good", "nice", "very good", "shukriya", "thanks", "thank you"]
 
     if (rating_match or is_star_emoji or is_positive_praise) and parsed.intent not in ["MENU_INQUIRY", "QUEUE_STATUS", "ORDER_STATUS", "CANCEL_ORDER"] and not parsed.items:
-        stars_num = rating_match.group(1) if rating_match else ("5" if is_positive_praise or is_star_emoji else "")
+        stars_num = rating_match.group(1) if (rating_match and rating_match.group(1)) else ("5" if (is_positive_praise or is_star_emoji) else "")
         stars_display = f" ({stars_num}⭐)" if stars_num else ""
         reply = (
             f"🌟 *Thank you for your feedback, {customer_name}!*{stars_display}\n\n"
