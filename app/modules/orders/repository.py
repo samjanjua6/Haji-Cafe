@@ -154,6 +154,7 @@ async def update_order_status(order_id: int, new_status: str, user_id: Optional[
             where={"id": order_id},
             data={"status": new_status},
             include={
+                "branch": True,
                 "orderItems": {
                     "include": {
                         "branchMenuItem": {

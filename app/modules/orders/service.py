@@ -1,6 +1,9 @@
 from decimal import Decimal
 import datetime
+import logging
 from typing import List, Optional
+
+logger = logging.getLogger("orders.service")
 
 from app.core.exceptions import BadRequestException, NotFoundException, UnprocessableException
 from app.modules.orders import repository
@@ -169,6 +172,17 @@ async def transition_status(branch_id: int, order_id: int, new_status: OrderStat
         )
     except Exception:
         pass
+
+    # Real-time WhatsApp customer notification (asynchronous, non-blocking)
+    if getattr(updated_order, "customerPhone", None):
+        try:
+            import asyncio
+            from app.modules.webhooks.whatsapp_service import notify_customer_order_status_update
+            asyncio.create_task(
+                notify_customer_order_status_update(updated_order, new_status.value)
+            )
+        except Exception as e:
+            logger.error(f"Failed to dispatch WhatsApp status notification for Order #{order_id}: {e}")
 
     return updated_order
 

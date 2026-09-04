@@ -248,6 +248,7 @@ export default function KitchenDisplayPage() {
   // 3. Status update
   const handleTransition = async (orderId: number, nextStatus: OrderStatus) => {
     try {
+      const targetOrder = orders.find((o) => o.id === orderId);
       await api.patch(`/branches/${branchId}/orders/${orderId}/status`, {
         status: nextStatus,
       });
@@ -256,7 +257,13 @@ export default function KitchenDisplayPage() {
         prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
       );
 
-      toast.success(`Ticket #${orderId} moved to ${nextStatus.replace("_", " ")}`);
+      const hasPhone = Boolean(targetOrder?.customerPhone);
+      const statusLabel = nextStatus.replace("_", " ");
+      if (hasPhone) {
+        toast.success(`Ticket #${orderId} moved to ${statusLabel} • WhatsApp sent to customer`);
+      } else {
+        toast.success(`Ticket #${orderId} moved to ${statusLabel}`);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to update ticket");
     }
@@ -497,6 +504,25 @@ export default function KitchenDisplayPage() {
                             }}
                           >
                             🍽️ {order.tableNumber || "Dine-in"}
+                          </span>
+                        )}
+                        {order.customerPhone && (
+                          <span
+                            style={{
+                              background: "rgba(16, 185, 129, 0.12)",
+                              color: "#10b981",
+                              border: "1px solid rgba(16, 185, 129, 0.25)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                            title={`WhatsApp status notifications active for ${order.customerPhone}`}
+                          >
+                            💬 WhatsApp Linked
                           </span>
                         )}
                       </div>

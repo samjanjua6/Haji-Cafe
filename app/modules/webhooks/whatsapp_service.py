@@ -104,6 +104,122 @@ async def send_waha_whatsapp_message(
         return False
 
 
+async def notify_customer_order_status_update(order: Any, new_status: str) -> bool:
+    """
+    Asynchronously dispatch a context-aware WhatsApp status notification to customer
+    when their order transitions in the Kitchen Display System (KDS) or Orders Management.
+    Supports:
+      - IN_PREPARATION (Dine-in with Table # and barista prep time vs Delivery with Address and kitchen prep time)
+      - COMPLETED (Dine-in with table delivery / counter pickup + 1-5 rating prompt vs Delivery courier dispatched + 1-5 rating prompt)
+      - CANCELLED (Friendly cancellation notice with cafe staff contact info)
+    """
+    try:
+        customer_phone = getattr(order, "customerPhone", None)
+        if not customer_phone:
+            return False
+
+        customer_name = getattr(order, "customerName", None) or "Valued Guest"
+        order_id = getattr(order, "id", None)
+        order_type = (getattr(order, "orderType", None) or "DINE_IN").upper()
+        table_number = getattr(order, "tableNumber", None) or "your table"
+        delivery_address = getattr(order, "deliveryAddress", None) or "your delivery address"
+
+        # Resolve branch name
+        branch = getattr(order, "branch", None)
+        branch_name = getattr(branch, "name", None) if branch else "Haji Cafe"
+
+        # Format items list
+        items_lines = []
+        raw_items = getattr(order, "orderItems", None) or []
+        for it in raw_items:
+            qty = getattr(it, "quantity", 1)
+            b_item = getattr(it, "branchMenuItem", None)
+            m_item = getattr(b_item, "masterItem", None) if b_item else None
+            item_name = getattr(m_item, "name", "Specialty Item") if m_item else "Specialty Item"
+            notes = getattr(it, "notes", None)
+            notes_str = f" ({notes})" if notes else ""
+            items_lines.append(f"• {qty}x {item_name}{notes_str}")
+
+        items_summary = "\n".join(items_lines) if items_lines else "• Specialty Order Items"
+
+        status_upper = str(new_status).upper()
+
+        if status_upper == "IN_PREPARATION":
+            if order_type == "DELIVERY":
+                msg = (
+                    f"☕ *Order Update: In Preparation!* (Order #{order_id})\n"
+                    f"👤 Customer: *{customer_name}*\n"
+                    f"📍 Branch: *{branch_name}*\n\n"
+                    f"Great news! Our kitchen team has started preparing your order:\n"
+                    f"{items_summary}\n\n"
+                    f"🛵 *Service:* Delivery\n"
+                    f"🏠 *Destination:* {delivery_address}\n"
+                    f"⏱️ *Est. Prep Time:* ~10-15 minutes\n\n"
+                    f"We'll notify you as soon as your courier is on the way!"
+                )
+            else:
+                msg = (
+                    f"☕ *Order Update: In Preparation!* (Order #{order_id})\n"
+                    f"👤 Customer: *{customer_name}*\n"
+                    f"📍 Branch: *{branch_name}*\n\n"
+                    f"Great news! Our barista is now preparing your order:\n"
+                    f"{items_summary}\n\n"
+                    f"🍽️ *Service:* Dine-in ({table_number})\n"
+                    f"⏱️ *Est. Prep Time:* ~5-8 minutes\n\n"
+                    f"We will bring your order to *{table_number}* the moment it's ready!"
+                )
+
+        elif status_upper == "COMPLETED":
+            if order_type == "DELIVERY":
+                msg = (
+                    f"🛵 *Order Out for Delivery!* (Order #{order_id})\n"
+                    f"👤 Customer: *{customer_name}*\n"
+                    f"📍 Branch: *{branch_name}*\n\n"
+                    f"Your order is freshly packed, sealed, and on its way!\n"
+                    f"{items_summary}\n\n"
+                    f"🏠 *Delivering To:* {delivery_address}\n"
+                    f"⏱️ *Courier:* En route to your address\n\n"
+                    f"---\n"
+                    f"⭐ *How was your ordering experience?*\n"
+                    f"Reply with a rating from *1 to 5* (e.g. *5* or *'Loved it!'*) to let us know!"
+                )
+            else:
+                msg = (
+                    f"🎉 *Order Ready!* (Order #{order_id})\n"
+                    f"👤 Customer: *{customer_name}*\n"
+                    f"📍 Branch: *{branch_name}*\n\n"
+                    f"Your order is freshly prepared and ready!\n"
+                    f"{items_summary}\n\n"
+                    f"🍽️ *Table:* {table_number}\n"
+                    f"Our server is bringing your items to *{table_number}* right now (or feel free to collect from the barista bar).\n\n"
+                    f"---\n"
+                    f"⭐ *How was your coffee & service today?*\n"
+                    f"Reply with a rating from *1 to 5* (e.g. *5* or *'Loved it!'*) to let us know!"
+                )
+
+        elif status_upper == "CANCELLED":
+            msg = (
+                f"❌ *Order Update: Cancelled* (Order #{order_id})\n"
+                f"👤 Customer: *{customer_name}*\n"
+                f"📍 Branch: *{branch_name}*\n\n"
+                f"Your order #{order_id} has been cancelled by the cafe team.\n\n"
+                f"If you did not request this or would like assistance, please speak with our staff at *{branch_name}* or reply directly here."
+            )
+        else:
+            return False
+
+        logger.info(f"Dispatching WhatsApp status notification [{status_upper}] for Order #{order_id} to {customer_phone}...")
+
+        # Multi-gateway outbound dispatch: WAHA & Meta
+        sent_waha = await send_waha_whatsapp_message(chat_id=customer_phone, message_text=msg)
+        sent_meta = await send_meta_whatsapp_message(to_phone=customer_phone, message_text=msg)
+
+        return sent_waha or sent_meta
+    except Exception as e:
+        logger.error(f"Error in notify_customer_order_status_update for order: {e}", exc_info=True)
+        return False
+
+
 DRAFT_TTL_MINUTES = 15
 
 
@@ -449,6 +565,7 @@ async def process_whatsapp_order(
     branch_name = branch.name if branch else f"Branch #{target_branch_id}"
 
     clean_lower = message_text.strip().lower()
+    clean_msg = message_text.strip()
 
     # ---------------------------------------------------------
     # STATE MACHINE HANDLER: Check if customer has an active draft
@@ -751,6 +868,29 @@ async def process_whatsapp_order(
                     reply_message=reply,
                     buttons=[{"id": "btn_view_menu", "text": "📜 View Menu"}],
                 )
+
+    # 0. Handle Customer Rating & Experience Feedback (e.g. "5", "⭐⭐⭐⭐⭐", "4", "Loved it!", "Great coffee")
+    rating_match = re.match(r"^([1-5])(\s*(star|stars|/5|\.0))?$", clean_msg)
+    is_star_emoji = any(c in clean_msg for c in ["⭐", "🌟", "✨"]) and len(clean_msg) <= 10
+    is_positive_praise = clean_lower in [
+        "loved it", "loved it!", "great coffee", "great", "excellent", "awesome",
+        "amazing", "good", "nice", "very good", "best coffee", "shukriya", "thanks", "thank you"
+    ]
+
+    if (rating_match or is_star_emoji or is_positive_praise) and parsed.intent not in ["MENU_INQUIRY", "QUEUE_STATUS", "ORDER_STATUS", "CANCEL_ORDER"] and not parsed.items:
+        stars_num = rating_match.group(1) if rating_match else ("5" if is_positive_praise or is_star_emoji else "")
+        stars_display = f" ({stars_num}⭐)" if stars_num else ""
+        reply = (
+            f"🌟 *Thank you for your feedback, {customer_name}!*{stars_display}\n\n"
+            f"We are thrilled you enjoyed your experience at *{branch_name}*. Your feedback means the world to our baristas!\n\n"
+            f"Whenever you'd like your next coffee or pastry, simply reply with your order or type *'menu'*. Have a wonderful day! ☕"
+        )
+        return WhatsAppOrderResponse(
+            status="FEEDBACK_RECEIVED",
+            branch_id=target_branch_id,
+            reply_message=reply,
+            buttons=[{"id": "btn_view_menu", "text": "📜 View Menu"}],
+        )
 
     # 1. Handle Kitchen Queue Inquiry
     if parsed.intent == "QUEUE_STATUS":
