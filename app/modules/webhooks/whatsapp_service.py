@@ -325,6 +325,41 @@ async def process_whatsapp_order(
             reply_message=reply,
         )
 
+    # Enforce Single Active Order Rule: A customer may only have 1 active order at a time
+    if customer_phone:
+        existing_active_orders = await orders_repo.get_active_orders_by_customer(
+            branch_id=target_branch_id,
+            customer_phone=customer_phone,
+        )
+        if existing_active_orders:
+            active_order = existing_active_orders[0]
+            status_desc = {
+                "PENDING": "⏳ Queued (waiting for barista to begin)",
+                "IN_PREPARATION": "☕ In Preparation (being brewed on the espresso bar)",
+            }.get(active_order.status, active_order.status)
+
+            item_lines = []
+            for it in active_order.orderItems:
+                item_lines.append(f"• {it.quantity}x {it.branchMenuItem.masterItem.name}")
+            items_str = "\n".join(item_lines) if item_lines else "Specialty Items"
+
+            reply = (
+                f"⚠️ *You already have an active order in progress!*\n\n"
+                f"• *Order #{active_order.id}:* {status_desc}\n"
+                f"• *Items:*\n{items_str}\n"
+                f"• *Total:* ${active_order.totalAmount:.2f}\n\n"
+                f"To keep our kitchen running smoothly, guests can have *one active order at a time*.\n\n"
+                f"👉 Once your current order is completed, you can place a new order.\n"
+                f"👉 If you'd like to cancel your current order first, simply reply: _\"Cancel my order\"_."
+            )
+            return WhatsAppOrderResponse(
+                status="ACTIVE_ORDER_EXISTS",
+                order_id=active_order.id,
+                branch_id=target_branch_id,
+                total_amount=float(active_order.totalAmount),
+                reply_message=reply,
+            )
+
     # Resolve items against branch inventory
     all_branch_items = await db.branchmenuitem.find_many(
         where={"branchId": target_branch_id, "isActive": True},

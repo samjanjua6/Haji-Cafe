@@ -223,10 +223,16 @@ async def get_orders_by_cafe(cafe_id: int, skip: int = 0, take: int = 25, where:
 async def get_active_orders_by_customer(branch_id: int, customer_phone: str):
     """Fetch active (PENDING or IN_PREPARATION) orders placed by a customer phone."""
     clean_phone = customer_phone.strip()
+    raw_digits = "".join(filter(str.isdigit, clean_phone))
+    possible_phones = [clean_phone]
+    if raw_digits:
+        possible_phones.extend([raw_digits, f"+{raw_digits}", f"{raw_digits}@c.us", f"{raw_digits}@s.whatsapp.net"])
+    possible_phones = list(set(possible_phones))
+
     return await db.order.find_many(
         where={
             "branchId": branch_id,
-            "customerPhone": clean_phone,
+            "customerPhone": {"in": possible_phones},
             "status": {"in": ["PENDING", "IN_PREPARATION"]},
         },
         order={"createdAt": "desc"},
