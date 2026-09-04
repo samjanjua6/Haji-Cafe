@@ -285,16 +285,18 @@ async def _run_session(ctx: JobContext):
         },
     )
 
-    # Choose TTS engine: default to Deepgram Aura TTS (active quota, sub-300ms latency)
+    # Choose TTS engine: prioritize ElevenLabs when API key is present, fallback to Deepgram Aura
     tts_engine = None
-    tts_provider = os.environ.get("LIVEKIT_TTS_PROVIDER", "deepgram").lower()
-    if tts_provider == "elevenlabs" and os.environ.get("ELEVENLABS_API_KEY"):
+    tts_provider = os.environ.get("LIVEKIT_TTS_PROVIDER", "elevenlabs").lower()
+    if tts_provider != "deepgram" and os.environ.get("ELEVENLABS_API_KEY"):
         try:
+            voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL")
             tts_engine = elevenlabs.TTS(
-                voice_id=os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+                voice_id=voice_id,
                 api_key=os.environ.get("ELEVENLABS_API_KEY"),
+                model="eleven_turbo_v2_5",
             )
-            logger.info("LiveKit voice using ElevenLabs TTS")
+            logger.info(f"LiveKit voice using ElevenLabs TTS (voice_id={voice_id})")
         except Exception as e:
             logger.warning(f"Failed to initialize ElevenLabs TTS, falling back to Deepgram: {e}")
             tts_engine = deepgram.TTS(model=os.environ.get("DEEPGRAM_TTS_MODEL", "aura-asteria-en"))
