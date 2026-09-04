@@ -243,6 +243,15 @@ async def incoming_whatsapp_webhook(
                         else None
                     ) or data_obj.get("pushName") or data_obj.get("pushname") or data_obj.get("profile_name") or data_obj.get("name")
 
+                    # Check for interactive button click responses
+                    button_id = (
+                        data_obj.get("selectedButtonId")
+                        or (data_obj.get("_data", {}).get("selectedButtonId") if isinstance(data_obj.get("_data"), dict) else None)
+                        or (data_obj.get("buttonResponse", {}).get("selectedButtonId") if isinstance(data_obj.get("buttonResponse"), dict) else None)
+                    )
+                    if button_id and not message_text:
+                        message_text = button_id
+
         except Exception:
             pass
 
@@ -293,8 +302,9 @@ async def incoming_whatsapp_webhook(
         await whatsapp_service.send_waha_whatsapp_message(
             chat_id=sender_phone,
             message_text=result.reply_message,
+            buttons=result.buttons,
         )
-        return {"status": "ok", "order_id": result.order_id, "reply": result.reply_message}
+        return {"status": "ok", "order_id": result.order_id, "reply": result.reply_message, "buttons": result.buttons}
 
     # Return Twilio TwiML XML format for native WhatsApp rendering
     twiml_reply = f"""<?xml version="1.0" encoding="UTF-8"?>

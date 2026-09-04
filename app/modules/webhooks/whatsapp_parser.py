@@ -56,6 +56,30 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
     if not message_text or not message_text.strip():
         return ParsedWhatsAppOrder(intent="HELP", branch_id=default_branch_id, items=[])
 
+    clean_lower = message_text.strip().lower()
+
+    # Fast-path for Interactive Button IDs and Confirmation replies (0ms latency)
+    if clean_lower in ["confirm_cancel_yes", "yes, cancel", "yes", "haan", "ha", "confirm", "yes cancel", "cancel yes"]:
+        return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_YES", branch_id=default_branch_id)
+
+    if clean_lower in ["confirm_cancel_no", "no, keep order", "no", "nahi", "keep", "keep order", "no keep"]:
+        return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_NO", branch_id=default_branch_id)
+
+    if clean_lower in ["btn_track_status", "track status", "track order"]:
+        return ParsedWhatsAppOrder(intent="MY_ORDER_STATUS", branch_id=default_branch_id)
+
+    if clean_lower in ["btn_cancel_order", "cancel order"]:
+        return ParsedWhatsAppOrder(intent="CANCEL_ORDER", branch_id=default_branch_id)
+
+    if clean_lower in ["btn_view_menu", "view menu", "see menu"]:
+        return ParsedWhatsAppOrder(intent="MENU_INQUIRY", branch_id=default_branch_id)
+
+    if clean_lower in ["btn_queue_status", "check queue", "queue"]:
+        return ParsedWhatsAppOrder(intent="QUEUE_STATUS", branch_id=default_branch_id)
+
+    if clean_lower in ["btn_recommendations", "house favorites", "recommendations"]:
+        return ParsedWhatsAppOrder(intent="RECOMMENDATION", branch_id=default_branch_id)
+
     user_prompt = f"Customer message: \"{message_text}\"\nDefault branch ID: {default_branch_id}"
 
     try:
@@ -115,7 +139,28 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
 
 def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedWhatsAppOrder:
     """Deterministic heuristic parser when LLM is unavailable."""
-    lower = text.lower()
+    lower = text.strip().lower()
+
+    if lower in ["confirm_cancel_yes", "yes, cancel", "yes", "haan", "ha", "confirm", "yes cancel", "cancel yes"]:
+        return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_YES", branch_id=default_branch_id)
+
+    if lower in ["confirm_cancel_no", "no, keep order", "no", "nahi", "keep", "keep order", "no keep"]:
+        return ParsedWhatsAppOrder(intent="CONFIRM_CANCEL_NO", branch_id=default_branch_id)
+
+    if lower in ["btn_track_status", "track status", "track order"]:
+        return ParsedWhatsAppOrder(intent="MY_ORDER_STATUS", branch_id=default_branch_id)
+
+    if lower in ["btn_cancel_order", "cancel order"]:
+        return ParsedWhatsAppOrder(intent="CANCEL_ORDER", branch_id=default_branch_id)
+
+    if lower in ["btn_view_menu", "view menu", "see menu"]:
+        return ParsedWhatsAppOrder(intent="MENU_INQUIRY", branch_id=default_branch_id)
+
+    if lower in ["btn_queue_status", "check queue", "queue"]:
+        return ParsedWhatsAppOrder(intent="QUEUE_STATUS", branch_id=default_branch_id)
+
+    if lower in ["btn_recommendations", "house favorites", "recommendations"]:
+        return ParsedWhatsAppOrder(intent="RECOMMENDATION", branch_id=default_branch_id)
 
     # 1. Cancel Order
     if any(q in lower for q in ["cancel", "cancle", "nahi chahiye", "khatam kar"]):

@@ -31,4 +31,5 @@ class WhatsAppOrderResponse(BaseModel):
     total_amount: Optional[float] = None
     items_placed: List[Dict[str, Any]] = []
     reply_message: str
+    buttons: Optional[List[Dict[str, str]]] = None
     prep_time_minutes: int = 10

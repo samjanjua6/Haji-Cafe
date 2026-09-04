@@ -66,10 +66,11 @@ async def send_waha_whatsapp_message(
     chat_id: str,
     message_text: str,
     waha_url: Optional[str] = None,
+    buttons: Optional[List[Dict[str, str]]] = None,
 ) -> bool:
     """
     Send an outbound message directly to customer's WhatsApp using WAHA (WhatsApp HTTP API).
-    Endpoint: POST {waha_url}/api/sendText
+    Supports interactive quick-reply buttons via POST /api/sendButtons with fallback to POST /api/sendText.
     """
     base_url = waha_url or os.getenv("WAHA_API_URL", "http://localhost:3008")
     clean_id = chat_id.strip()
@@ -79,18 +80,39 @@ async def send_waha_whatsapp_message(
         clean_id = clean_id.replace("+", "").replace(" ", "").replace("-", "")
         clean_id = f"{clean_id}@c.us"
 
-    url = f"{base_url.rstrip('/')}/api/sendText"
-    payload = {
-        "chatId": clean_id,
-        "text": message_text,
-        "session": "default",
-    }
-    logger.info(f"Dispatching WAHA WhatsApp reply to {clean_id}...")
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(url, json=payload)
+            # 1. If buttons are provided, dispatch via /api/sendButtons
+            if buttons:
+                btn_url = f"{base_url.rstrip('/')}/api/sendButtons"
+                btn_payload = {
+                    "session": "default",
+                    "chatId": clean_id,
+                    "title": message_text,
+                    "footer": "Haji Cafe ☕",
+                    "buttons": buttons,
+                }
+                logger.info(f"Dispatching WAHA interactive buttons to {clean_id}...")
+                try:
+                    btn_resp = await client.post(btn_url, json=btn_payload)
+                    if btn_resp.status_code in [200, 201]:
+                        logger.info(f"WAHA interactive buttons successfully sent to {clean_id}")
+                        return True
+                    else:
+                        logger.warning(f"WAHA sendButtons returned {btn_resp.status_code}, falling back to sendText: {btn_resp.text}")
+                except Exception as e:
+                    logger.warning(f"WAHA sendButtons failed: {e}, falling back to sendText")
+
+            # 2. Standard text message fallback
+            text_url = f"{base_url.rstrip('/')}/api/sendText"
+            text_payload = {
+                "chatId": clean_id,
+                "text": message_text,
+                "session": "default",
+            }
+            resp = await client.post(text_url, json=text_payload)
             if resp.status_code in [200, 201]:
-                logger.info(f"WAHA WhatsApp reply successfully sent to {clean_id}")
+                logger.info(f"WAHA WhatsApp text successfully sent to {clean_id}")
                 return True
             else:
                 logger.error(f"WAHA send response error: {resp.status_code} - {resp.text}")
@@ -137,14 +159,19 @@ async def process_whatsapp_order(
             f"Ready to order? Just reply with what you'd like, e.g.:\n"
             f"👉 _\"Can I get 2 Spanish Lattes and 1 Croissant?\"_"
         )
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Menu"},
+            {"id": "btn_recommendations", "text": "⭐ House Favorites"},
+        ]
         return WhatsAppOrderResponse(
             status="QUEUE_INFO",
             branch_id=target_branch_id,
             reply_message=reply,
+            buttons=buttons,
             prep_time_minutes=wait_m,
         )
 
-    # 2. Handle Order Cancellation
+    # 2a. Handle Order Cancellation Request (Step 1: Ask for Confirmation with Yes/No buttons)
     if parsed.intent == "CANCEL_ORDER":
         order_to_cancel = None
         if parsed.order_id_reference:
@@ -163,20 +190,76 @@ async def process_whatsapp_order(
                 f"You don't have any active pending orders right now.\n\n"
                 f"Would you like to view our menu or place a new order? Reply with *'menu'* anytime!"
             )
-            return WhatsAppOrderResponse(status="NOT_FOUND", branch_id=target_branch_id, reply_message=reply)
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+            return WhatsAppOrderResponse(status="NOT_FOUND", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
         if order_to_cancel.status == "IN_PREPARATION":
             reply = (
-                f"⚠️ *Order #{order_to_cancel.id} is already in preparation!* \n"
+                f"⚠️ *Order #{order_to_cancel.id} is already in preparation!* \n\n"
                 f"Our barista is currently brewing your items on the bar. If you need to urgently modify or cancel, please speak directly to the counter barista."
             )
-            return WhatsAppOrderResponse(status="IN_PREPARATION", branch_id=target_branch_id, reply_message=reply)
+            buttons = [
+                {"id": "btn_track_status", "text": "🔍 Track Status"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+            return WhatsAppOrderResponse(status="IN_PREPARATION", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
         if order_to_cancel.status == "COMPLETED":
             reply = (
                 f"Order #{order_to_cancel.id} has already been completed and is ready at the counter for pickup."
             )
-            return WhatsAppOrderResponse(status="COMPLETED", branch_id=target_branch_id, reply_message=reply)
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+            return WhatsAppOrderResponse(status="COMPLETED", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
+
+        # Active PENDING order found: Prompt with Yes/No Confirmation Buttons!
+        item_lines = [f"• {it.quantity}x {it.branchMenuItem.masterItem.name}" for it in order_to_cancel.orderItems]
+        items_str = "\n".join(item_lines) if item_lines else "Your ordered items"
+
+        reply = (
+            f"❓ *Confirm Order Cancellation*\n\n"
+            f"Are you sure you want to cancel your active order?\n"
+            f"• *Order #{order_to_cancel.id} Status:* ⏳ Queued\n"
+            f"• *Items:*\n{items_str}\n"
+            f"• *Total:* ${order_to_cancel.totalAmount:.2f}\n\n"
+            f"Please tap a button below or reply with *\"Yes\"* or *\"No\"*."
+        )
+        buttons = [
+            {"id": "confirm_cancel_yes", "text": "✅ Yes, Cancel"},
+            {"id": "confirm_cancel_no", "text": "❌ No, Keep Order"},
+        ]
+        return WhatsAppOrderResponse(
+            status="CONFIRM_CANCELLATION",
+            order_id=order_to_cancel.id,
+            branch_id=target_branch_id,
+            total_amount=float(order_to_cancel.totalAmount),
+            reply_message=reply,
+            buttons=buttons,
+        )
+
+    # 2b. Handle Confirmed Cancellation (User tapped "Yes, Cancel" or typed "yes")
+    if parsed.intent == "CONFIRM_CANCEL_YES":
+        order_to_cancel = None
+        if customer_phone:
+            active_orders = await orders_repo.get_active_orders_by_customer(target_branch_id, customer_phone)
+            if active_orders:
+                order_to_cancel = active_orders[0]
+
+        if not order_to_cancel:
+            reply = (
+                f"You don't have any active orders to cancel right now.\n\n"
+                f"Would you like to check out our menu?"
+            )
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+            return WhatsAppOrderResponse(status="NOT_FOUND", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
         # Cancel the order and restore stock
         cancelled = await orders_repo.update_order_status(order_to_cancel.id, "CANCELLED", user_id=None)
@@ -195,14 +278,45 @@ async def process_whatsapp_order(
         reply = (
             f"❌ *Order #{order_to_cancel.id} Cancelled*\n\n"
             f"Your order has been cancelled successfully and removed from our kitchen queue. No charges were made.\n\n"
-            f"We hope to serve you again soon! Let us know if you'd like to order anything else."
+            f"We hope to serve you again soon! What would you like to do next?"
         )
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Menu"},
+            {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+        ]
         return WhatsAppOrderResponse(
             status="CANCELLED",
             order_id=order_to_cancel.id,
             branch_id=target_branch_id,
             reply_message=reply,
+            buttons=buttons,
         )
+
+    # 2c. Handle Cancellation Declined (User tapped "No, Keep Order" or typed "no")
+    if parsed.intent == "CONFIRM_CANCEL_NO":
+        order_to_keep = None
+        if customer_phone:
+            active_orders = await orders_repo.get_active_orders_by_customer(target_branch_id, customer_phone)
+            if active_orders:
+                order_to_keep = active_orders[0]
+
+        if order_to_keep:
+            reply = (
+                f"👍 *Order Kept Active!*\n\n"
+                f"Your *Order #{order_to_keep.id}* remains active in our kitchen queue. Our barista will have it ready for you shortly!"
+            )
+            buttons = [
+                {"id": "btn_track_status", "text": "🔍 Track Status"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+        else:
+            reply = "No changes were made. How can we help you today?"
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
+
+        return WhatsAppOrderResponse(status="ACTIVE_KEPT", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
     # 3. Handle Personal Order Status
     if parsed.intent == "MY_ORDER_STATUS":
@@ -237,14 +351,23 @@ async def process_whatsapp_order(
                 f"Items:\n{item_str}\n\n"
                 f"💵 Total: ${order_found.totalAmount:.2f}"
             )
+            buttons = [
+                {"id": "btn_cancel_order", "text": "❌ Cancel Order"},
+                {"id": "btn_queue_status", "text": "⏳ Kitchen Queue"},
+            ]
         else:
             reply = "You don't have any recent orders. Reply with what you'd like to order today!"
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+            ]
 
         return WhatsAppOrderResponse(
             status="STATUS",
             order_id=order_found.id if order_found else None,
             branch_id=target_branch_id,
             reply_message=reply,
+            buttons=buttons,
         )
 
     # 4. Handle Categorized Menu Inquiries
@@ -280,7 +403,11 @@ async def process_whatsapp_order(
             f"🛒 *How to order:* Just type naturally!\n"
             f"👉 _\"Send 2 Spanish Lattes and 1 Butter Croissant for pickup.\"_"
         )
-        return WhatsAppOrderResponse(status="MENU", branch_id=target_branch_id, reply_message=reply)
+        buttons = [
+            {"id": "btn_recommendations", "text": "⭐ House Favorites"},
+            {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+        ]
+        return WhatsAppOrderResponse(status="MENU", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
     # 5. Handle Recommendations
     if parsed.intent == "RECOMMENDATION":
@@ -292,7 +419,11 @@ async def process_whatsapp_order(
             f"4. 🥪 *Chicken Pesto Panini ($7.50)* — Grilled artisan sourdough with fresh mozzarella and basil pesto.\n\n"
             f"Ready to order? Just reply with your choice!"
         )
-        return WhatsAppOrderResponse(status="RECOMMENDATION", branch_id=target_branch_id, reply_message=reply)
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Full Menu"},
+            {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+        ]
+        return WhatsAppOrderResponse(status="RECOMMENDATION", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
     # 6. Handle Store Info
     if parsed.intent == "STORE_INFO":
@@ -305,7 +436,11 @@ async def process_whatsapp_order(
             f"• 🚗 *Service:* Dine-in, Takeaway & Express WhatsApp Counter Pickup\n\n"
             f"Can I get an order started for you? Reply anytime!"
         )
-        return WhatsAppOrderResponse(status="STORE_INFO", branch_id=target_branch_id, reply_message=reply)
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Menu"},
+            {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+        ]
+        return WhatsAppOrderResponse(status="STORE_INFO", branch_id=target_branch_id, reply_message=reply, buttons=buttons)
 
     # 7. General Greetings / Help
     if not parsed.items or parsed.intent == "HELP":
@@ -319,10 +454,15 @@ async def process_whatsapp_order(
             f"• ❌ *Cancel:* _\"Cancel my order\"_\n\n"
             f"What would you like to enjoy today?"
         )
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Menu"},
+            {"id": "btn_queue_status", "text": "⏳ Check Queue"},
+        ]
         return WhatsAppOrderResponse(
             status="HELP",
             branch_id=target_branch_id,
             reply_message=reply,
+            buttons=buttons,
         )
 
     # Enforce Single Active Order Rule: A customer may only have 1 active order at a time
@@ -352,12 +492,17 @@ async def process_whatsapp_order(
                 f"👉 Once your current order is completed, you can place a new order.\n"
                 f"👉 If you'd like to cancel your current order first, simply reply: _\"Cancel my order\"_."
             )
+            buttons = [
+                {"id": "btn_track_status", "text": "🔍 Track Status"},
+                {"id": "btn_cancel_order", "text": "❌ Cancel Current Order"},
+            ]
             return WhatsAppOrderResponse(
                 status="ACTIVE_ORDER_EXISTS",
                 order_id=active_order.id,
                 branch_id=target_branch_id,
                 total_amount=float(active_order.totalAmount),
                 reply_message=reply,
+                buttons=buttons,
             )
 
     # Resolve items against branch inventory
@@ -396,10 +541,15 @@ async def process_whatsapp_order(
             f"Our favorites: Spanish Latte ($4.75), Americano ($3.25), Butter Croissant ($3.50).\n"
             f"Reply with an item name to order!"
         )
+        buttons = [
+            {"id": "btn_view_menu", "text": "📜 View Menu"},
+            {"id": "btn_recommendations", "text": "⭐ House Favorites"},
+        ]
         return WhatsAppOrderResponse(
             status="UNAVAILABLE",
             branch_id=target_branch_id,
             reply_message=reply,
+            buttons=buttons,
         )
 
     # Create real order in PostgreSQL with customerPhone linked!
@@ -430,6 +580,11 @@ async def process_whatsapp_order(
         f"Your order is now live on our kitchen display! We'll notify you when it's ready for pickup."
     )
 
+    receipt_buttons = [
+        {"id": "btn_track_status", "text": "🔍 Track Status"},
+        {"id": "btn_cancel_order", "text": "❌ Cancel Order"},
+    ]
+
     return WhatsAppOrderResponse(
         status="ORDER_PLACED",
         order_id=order_id,
@@ -437,6 +592,7 @@ async def process_whatsapp_order(
         total_amount=total_amt,
         items_placed=items_summary,
         reply_message=reply_receipt,
+        buttons=receipt_buttons,
         prep_time_minutes=10,
     )
 
