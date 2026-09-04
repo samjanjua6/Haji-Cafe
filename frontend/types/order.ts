@@ -3,9 +3,15 @@ export interface Order {
   branchId: number;
   status: OrderStatus;
   totalAmount: number;
+  orderType?: 'DINE_IN' | 'DELIVERY' | 'TAKEAWAY';
+  tableNumber?: string | null;
+  deliveryAddress?: string | null;
+  customerPhone?: string | null;
+  customerName?: string | null;
   createdAt: string;
   updatedAt: string;
   orderLines?: OrderLine[];
+  orderItems?: OrderLine[];
   placedBy?: { id: number; email: string };
 }
 

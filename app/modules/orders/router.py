@@ -17,8 +17,18 @@ async def place_order(
     body: OrderCreate,
     current_user=Depends(require_branch_access()),
 ):
-    """[STAFF, BRANCH_MANAGER, SUPER_ADMIN] Place a new order at a branch."""
-    return prisma_to_dict(await service.place_order(branch_id, current_user.id, body.items))
+    return prisma_to_dict(
+        await service.place_order(
+            branch_id,
+            current_user.id,
+            body.items,
+            customer_phone=body.customer_phone,
+            customer_name=body.customer_name,
+            order_type=body.order_type,
+            table_number=body.table_number,
+            delivery_address=body.delivery_address,
+        )
+    )
 
 
 @router.get("/branches/{branch_id}/orders")

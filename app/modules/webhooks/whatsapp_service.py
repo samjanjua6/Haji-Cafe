@@ -6,6 +6,9 @@ triggers zero-latency KDS WebSocket push, and formats WhatsApp receipt messages.
 """
 
 import os
+import json
+import re
+import datetime
 import httpx
 from decimal import Decimal
 import logging
@@ -16,7 +19,7 @@ from app.modules.orders import service as orders_service
 from app.modules.orders import repository as orders_repo
 from app.modules.orders.schemas import OrderItemCreate
 from app.modules.webhooks.schemas import ParsedWhatsAppOrder, WhatsAppOrderResponse
-from app.modules.webhooks.whatsapp_parser import parse_customer_message
+from app.modules.webhooks.whatsapp_parser import parse_customer_message, normalize_table_number
 
 logger = logging.getLogger("webhooks.whatsapp.service")
 
@@ -101,6 +104,305 @@ async def send_waha_whatsapp_message(
         return False
 
 
+DRAFT_TTL_MINUTES = 15
+
+
+async def get_active_draft(customer_phone: Optional[str]) -> Optional[Any]:
+    """Retrieve non-expired draft order for customer phone; cleans up if expired."""
+    if not customer_phone:
+        return None
+    try:
+        draft = await db.whatsappdraftorder.find_unique(where={"customerPhone": customer_phone})
+        if not draft:
+            return None
+        now = datetime.datetime.now(datetime.timezone.utc)
+        exp = draft.expiresAt
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=datetime.timezone.utc)
+        if now > exp:
+            await db.whatsappdraftorder.delete(where={"customerPhone": customer_phone})
+            return None
+        return draft
+    except Exception as e:
+        logger.debug(f"Could not retrieve draft order for {customer_phone}: {e}")
+        return None
+
+
+async def save_or_update_draft(
+    customer_phone: str,
+    branch_id: int,
+    items_summary: List[Dict[str, Any]],
+    total_amount: float,
+    state: str = "AWAITING_ORDER_TYPE",
+    customer_name: Optional[str] = None,
+    order_type: Optional[str] = None,
+    table_number: Optional[str] = None,
+    delivery_address: Optional[str] = None,
+) -> Any:
+    """Upsert a draft order with a 15-minute TTL."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    expires_at = now + datetime.timedelta(minutes=DRAFT_TTL_MINUTES)
+    items_json = json.dumps(items_summary)
+
+    payload: Dict[str, Any] = {
+        "branchId": branch_id,
+        "itemsJson": items_json,
+        "totalAmount": Decimal(str(round(total_amount, 2))),
+        "state": state,
+        "expiresAt": expires_at,
+    }
+    if customer_name:
+        payload["customerName"] = customer_name
+    if order_type:
+        payload["orderType"] = order_type
+    if table_number:
+        payload["tableNumber"] = table_number
+    if delivery_address:
+        payload["deliveryAddress"] = delivery_address
+
+    try:
+        draft = await db.whatsappdraftorder.upsert(
+            where={"customerPhone": customer_phone},
+            data={
+                "create": {
+                    "customerPhone": customer_phone,
+                    **payload,
+                },
+                "update": payload,
+            },
+        )
+        return draft
+    except Exception as e:
+        logger.error(f"Error saving draft order for {customer_phone}: {e}")
+        return None
+
+
+async def delete_draft(customer_phone: Optional[str]) -> bool:
+    """Delete draft order for customer phone."""
+    if not customer_phone:
+        return False
+    try:
+        await db.whatsappdraftorder.delete_many(where={"customerPhone": customer_phone})
+        return True
+    except Exception as e:
+        logger.debug(f"Error deleting draft for {customer_phone}: {e}")
+        return False
+
+
+def _format_service_choice_prompt(
+    branch_name: str,
+    customer_name: Optional[str],
+    items_summary: List[Dict[str, Any]],
+    total_amt: float,
+    target_branch_id: int = 1,
+) -> WhatsAppOrderResponse:
+    lines = []
+    for it in items_summary:
+        note_str = f" ({it['notes']})" if it.get("notes") else ""
+        lines.append(f"• {it['quantity']}x {it['item_name']}{note_str} — ${it['subtotal']:.2f}")
+    items_str = "\n".join(lines)
+    cust_line = f"👤 Customer: *{customer_name}*\n" if customer_name else ""
+
+    reply = (
+        f"🛒 *Your Order Summary* ({branch_name})\n{cust_line}\n"
+        f"{items_str}\n\n"
+        f"💵 *Total:* ${total_amt:.2f}\n\n"
+        f"Would you like this order for *Dine-in* or *Delivery*?\n"
+        f"1️⃣ *Dine-in* (at the café table)\n"
+        f"2️⃣ *Delivery* (to your address)\n\n"
+        f"_(Reply *1* or *Dine in*, or *2* or *Delivery*, or *'cancel'* to cancel)_"
+    )
+    buttons = [
+        {"id": "btn_dine_in", "text": "🍽️ Dine-in"},
+        {"id": "btn_delivery", "text": "🛵 Delivery"},
+        {"id": "btn_cancel_order", "text": "❌ Cancel"},
+    ]
+    return WhatsAppOrderResponse(
+        status="AWAITING_ORDER_TYPE",
+        branch_id=target_branch_id,
+        total_amount=total_amt,
+        items_placed=items_summary,
+        reply_message=reply,
+        buttons=buttons,
+    )
+
+
+def _format_table_number_prompt(
+    branch_name: str,
+    customer_name: Optional[str],
+    items_summary: List[Dict[str, Any]],
+    total_amt: float,
+    target_branch_id: int = 1,
+) -> WhatsAppOrderResponse:
+    cust_line = f" ({customer_name})" if customer_name else ""
+    reply = (
+        f"🍽️ *Dine-in Selected!*{cust_line}\n\n"
+        f"Please reply with your *Table Number* (e.g., *Table 4* or *4*):\n\n"
+        f"_(Or reply *'cancel'* to cancel, or *'delivery'* to switch to delivery)_"
+    )
+    buttons = [
+        {"id": "btn_delivery", "text": "🛵 Switch to Delivery"},
+        {"id": "btn_cancel_order", "text": "❌ Cancel"},
+    ]
+    return WhatsAppOrderResponse(
+        status="AWAITING_TABLE_NUMBER",
+        branch_id=target_branch_id,
+        total_amount=total_amt,
+        items_placed=items_summary,
+        reply_message=reply,
+        buttons=buttons,
+        order_type="DINE_IN",
+    )
+
+
+def _format_delivery_address_prompt(
+    branch_name: str,
+    customer_name: Optional[str],
+    items_summary: List[Dict[str, Any]],
+    total_amt: float,
+    target_branch_id: int = 1,
+) -> WhatsAppOrderResponse:
+    cust_line = f" ({customer_name})" if customer_name else ""
+    reply = (
+        f"🛵 *Delivery Selected!*{cust_line}\n\n"
+        f"Please reply with your complete *Delivery Address* (street, house #, or landmark):\n\n"
+        f"_(Or reply *'cancel'* to cancel, or *'dine in'* to switch to dine-in)_"
+    )
+    buttons = [
+        {"id": "btn_dine_in", "text": "🍽️ Switch to Dine-in"},
+        {"id": "btn_cancel_order", "text": "❌ Cancel"},
+    ]
+    return WhatsAppOrderResponse(
+        status="AWAITING_DELIVERY_ADDRESS",
+        branch_id=target_branch_id,
+        total_amount=total_amt,
+        items_placed=items_summary,
+        reply_message=reply,
+        buttons=buttons,
+        order_type="DELIVERY",
+    )
+
+
+def _format_confirmation_ticket(
+    branch_name: str,
+    customer_name: Optional[str],
+    customer_phone: Optional[str],
+    items_summary: List[Dict[str, Any]],
+    total_amt: float,
+    order_type: str,
+    table_number: Optional[str] = None,
+    delivery_address: Optional[str] = None,
+    target_branch_id: int = 1,
+) -> WhatsAppOrderResponse:
+    lines = []
+    for it in items_summary:
+        note_str = f" ({it['notes']})" if it.get("notes") else ""
+        lines.append(f"• {it['quantity']}x {it['item_name']}{note_str} — ${it['subtotal']:.2f}")
+    items_str = "\n".join(lines)
+
+    cust_line = f"👤 *Customer:* {customer_name}\n" if customer_name else ""
+
+    if order_type == "DELIVERY":
+        service_lines = f"🛵 *Service:* Delivery\n🏠 *Address:* {delivery_address or 'Pending'}\n"
+        est_time = "⏱️ *Est. Delivery Time:* ~25-35 mins"
+        prep_m = 30
+    else:
+        tbl = table_number or "Table 1"
+        service_lines = f"🍽️ *Service:* Dine-in ({tbl})\n"
+        est_time = "⏱️ *Est. Prep Time:* ~10 mins"
+        prep_m = 10
+
+    reply = (
+        f"📋 *Please Confirm Your Order*\n\n"
+        f"📍 *Branch:* {branch_name}\n"
+        f"{service_lines}"
+        f"{cust_line}\n"
+        f"*Order Items:*\n"
+        f"{items_str}\n\n"
+        f"💵 *Total:* ${total_amt:.2f}\n"
+        f"{est_time}\n\n"
+        f"Ready to send this ticket to the kitchen?\n"
+        f"1️⃣ *Yes, Place Order*\n"
+        f"2️⃣ *Cancel*\n\n"
+        f"_(Reply *1* or *Yes* to confirm, or *2* to cancel)_"
+    )
+    buttons = [
+        {"id": "btn_confirm_order_yes", "text": "✅ Yes, Place Order"},
+        {"id": "btn_confirm_order_no", "text": "❌ Cancel"},
+    ]
+    return WhatsAppOrderResponse(
+        status="AWAITING_FINAL_CONFIRMATION",
+        branch_id=target_branch_id,
+        total_amount=total_amt,
+        items_placed=items_summary,
+        reply_message=reply,
+        buttons=buttons,
+        order_type=order_type,
+        table_number=table_number,
+        delivery_address=delivery_address,
+        prep_time_minutes=prep_m,
+    )
+
+
+def _format_confirmed_receipt(
+    order_id: int,
+    branch_name: str,
+    customer_name: Optional[str],
+    items_summary: List[Dict[str, Any]],
+    total_amt: float,
+    order_type: str,
+    table_number: Optional[str] = None,
+    delivery_address: Optional[str] = None,
+    target_branch_id: int = 1,
+) -> WhatsAppOrderResponse:
+    lines = []
+    for it in items_summary:
+        note_str = f" ({it['notes']})" if it.get("notes") else ""
+        lines.append(f"• {it['quantity']}x {it['item_name']}{note_str} — ${it['subtotal']:.2f}")
+    items_str = "\n".join(lines)
+
+    cust_line = f"\n👤 Customer: *{customer_name}*" if customer_name else ""
+
+    if order_type == "DELIVERY":
+        service_line = f"🛵 Service: *Delivery* to {delivery_address or 'Your Address'}"
+        closing = "Your order is now live on our kitchen display! We will dispatch our courier as soon as it is packed."
+        est_time = "⏱️ Estimated Delivery Time: ~25-35 minutes"
+        prep_m = 30
+    else:
+        tbl = table_number or "Your Table"
+        service_line = f"🍽️ Service: *Dine-in* ({tbl})"
+        closing = f"Your order is now live on our kitchen display! We will bring it to {tbl} when ready."
+        est_time = "⏱️ Estimated Prep Time: ~10 minutes"
+        prep_m = 10
+
+    reply = (
+        f"🎉 *Order Confirmed! Order #{order_id}*\n"
+        f"📍 Branch: {branch_name}{cust_line}\n"
+        f"{service_line}\n\n"
+        f"Order Summary:\n{items_str}\n\n"
+        f"💵 Total: ${total_amt:.2f}\n"
+        f"{est_time}\n\n"
+        f"{closing}"
+    )
+    receipt_buttons = [
+        {"id": "btn_track_status", "text": "🔍 Track Status"},
+        {"id": "btn_cancel_order", "text": "❌ Cancel Order"},
+    ]
+    return WhatsAppOrderResponse(
+        status="ORDER_PLACED",
+        order_id=order_id,
+        branch_id=target_branch_id,
+        total_amount=total_amt,
+        items_placed=items_summary,
+        reply_message=reply,
+        buttons=receipt_buttons,
+        order_type=order_type,
+        table_number=table_number,
+        delivery_address=delivery_address,
+        prep_time_minutes=prep_m,
+    )
+
+
 async def process_whatsapp_order(
     message_text: str,
     customer_name: Optional[str] = None,
@@ -145,6 +447,310 @@ async def process_whatsapp_order(
 
     branch = await db.branch.find_unique(where={"id": target_branch_id}, include={"cafe": True})
     branch_name = branch.name if branch else f"Branch #{target_branch_id}"
+
+    clean_lower = message_text.strip().lower()
+
+    # ---------------------------------------------------------
+    # STATE MACHINE HANDLER: Check if customer has an active draft
+    # ---------------------------------------------------------
+    active_draft = await get_active_draft(customer_phone) if customer_phone else None
+    if active_draft:
+        target_branch_id = active_draft.branchId or target_branch_id
+        draft_items = json.loads(active_draft.itemsJson) if active_draft.itemsJson else []
+        draft_total = float(active_draft.totalAmount)
+        draft_name = customer_name or active_draft.customerName
+
+        # Universal Cancellation check while draft is active
+        if clean_lower in [
+            "cancel", "cancle", "no", "nahi", "stop", "rehne do", "mat karo",
+            "btn_confirm_order_no", "btn_cancel_order", "cancel order", "discard"
+        ]:
+            await delete_draft(customer_phone)
+            reply = (
+                "❌ *Order Cancelled*\n\n"
+                "Your draft order has been cancelled and cleared. No charges were made.\n\n"
+                "Feel free to reply with *'menu'* anytime to browse or start fresh!"
+            )
+            buttons = [
+                {"id": "btn_view_menu", "text": "📜 View Menu"},
+                {"id": "btn_recommendations", "text": "⭐ House Favorites"},
+            ]
+            return WhatsAppOrderResponse(
+                status="DRAFT_CANCELLED",
+                branch_id=target_branch_id,
+                reply_message=reply,
+                buttons=buttons,
+            )
+
+        # STATE 1: AWAITING_ORDER_TYPE
+        if active_draft.state == "AWAITING_ORDER_TYPE":
+            is_dine = clean_lower in ["1", "1.", "1️⃣", "dine in", "dine-in", "dine", "table", "baith ke", "yahan", "btn_dine_in"] or "dine in" in clean_lower or "table" in clean_lower
+            is_deliv = clean_lower in ["2", "2.", "2️⃣", "delivery", "deliver", "ghar", "home", "btn_delivery"] or "deliver" in clean_lower or "ghar" in clean_lower
+
+            if is_dine:
+                tbl_m = re.search(r'(?:table\s*(?:no\.?|#)?|t-?)\s*([0-9]+[a-zA-Z]?|[a-zA-Z][0-9]*)', message_text, re.IGNORECASE)
+                if tbl_m:
+                    tbl = normalize_table_number(tbl_m.group(0))
+                    await save_or_update_draft(
+                        customer_phone=customer_phone,
+                        branch_id=target_branch_id,
+                        items_summary=draft_items,
+                        total_amount=draft_total,
+                        state="AWAITING_FINAL_CONFIRMATION",
+                        customer_name=draft_name,
+                        order_type="DINE_IN",
+                        table_number=tbl,
+                    )
+                    return _format_confirmation_ticket(
+                        branch_name=branch_name,
+                        customer_name=draft_name,
+                        customer_phone=customer_phone,
+                        items_summary=draft_items,
+                        total_amt=draft_total,
+                        order_type="DINE_IN",
+                        table_number=tbl,
+                        target_branch_id=target_branch_id,
+                    )
+                else:
+                    await save_or_update_draft(
+                        customer_phone=customer_phone,
+                        branch_id=target_branch_id,
+                        items_summary=draft_items,
+                        total_amount=draft_total,
+                        state="AWAITING_TABLE_NUMBER",
+                        customer_name=draft_name,
+                        order_type="DINE_IN",
+                    )
+                    return _format_table_number_prompt(
+                        branch_name=branch_name,
+                        customer_name=draft_name,
+                        items_summary=draft_items,
+                        total_amt=draft_total,
+                        target_branch_id=target_branch_id,
+                    )
+
+            elif is_deliv:
+                addr_m = re.search(r'(?:delivery\s+(?:to|at)|deliver\s+(?:to|at)|2\s+)\s*(.+)', message_text, re.IGNORECASE)
+                candidate_addr = addr_m.group(1).strip() if addr_m else None
+                if candidate_addr and len(candidate_addr) >= 5 and not candidate_addr.isdigit():
+                    await save_or_update_draft(
+                        customer_phone=customer_phone,
+                        branch_id=target_branch_id,
+                        items_summary=draft_items,
+                        total_amount=draft_total,
+                        state="AWAITING_FINAL_CONFIRMATION",
+                        customer_name=draft_name,
+                        order_type="DELIVERY",
+                        delivery_address=candidate_addr,
+                    )
+                    return _format_confirmation_ticket(
+                        branch_name=branch_name,
+                        customer_name=draft_name,
+                        customer_phone=customer_phone,
+                        items_summary=draft_items,
+                        total_amt=draft_total,
+                        order_type="DELIVERY",
+                        delivery_address=candidate_addr,
+                        target_branch_id=target_branch_id,
+                    )
+                else:
+                    await save_or_update_draft(
+                        customer_phone=customer_phone,
+                        branch_id=target_branch_id,
+                        items_summary=draft_items,
+                        total_amount=draft_total,
+                        state="AWAITING_DELIVERY_ADDRESS",
+                        customer_name=draft_name,
+                        order_type="DELIVERY",
+                    )
+                    return _format_delivery_address_prompt(
+                        branch_name=branch_name,
+                        customer_name=draft_name,
+                        items_summary=draft_items,
+                        total_amt=draft_total,
+                        target_branch_id=target_branch_id,
+                    )
+            elif not any(w in clean_lower for w in ["timing", "hours", "location", "wifi", "open", "queue", "rush", "menu", "recommend"]):
+                reply = (
+                    f"Please choose whether you'd like your order for *Dine-in* or *Delivery*:\n\n"
+                    f"1️⃣ *Dine-in* (at the café table)\n"
+                    f"2️⃣ *Delivery* (to your address)\n\n"
+                    f"_(Reply *1* or *Dine in*, or *2* or *Delivery*, or *'cancel'* to cancel)_"
+                )
+                return WhatsAppOrderResponse(
+                    status="AWAITING_ORDER_TYPE",
+                    branch_id=target_branch_id,
+                    total_amount=draft_total,
+                    items_placed=draft_items,
+                    reply_message=reply,
+                    buttons=[
+                        {"id": "btn_dine_in", "text": "🍽️ Dine-in"},
+                        {"id": "btn_delivery", "text": "🛵 Delivery"},
+                        {"id": "btn_cancel_order", "text": "❌ Cancel"},
+                    ],
+                )
+
+        # STATE 2: AWAITING_TABLE_NUMBER
+        elif active_draft.state == "AWAITING_TABLE_NUMBER":
+            if clean_lower in ["2", "delivery", "deliver", "ghar", "btn_delivery"] or "switch to delivery" in clean_lower:
+                await save_or_update_draft(
+                    customer_phone=customer_phone,
+                    branch_id=target_branch_id,
+                    items_summary=draft_items,
+                    total_amount=draft_total,
+                    state="AWAITING_DELIVERY_ADDRESS",
+                    customer_name=draft_name,
+                    order_type="DELIVERY",
+                )
+                return _format_delivery_address_prompt(
+                    branch_name=branch_name,
+                    customer_name=draft_name,
+                    items_summary=draft_items,
+                    total_amt=draft_total,
+                    target_branch_id=target_branch_id,
+                )
+
+            if not any(w in clean_lower for w in ["timing", "hours", "location", "wifi", "open", "menu", "recommend"]) and len(message_text.strip()) <= 30:
+                tbl = normalize_table_number(message_text)
+                await save_or_update_draft(
+                    customer_phone=customer_phone,
+                    branch_id=target_branch_id,
+                    items_summary=draft_items,
+                    total_amount=draft_total,
+                    state="AWAITING_FINAL_CONFIRMATION",
+                    customer_name=draft_name,
+                    order_type="DINE_IN",
+                    table_number=tbl,
+                )
+                return _format_confirmation_ticket(
+                    branch_name=branch_name,
+                    customer_name=draft_name,
+                    customer_phone=customer_phone,
+                    items_summary=draft_items,
+                    total_amt=draft_total,
+                    order_type="DINE_IN",
+                    table_number=tbl,
+                    target_branch_id=target_branch_id,
+                )
+
+        # STATE 3: AWAITING_DELIVERY_ADDRESS
+        elif active_draft.state == "AWAITING_DELIVERY_ADDRESS":
+            if clean_lower in ["1", "dine in", "dine-in", "dine", "table", "btn_dine_in"] or "switch to dine" in clean_lower:
+                await save_or_update_draft(
+                    customer_phone=customer_phone,
+                    branch_id=target_branch_id,
+                    items_summary=draft_items,
+                    total_amount=draft_total,
+                    state="AWAITING_TABLE_NUMBER",
+                    customer_name=draft_name,
+                    order_type="DINE_IN",
+                )
+                return _format_table_number_prompt(
+                    branch_name=branch_name,
+                    customer_name=draft_name,
+                    items_summary=draft_items,
+                    total_amt=draft_total,
+                    target_branch_id=target_branch_id,
+                )
+
+            addr_text = message_text.strip()
+            if len(addr_text) >= 4 and not any(w in clean_lower for w in ["timing", "hours", "location", "wifi", "open", "menu", "recommend"]):
+                await save_or_update_draft(
+                    customer_phone=customer_phone,
+                    branch_id=target_branch_id,
+                    items_summary=draft_items,
+                    total_amount=draft_total,
+                    state="AWAITING_FINAL_CONFIRMATION",
+                    customer_name=draft_name,
+                    order_type="DELIVERY",
+                    delivery_address=addr_text,
+                )
+                return _format_confirmation_ticket(
+                    branch_name=branch_name,
+                    customer_name=draft_name,
+                    customer_phone=customer_phone,
+                    items_summary=draft_items,
+                    total_amt=draft_total,
+                    order_type="DELIVERY",
+                    delivery_address=addr_text,
+                    target_branch_id=target_branch_id,
+                )
+
+        # STATE 4: AWAITING_FINAL_CONFIRMATION
+        elif active_draft.state == "AWAITING_FINAL_CONFIRMATION":
+            is_yes = clean_lower in [
+                "1", "1.", "1️⃣", "yes", "yes please", "confirm", "haan", "ha", "ji haan",
+                "place order", "btn_confirm_order_yes", "ok", "kardo", "done", "y"
+            ]
+            is_no = clean_lower in [
+                "2", "2.", "2️⃣", "no", "no please", "cancel", "nahi", "rehne do", "mat karo",
+                "btn_confirm_order_no", "n"
+            ]
+
+            if is_yes:
+                order_items_create = [
+                    OrderItemCreate(
+                        branch_menu_item_id=it.get("branch_menu_item_id", 1),
+                        quantity=it["quantity"],
+                        notes=it.get("notes"),
+                    )
+                    for it in draft_items
+                ]
+                try:
+                    placed_order = await orders_service.place_order(
+                        branch_id=target_branch_id,
+                        user_id=None,
+                        items=order_items_create,
+                        customer_phone=customer_phone,
+                        customer_name=draft_name,
+                        order_type=active_draft.orderType or "DINE_IN",
+                        table_number=active_draft.tableNumber,
+                        delivery_address=active_draft.deliveryAddress,
+                    )
+                    await delete_draft(customer_phone)
+
+                    return _format_confirmed_receipt(
+                        order_id=placed_order.id,
+                        branch_name=branch_name,
+                        customer_name=draft_name,
+                        items_summary=draft_items,
+                        total_amt=float(placed_order.totalAmount),
+                        order_type=active_draft.orderType or "DINE_IN",
+                        table_number=active_draft.tableNumber,
+                        delivery_address=active_draft.deliveryAddress,
+                        target_branch_id=target_branch_id,
+                    )
+                except Exception as e:
+                    logger.error(f"Error placing order from confirmed draft: {e}")
+                    reply = (
+                        f"⚠️ We encountered an issue finalizing your order: {str(e)}\n\n"
+                        f"Your draft has been preserved. Reply *1* to retry or *'cancel'* to cancel."
+                    )
+                    return WhatsAppOrderResponse(
+                        status="ERROR",
+                        branch_id=target_branch_id,
+                        total_amount=draft_total,
+                        items_placed=draft_items,
+                        reply_message=reply,
+                        buttons=[
+                            {"id": "btn_confirm_order_yes", "text": "🔄 Retry"},
+                            {"id": "btn_cancel_order", "text": "❌ Cancel"},
+                        ],
+                    )
+
+            elif is_no:
+                await delete_draft(customer_phone)
+                reply = (
+                    "❌ *Order Cancelled*\n\n"
+                    "Your draft order was cancelled. No charges were made.\n\n"
+                    "Reply *'menu'* anytime to explore our items!"
+                )
+                return WhatsAppOrderResponse(
+                    status="DRAFT_CANCELLED",
+                    branch_id=target_branch_id,
+                    reply_message=reply,
+                    buttons=[{"id": "btn_view_menu", "text": "📜 View Menu"}],
+                )
 
     # 1. Handle Kitchen Queue Inquiry
     if parsed.intent == "QUEUE_STATUS":
@@ -578,6 +1184,7 @@ async def process_whatsapp_order(
                 )
             )
             items_summary.append({
+                "branch_menu_item_id": match.id,
                 "item_name": match.masterItem.name,
                 "quantity": req_item.quantity,
                 "unit_price": float(effective_p),
@@ -623,49 +1230,108 @@ async def process_whatsapp_order(
             buttons=buttons,
         )
 
-    # Create real order in PostgreSQL with customerPhone linked!
-    placed_order = await orders_service.place_order(
+    total_amt = sum(it["subtotal"] for it in items_summary)
+    active_phone = customer_phone or "+920000000000"
+
+    # 1. Shortcut: Dine-in with Table specified upfront (e.g. "2 lattes dine in table 4")
+    if parsed.order_type == "DINE_IN" and parsed.table_number:
+        await save_or_update_draft(
+            customer_phone=active_phone,
+            branch_id=target_branch_id,
+            items_summary=items_summary,
+            total_amount=total_amt,
+            state="AWAITING_FINAL_CONFIRMATION",
+            customer_name=customer_name,
+            order_type="DINE_IN",
+            table_number=parsed.table_number,
+        )
+        return _format_confirmation_ticket(
+            branch_name=branch_name,
+            customer_name=customer_name,
+            customer_phone=active_phone,
+            items_summary=items_summary,
+            total_amt=total_amt,
+            order_type="DINE_IN",
+            table_number=parsed.table_number,
+            target_branch_id=target_branch_id,
+        )
+
+    # 2. Shortcut: Delivery with Address specified upfront (e.g. "1 cold brew delivery to House 12, St 3")
+    if parsed.order_type == "DELIVERY" and parsed.delivery_address:
+        await save_or_update_draft(
+            customer_phone=active_phone,
+            branch_id=target_branch_id,
+            items_summary=items_summary,
+            total_amount=total_amt,
+            state="AWAITING_FINAL_CONFIRMATION",
+            customer_name=customer_name,
+            order_type="DELIVERY",
+            delivery_address=parsed.delivery_address,
+        )
+        return _format_confirmation_ticket(
+            branch_name=branch_name,
+            customer_name=customer_name,
+            customer_phone=active_phone,
+            items_summary=items_summary,
+            total_amt=total_amt,
+            order_type="DELIVERY",
+            delivery_address=parsed.delivery_address,
+            target_branch_id=target_branch_id,
+        )
+
+    # 3. Shortcut: Dine-in specified without Table # (e.g. "2 lattes dine in")
+    if parsed.order_type == "DINE_IN":
+        await save_or_update_draft(
+            customer_phone=active_phone,
+            branch_id=target_branch_id,
+            items_summary=items_summary,
+            total_amount=total_amt,
+            state="AWAITING_TABLE_NUMBER",
+            customer_name=customer_name,
+            order_type="DINE_IN",
+        )
+        return _format_table_number_prompt(
+            branch_name=branch_name,
+            customer_name=customer_name,
+            items_summary=items_summary,
+            total_amt=total_amt,
+            target_branch_id=target_branch_id,
+        )
+
+    # 4. Shortcut: Delivery specified without Address (e.g. "2 lattes delivery")
+    if parsed.order_type == "DELIVERY":
+        await save_or_update_draft(
+            customer_phone=active_phone,
+            branch_id=target_branch_id,
+            items_summary=items_summary,
+            total_amount=total_amt,
+            state="AWAITING_DELIVERY_ADDRESS",
+            customer_name=customer_name,
+            order_type="DELIVERY",
+        )
+        return _format_delivery_address_prompt(
+            branch_name=branch_name,
+            customer_name=customer_name,
+            items_summary=items_summary,
+            total_amt=total_amt,
+            target_branch_id=target_branch_id,
+        )
+
+    # 5. Standard Flow: Ask Dine-in or Delivery
+    await save_or_update_draft(
+        customer_phone=active_phone,
         branch_id=target_branch_id,
-        user_id=None,
-        items=items_to_order,
-        customer_phone=customer_phone,
+        items_summary=items_summary,
+        total_amount=total_amt,
+        state="AWAITING_ORDER_TYPE",
         customer_name=customer_name,
     )
-
-    order_id = placed_order.id
-    total_amt = float(placed_order.totalAmount)
-
-    # Format WhatsApp Receipt
-    lines = []
-    for it in items_summary:
-        note_str = f" ({it['notes']})" if it.get("notes") else ""
-        lines.append(f"• {it['quantity']}x {it['item_name']}{note_str} — ${it['subtotal']:.2f}")
-
-    receipt_items_str = "\n".join(lines)
-    cust_line = f"\n👤 Customer: *{customer_name}*" if customer_name else ""
-    reply_receipt = (
-        f"🎉 Order Confirmed! Order #{order_id}\n"
-        f"📍 Branch: {branch_name}{cust_line}\n\n"
-        f"Order Summary:\n{receipt_items_str}\n\n"
-        f"💵 Total: ${total_amt:.2f}\n"
-        f"⏱️ Estimated Prep Time: ~10 minutes\n\n"
-        f"Your order is now live on our kitchen display! We'll notify you when it's ready for pickup."
-    )
-
-    receipt_buttons = [
-        {"id": "btn_track_status", "text": "🔍 Track Status"},
-        {"id": "btn_cancel_order", "text": "❌ Cancel Order"},
-    ]
-
-    return WhatsAppOrderResponse(
-        status="ORDER_PLACED",
-        order_id=order_id,
-        branch_id=target_branch_id,
-        total_amount=total_amt,
-        items_placed=items_summary,
-        reply_message=reply_receipt,
-        buttons=receipt_buttons,
-        prep_time_minutes=10,
+    return _format_service_choice_prompt(
+        branch_name=branch_name,
+        customer_name=customer_name,
+        items_summary=items_summary,
+        total_amt=total_amt,
+        target_branch_id=target_branch_id,
     )
 
 

@@ -15,6 +15,9 @@ class ParsedWhatsAppOrder(BaseModel):
     items: List[ParsedOrderItem] = []
     order_id_reference: Optional[int] = None
     inquiry_topic: Optional[str] = None
+    order_type: Optional[str] = None  # "DINE_IN" | "DELIVERY"
+    table_number: Optional[str] = None
+    delivery_address: Optional[str] = None
 
 
 class WhatsAppSimulationRequest(BaseModel):
@@ -33,3 +36,7 @@ class WhatsAppOrderResponse(BaseModel):
     reply_message: str
     buttons: Optional[List[Dict[str, str]]] = None
     prep_time_minutes: int = 10
+    order_type: Optional[str] = None
+    table_number: Optional[str] = None
+    delivery_address: Optional[str] = None
+

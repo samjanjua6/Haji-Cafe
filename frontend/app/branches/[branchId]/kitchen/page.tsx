@@ -194,10 +194,18 @@ export default function KitchenDisplayPage() {
               .join(", ");
 
             if (voiceEnabled) {
-              announceOrderVoice(`New Order ${newOrder.id}. ${itemSummary || "New items"}`);
+              const servicePrefix = newOrder.orderType === "DELIVERY"
+                ? `New Delivery order ${newOrder.id}`
+                : newOrder.tableNumber
+                  ? `New Dine-in ticket for ${newOrder.tableNumber}`
+                  : `New Dine-in ticket ${newOrder.id}`;
+              announceOrderVoice(`${servicePrefix}. ${itemSummary || "New items"}`);
             }
 
-            toast.success(`🔔 New Ticket #${newOrder.id}: ${itemSummary || "Incoming order"}`, {
+            const toastTitle = newOrder.orderType === "DELIVERY"
+              ? `🛵 Delivery Ticket #${newOrder.id}`
+              : `🍽️ Dine-in ${newOrder.tableNumber ? `(${newOrder.tableNumber})` : ""} Ticket #${newOrder.id}`;
+            toast.success(`${toastTitle}: ${itemSummary || "Incoming order"}`, {
               duration: 5000,
               icon: "☕",
             });
@@ -450,14 +458,55 @@ export default function KitchenDisplayPage() {
                     }}
                   >
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)" }}>
                           Ticket #{order.id}
                         </span>
                         <StatusBadge status={order.status} />
+                        {order.orderType === "DELIVERY" ? (
+                          <span
+                            style={{
+                              background: "rgba(59, 130, 246, 0.15)",
+                              color: "#3b82f6",
+                              border: "1px solid rgba(59, 130, 246, 0.3)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            🛵 Delivery
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              background: "rgba(245, 158, 11, 0.15)",
+                              color: "#f59e0b",
+                              border: "1px solid rgba(245, 158, 11, 0.3)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            🍽️ {order.tableNumber || "Dine-in"}
+                          </span>
+                        )}
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                        {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <span>{new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        {order.customerName && (
+                          <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>• 👤 {order.customerName}</span>
+                        )}
+                        {order.orderType === "DELIVERY" && order.deliveryAddress && (
+                          <span style={{ color: "var(--text-secondary)" }}>• 📍 {order.deliveryAddress}</span>
+                        )}
                       </div>
                     </div>
 

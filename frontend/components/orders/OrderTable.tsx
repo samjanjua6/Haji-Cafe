@@ -89,6 +89,7 @@ export default function OrderTable({
             <TableRow>
               <SortableHeader sticky label="ID" field="id" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               {!branchMode && <TableCell isHeader>Branch</TableCell>}
+              <TableCell isHeader>Service</TableCell>
               <SortableHeader label="Status" field="status" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Total" field="totalAmount" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
               <SortableHeader label="Date" field="createdAt" currentSortBy={sortBy} currentSortDir={sortDir} onSort={onSort} />
@@ -104,6 +105,22 @@ export default function OrderTable({
                     {(order as any).branch?.name || `Branch #${order.branchId}`}
                   </TableCell>
                 )}
+                <TableCell style={{ fontSize: 13, fontWeight: 500 }}>
+                  {order.orderType === "DELIVERY" ? (
+                    <span style={{ color: "#3b82f6", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🛵 Delivery
+                    </span>
+                  ) : (
+                    <span style={{ color: "#f59e0b", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🍽️ {order.tableNumber || "Dine-in"}
+                    </span>
+                  )}
+                  {order.customerName && (
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                      {order.customerName}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell><StatusBadge status={order.status} /></TableCell>
                 <TableCell style={{ fontWeight: 700, color: "var(--accent)" }}>${Number(order.totalAmount).toFixed(2)}</TableCell>
                 <TableCell style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(order.createdAt).toLocaleString()}</TableCell>

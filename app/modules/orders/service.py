@@ -13,6 +13,9 @@ async def place_order(
     items: List[OrderItemCreate],
     customer_phone: Optional[str] = None,
     customer_name: Optional[str] = None,
+    order_type: Optional[str] = "DINE_IN",
+    table_number: Optional[str] = None,
+    delivery_address: Optional[str] = None,
 ):
     """
     Place a new order. Business rules enforced:
@@ -69,6 +72,9 @@ async def place_order(
         items_data=items_data,
         customer_phone=customer_phone,
         customer_name=customer_name,
+        order_type=order_type or "DINE_IN",
+        table_number=table_number,
+        delivery_address=delivery_address,
     )
 
     # Real-time WebSocket broadcast (non-blocking)

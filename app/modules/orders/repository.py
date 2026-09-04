@@ -18,6 +18,9 @@ async def create_order(
     items_data: list,
     customer_phone: Optional[str] = None,
     customer_name: Optional[str] = None,
+    order_type: Optional[str] = "DINE_IN",
+    table_number: Optional[str] = None,
+    delivery_address: Optional[str] = None,
 ):
     """Create an order and deduct inventory in a single atomic transaction."""
     async with db.tx() as transaction:
@@ -25,6 +28,7 @@ async def create_order(
             "branchId": branch_id,
             "createdByUserId": user_id,
             "totalAmount": total_amount,
+            "orderType": order_type or "DINE_IN",
             "orderItems": {
                 "create": items_data,
             },
@@ -33,6 +37,10 @@ async def create_order(
             create_payload["customerPhone"] = customer_phone
         if customer_name is not None:
             create_payload["customerName"] = customer_name
+        if table_number is not None:
+            create_payload["tableNumber"] = table_number
+        if delivery_address is not None:
+            create_payload["deliveryAddress"] = delivery_address
 
         # Create order
         order = await transaction.order.create(

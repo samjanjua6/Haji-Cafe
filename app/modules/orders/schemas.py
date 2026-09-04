@@ -32,6 +32,11 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     items: List[OrderItemCreate] = Field(..., min_length=1)
+    order_type: Optional[str] = "DINE_IN"
+    table_number: Optional[str] = None
+    delivery_address: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_name: Optional[str] = None
 
 
 class OrderStatusUpdate(BaseModel):
@@ -63,9 +68,15 @@ class OrderResponse(BaseModel):
     id: int
     branch_id: int = Field(alias="branchId")
     created_by_user_id: Optional[int] = Field(None, alias="createdByUserId")
+    customer_phone: Optional[str] = Field(None, alias="customerPhone")
+    customer_name: Optional[str] = Field(None, alias="customerName")
+    order_type: Optional[str] = Field("DINE_IN", alias="orderType")
+    table_number: Optional[str] = Field(None, alias="tableNumber")
+    delivery_address: Optional[str] = Field(None, alias="deliveryAddress")
     status: OrderStatusEnum
     total_amount: Decimal = Field(alias="totalAmount")
     created_at: Optional[datetime] = Field(None, alias="createdAt")
     items: Optional[List[OrderItemResponse]] = Field(None, alias="orderItems")
 
     model_config = {"from_attributes": True, "populate_by_name": True}
+

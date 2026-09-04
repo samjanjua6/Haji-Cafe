@@ -15,6 +15,30 @@ from app.modules.webhooks.schemas import ParsedWhatsAppOrder, ParsedOrderItem
 
 logger = logging.getLogger("webhooks.whatsapp.parser")
 
+
+def normalize_table_number(raw_text: str) -> str:
+    """Normalize raw user table input (e.g. '4', 'table 4', 'T-4', 'outdoor 2') into clean title."""
+    if not raw_text:
+        return "Table 1"
+    cleaned = raw_text.strip()
+    # Check for table number patterns like "table 4", "t-4", "table #4", "tbl 4", "4"
+    m_num = re.search(r'^(?:table\s*(?:no\.?|#)?|t-?|tbl\.?)\s*([0-9]+[a-zA-Z]?|[a-zA-Z][0-9]*)$', cleaned, re.IGNORECASE)
+    if m_num:
+        return f"Table {m_num.group(1).upper()}"
+    if cleaned.isdigit():
+        return f"Table {cleaned}"
+    # Check for section/area with optional number: e.g. "outdoor 2", "patio 3", "terrace", "bar 1"
+    m_area = re.search(r'^(outdoor|patio|terrace|balcony|bar|counter|vip|roof(?:top)?)\s*(?:table\s*)?([0-9]+)?$', cleaned, re.IGNORECASE)
+    if m_area:
+        area = m_area.group(1).capitalize()
+        num = m_area.group(2)
+        return f"{area} {num}" if num else area
+    # General cleanup if short
+    if len(cleaned) <= 25:
+        return cleaned.title() if not cleaned.lower().startswith("table") else cleaned
+    return cleaned[:25].strip()
+
+
 SYSTEM_PARSER_PROMPT = """You are an expert AI Barista conversational intent parser for a modern specialty café called Haji Cafe.
 Your job is to read customer WhatsApp messages and classify them into a strict, validated JSON object.
 
@@ -33,6 +57,9 @@ RESPONSE FORMAT (STRICT JSON ONLY, NO MARKDOWN, NO COMMENTARY):
   "intent": "ORDER",
   "customer_name": "Sam",
   "branch_id": 1,
+  "order_type": "DINE_IN",
+  "table_number": "Table 4",
+  "delivery_address": null,
   "items": [
     {"name": "Spanish Latte", "quantity": 2, "notes": "extra hot"},
     {"name": "Butter Croissant", "quantity": 1, "notes": null}
@@ -49,8 +76,11 @@ RULES:
 5. Never classify "How many orders are in queue" as ORDER or MY_ORDER_STATUS — it must be QUEUE_STATUS.
 6. Never classify "Cancel my order" as ORDER — it must be CANCEL_ORDER.
 7. If the customer introduces themselves (e.g. "I am Sam", "My name is Bilal", "Mera naam Ali hai"), extract their name into "customer_name", otherwise null.
-8. Return strictly valid JSON.
-9. CRITICAL INTENT DISTINCTION:
+8. Extract "order_type": "DINE_IN" if customer mentions dine in, table, or seating (e.g. "dine in", "table 4", "baith ke", "yahan"). Extract "order_type": "DELIVERY" if customer mentions delivery, deliver, or home address (e.g. "delivery", "deliver to...", "ghar"). If unspecified, set "order_type": null.
+9. Extract "table_number" if mentioned (e.g. "table 4" -> "Table 4", "t-3" -> "Table 3", "outdoor 2" -> "Outdoor 2"). Otherwise null.
+10. Extract "delivery_address" if mentioned in the message (e.g. "House 12, Street 3, F-7"). Otherwise null.
+11. Return strictly valid JSON.
+12. CRITICAL INTENT DISTINCTION:
 - Questions about pricing, availability, stock, or ingredients (e.g. "how much is a latte?", "how much latte do you have?", "do you have cold brew?", "is croissant available?", "latte kitne ka hai?", "kya cold brew hai?") MUST BE CLASSIFIED AS "MENU_INQUIRY" with "inquiry_topic" set to the item name, and "items" MUST BE [].
 - Only classify as "ORDER" if the customer clearly instructs to order/buy/send/get items (e.g. "send 1 latte", "can I get 2 cold brews", "1 nitro cold brew", "1 latte please", "1 latte bhej do", "1 latte chahiye").
 - When intent is NOT "ORDER", always return "items": [] (empty array, never null).
@@ -144,6 +174,21 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
             if num_match and intent in ["CANCEL_ORDER", "MY_ORDER_STATUS"]:
                 ref_id = int(num_match.group(1))
 
+        raw_order_type = data.get("order_type")
+        order_type = None
+        if raw_order_type:
+            raw_upper = str(raw_order_type).upper()
+            if "DINE" in raw_upper or "TABLE" in raw_upper:
+                order_type = "DINE_IN"
+            elif "DELIV" in raw_upper:
+                order_type = "DELIVERY"
+
+        raw_table = data.get("table_number")
+        table_num = normalize_table_number(str(raw_table)) if raw_table else None
+
+        raw_addr = data.get("delivery_address")
+        delivery_addr = str(raw_addr).strip() if raw_addr and len(str(raw_addr).strip()) >= 4 else None
+
         return ParsedWhatsAppOrder(
             intent=intent,
             customer_name=data.get("customer_name"),
@@ -151,6 +196,9 @@ async def parse_customer_message(message_text: str, default_branch_id: int = 1) 
             items=items_list,
             order_id_reference=int(ref_id) if ref_id else None,
             inquiry_topic=data.get("inquiry_topic"),
+            order_type=order_type,
+            table_number=table_num,
+            delivery_address=delivery_addr,
         )
 
     except Exception as e:
@@ -279,5 +327,29 @@ def _heuristic_fallback_parser(text: str, default_branch_id: int = 1) -> ParsedW
     name_match = re.search(r"(?:my name is|i am|i'm|mera naam|this is)\s+([A-Za-z]+)", text, re.IGNORECASE)
     detected_name = name_match.group(1).capitalize() if name_match else None
 
+    # Detect service type, table number, delivery address in fallback
+    order_type = None
+    table_num = None
+    delivery_addr = None
+
+    if any(w in lower for w in ["dine in", "dine-in", "dine", "table", "baith ke", "yahan"]):
+        order_type = "DINE_IN"
+        tbl_m = re.search(r'(?:table\s*(?:no\.?|#)?|t-?)\s*([0-9]+[a-zA-Z]?|[a-zA-Z][0-9]*)', text, re.IGNORECASE)
+        if tbl_m:
+            table_num = normalize_table_number(tbl_m.group(0))
+    elif any(w in lower for w in ["delivery", "deliver", "ghar", "home delivery"]):
+        order_type = "DELIVERY"
+        addr_m = re.search(r'(?:delivery\s+(?:to|at)|deliver\s+(?:to|at))\s+(.+)', text, re.IGNORECASE)
+        if addr_m:
+            delivery_addr = addr_m.group(1).strip()
+
     intent = "ORDER" if items else "HELP"
-    return ParsedWhatsAppOrder(intent=intent, branch_id=default_branch_id, items=items, customer_name=detected_name)
+    return ParsedWhatsAppOrder(
+        intent=intent,
+        branch_id=default_branch_id,
+        items=items,
+        customer_name=detected_name,
+        order_type=order_type,
+        table_number=table_num,
+        delivery_address=delivery_addr,
+    )

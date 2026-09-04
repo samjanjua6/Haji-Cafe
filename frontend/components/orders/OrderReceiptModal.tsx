@@ -149,6 +149,32 @@ export default function OrderReceiptModal({
             </div>
           </div>
 
+          {/* Service & Customer Meta */}
+          <div style={{ background: "var(--bg-card)", padding: "8px 12px", borderRadius: "var(--radius-sm)", fontSize: 12, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+              <span style={{ color: "var(--text-muted)" }}>Service:</span>
+              <strong style={{ color: "var(--text-primary)" }}>
+                {order.orderType === "DELIVERY" ? "🛵 Delivery" : `🍽️ Dine-in (${order.tableNumber || "Table"})`}
+              </strong>
+            </div>
+            {order.customerName && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ color: "var(--text-muted)" }}>Customer:</span>
+                <span style={{ color: "var(--text-primary)" }}>
+                  {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ""}
+                </span>
+              </div>
+            )}
+            {order.orderType === "DELIVERY" && order.deliveryAddress && (
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--text-muted)" }}>Address:</span>
+                <span style={{ color: "var(--text-primary)", textAlign: "right", maxWidth: 260 }}>
+                  {order.deliveryAddress}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Line Items Table */}
           <div style={{ marginTop: 4 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

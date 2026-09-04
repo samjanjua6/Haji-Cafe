@@ -164,6 +164,9 @@ model Order {
   createdByUserId Int?        @map("created_by_user_id")
   customerPhone   String?     @map("customer_phone")
   customerName    String?     @map("customer_name")
+  orderType       String?     @default("DINE_IN") @map("order_type")
+  tableNumber     String?     @map("table_number")
+  deliveryAddress String?     @map("delivery_address")
   status          OrderStatus @default(PENDING)
   totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
   createdAt       DateTime    @default(now()) @map("created_at")
@@ -175,6 +178,7 @@ model Order {
 
   @@index([branchId, status, createdAt])
   @@index([customerPhone, status])
+  @@index([orderType])
   @@index([createdAt])
   @@index([status, createdAt])
   @@map("orders")
@@ -281,3 +285,24 @@ model CustomerReview {
   @@index([branchId, sentiment, createdAt])
   @@map("customer_reviews")
 }
+
+model WhatsAppDraftOrder {
+  id              Int      @id @default(autoincrement())
+  customerPhone   String   @unique @map("customer_phone")
+  customerName    String?  @map("customer_name")
+  branchId        Int      @map("branch_id")
+  orderType       String?  @map("order_type")      // "DINE_IN" | "DELIVERY"
+  tableNumber     String?  @map("table_number")    // e.g. "Table 4"
+  deliveryAddress String?  @map("delivery_address")
+  itemsJson       String   @map("items_json")       // Serialized line items JSON
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+  state           String   @default("AWAITING_ORDER_TYPE") @map("state") // "AWAITING_ORDER_TYPE" | "AWAITING_TABLE_NUMBER" | "AWAITING_DELIVERY_ADDRESS" | "AWAITING_FINAL_CONFIRMATION"
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([customerPhone])
+  @@index([expiresAt])
+  @@map("whatsapp_draft_orders")
+}
+
