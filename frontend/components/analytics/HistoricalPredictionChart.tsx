@@ -11,6 +11,12 @@ import {
   Award,
   ArrowUpRight,
   Zap,
+  Lightbulb,
+  Flame,
+  Users,
+  Star,
+  HelpCircle,
+  TrendingDown,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
@@ -739,8 +745,8 @@ export function HistoricalPredictionChart({
                       fontSize: 12,
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: hoveredPoint.anomaly_type === "SPIKE" ? "var(--success)" : "var(--danger)" }}>
-                      ⚡ {hoveredPoint.anomaly_type} ANOMALY
+                    <div style={{ fontWeight: 700, color: hoveredPoint.anomaly_type === "SPIKE" ? "var(--success)" : "var(--danger)", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Zap size={13} /> {hoveredPoint.anomaly_type} ANOMALY
                     </div>
                     <div style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 2 }}>
                       {hoveredPoint.anomaly_reason}
@@ -862,8 +868,8 @@ export function HistoricalPredictionChart({
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                    💡 {item.insight}
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic", display: "flex", alignItems: "center", gap: 5 }}>
+                    <Lightbulb size={13} style={{ color: "var(--accent)", flexShrink: 0 }} /> {item.insight}
                   </div>
                 </div>
               ))}
@@ -886,11 +892,11 @@ export function HistoricalPredictionChart({
             </div>
             {peakHoursData && (
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <span style={{ fontSize: 13, background: "var(--warning-glow)", color: "var(--warning)", padding: "4px 10px", borderRadius: 6, fontWeight: 700 }}>
-                  🔥 Peak: {peakHoursData.busiest_hour_label}
+                <span style={{ fontSize: 13, background: "var(--warning-glow)", color: "var(--warning)", padding: "4px 10px", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <Flame size={14} /> Peak: {peakHoursData.busiest_hour_label}
                 </span>
-                <span style={{ fontSize: 13, background: "var(--info-glow)", color: "var(--info)", padding: "4px 10px", borderRadius: 6, fontWeight: 700 }}>
-                  👥 Staff: {peakHoursData.recommended_shift_staff} Baristas
+                <span style={{ fontSize: 13, background: "var(--info-glow)", color: "var(--info)", padding: "4px 10px", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <Users size={14} /> Staff: {peakHoursData.recommended_shift_staff} Baristas
                 </span>
               </div>
             )}
@@ -958,7 +964,7 @@ export function HistoricalPredictionChart({
               {/* Stars */}
               <div style={{ background: "var(--bg-surface)", border: "1px solid var(--warning-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--warning)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  ⭐ Stars (High Volume, High Margin)
+                  <Star size={16} /> Stars (High Volume, High Margin)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.stars?.map((item: any, i: number) => (
@@ -973,7 +979,7 @@ export function HistoricalPredictionChart({
               {/* Cash Cows */}
               <div style={{ background: "var(--bg-surface)", border: "1px solid var(--success-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--success)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  🐄 Cash Cows (High Volume, Steady)
+                  <DollarSign size={16} /> Cash Cows (High Volume, Steady)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.cash_cows?.map((item: any, i: number) => (
@@ -988,7 +994,7 @@ export function HistoricalPredictionChart({
               {/* Puzzles */}
               <div style={{ background: "var(--bg-surface)", border: "1px solid var(--info-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--info)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  ❓ Puzzles (High Margin, Promote More)
+                  <HelpCircle size={16} /> Question Marks / Puzzles (High Margin)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.puzzles?.map((item: any, i: number) => (
@@ -1003,7 +1009,7 @@ export function HistoricalPredictionChart({
               {/* Dogs */}
               <div style={{ background: "var(--bg-surface)", border: "1px solid var(--danger-glow)", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 800, color: "var(--danger)", fontSize: 15, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  🐕 Dogs (Low Volume, Low Margin)
+                  <TrendingDown size={16} /> Underperformers / Dogs (Low Volume)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {bcgData?.dogs?.map((item: any, i: number) => (

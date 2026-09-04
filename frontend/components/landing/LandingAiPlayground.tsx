@@ -1,12 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mic, Sparkles, Volume2, Bot, Play, CheckCircle2, MessageSquare, ArrowRight } from "lucide-react";
+import {
+  Mic,
+  Sparkles,
+  Volume2,
+  Bot,
+  Play,
+  CheckCircle2,
+  MessageSquare,
+  ArrowRight,
+  BarChart3,
+  AlertTriangle,
+  Building2,
+  LucideIcon,
+} from "lucide-react";
 
 interface VoiceQuery {
   id: string;
   category: string;
-  icon: string;
+  icon: LucideIcon;
   userPrompt: string;
   aiResponse: string;
   actionTaken: string;
@@ -17,7 +30,7 @@ const PRESET_QUERIES: VoiceQuery[] = [
   {
     id: "1",
     category: "Hands-Free Voice Order",
-    icon: "🎙️",
+    icon: Mic,
     userPrompt: "Take order for 2 Iced Spanish Lattes with Oat Milk and 1 Blueberry Muffin for Table 6",
     aiResponse:
       "Order confirmed for Table 6: 2x Iced Spanish Latte (Modifier: Oat Milk) + 1x Blueberry Muffin. Subtotal: $14.20. Order pushed to Barista KDS display immediately.",
@@ -27,7 +40,7 @@ const PRESET_QUERIES: VoiceQuery[] = [
   {
     id: "2",
     category: "Real-Time Sales Query",
-    icon: "📊",
+    icon: BarChart3,
     userPrompt: "What is our best-selling coffee item today and total sales across all branches?",
     aiResponse:
       "Today's top-performing item is Spanish Latte with 94 cups sold ($488.80). Total gross revenue across all 3 branches is $4,850.20 (+22% compared to last Tuesday).",
@@ -37,7 +50,7 @@ const PRESET_QUERIES: VoiceQuery[] = [
   {
     id: "3",
     category: "Smart Low-Stock Alert",
-    icon: "⚠️",
+    icon: AlertTriangle,
     userPrompt: "Are there any raw ingredients or syrups running below safety stock?",
     aiResponse:
       "Warning: 2 items require immediate reorder: 1) Colombian Espresso Roast (1.5 kg remaining / 5 kg threshold), 2) Caramel Syrup (1 bottle remaining).",
@@ -47,7 +60,7 @@ const PRESET_QUERIES: VoiceQuery[] = [
   {
     id: "4",
     category: "Multi-Branch Oversight",
-    icon: "🏬",
+    icon: Building2,
     userPrompt: "How is the Mall Outlet performing compared to Downtown Branch?",
     aiResponse:
       "Mall Outlet has processed 142 orders ($1,890) with an average ticket time of 1m 50s. Downtown Branch has processed 188 orders ($2,510) with 1m 35s speed.",
@@ -79,23 +92,6 @@ export default function LandingAiPlayground() {
       >
         {/* Section Header */}
         <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto 48px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--accent-muted)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <Sparkles size={14} /> LIVEKIT WEBRTC &amp; GEMINI POWERED
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",
@@ -156,7 +152,21 @@ export default function LandingAiPlayground() {
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <span style={{ fontSize: "24px", lineHeight: 1 }}>{q.icon}</span>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: isSelected ? "var(--accent-muted)" : "var(--bg-card)",
+                      color: isSelected ? "var(--accent)" : "var(--text-muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <q.icon size={18} />
+                  </span>
                   <div style={{ flex: 1 }}>
                     <div
                       style={{
@@ -250,10 +260,10 @@ export default function LandingAiPlayground() {
                   </div>
                   <div>
                     <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      LiveKit Voice Channel
+                      AI Voice Assistant
                     </div>
                     <div style={{ fontSize: "12px", color: "var(--success)", fontWeight: 600 }}>
-                      ● Ultra Low-Latency Audio Stream (48 kHz)
+                      ● Instant Voice Recognition Ready
                     </div>
                   </div>
                 </div>

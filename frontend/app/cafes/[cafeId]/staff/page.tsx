@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import EmptyState from "@/components/EmptyState";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 
 interface Staff { id: number; email: string; role: string; }
 interface Cafe { id: number; name: string; }
@@ -106,6 +107,7 @@ export default function StaffAndSchedulingPage() {
 
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} cafeName={cafe?.name} />
       <div className="page-header">
         <div>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>

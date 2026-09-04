@@ -12,24 +12,30 @@ export interface Order {
   updatedAt: string;
   orderLines?: OrderLine[];
   orderItems?: OrderLine[];
-  placedBy?: { id: number; email: string };
+  placedBy?: { id: number; email: string; name?: string };
+  branch?: { id: number; name: string; location?: string; cafeId?: number };
 }
 
 export type OrderStatus = 'PENDING' | 'IN_PREPARATION' | 'COMPLETED' | 'CANCELLED';
 
 export interface OrderLine {
   id: number;
-  orderId: number;
+  orderId?: number;
   branchMenuItemId: number;
   quantity: number;
-  unitPrice: number;
-  lineTotal: number;
+  unitPrice?: number;
+  priceAtPurchase?: number | string;
+  lineTotal?: number;
   itemName?: string;
   notes?: string | null;
   branchMenuItem?: {
     id: number;
-    masterItem: {
+    priceOverride?: number | null;
+    availableQuantity?: number | null;
+    masterItem?: {
+      id?: number;
       name: string;
+      basePrice?: number;
     };
   };
 }

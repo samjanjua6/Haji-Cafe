@@ -14,6 +14,8 @@ import {
   Sparkles,
   Server,
   Zap,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 type RoleKey = "SUPER_ADMIN" | "CAFE_OWNER" | "BRANCH_MANAGER" | "CASHIER" | "KITCHEN_STAFF";
@@ -39,7 +41,7 @@ const ROLES_INFO: Record<RoleKey, RolePermissionInfo> = {
       "Create, archive & restore cafes across the platform",
       "Assign global & tenant-scoped user roles",
       "Inspect complete multi-tenant audit logs",
-      "Access global telemetry & system configuration",
+      "Access platform health & system configuration",
     ],
     restricted: [],
   },
@@ -102,7 +104,7 @@ const ROLES_INFO: Record<RoleKey, RolePermissionInfo> = {
     desc: "Back-of-house team dedicated strictly to order fulfillment, preparation timers, priority tags, and item completion notifications.",
     allowed: [
       "View real-time incoming kitchen ticket queue",
-      "Update order preparation state (In Prep ➔ Ready to Serve)",
+      "Update order preparation state (In Prep → Ready to Serve)",
       "Receive audio chime announcements for rush tickets",
       "Filter by station (Espresso Bar, Bakery, Grill)",
     ],
@@ -120,33 +122,33 @@ export default function LandingSecurity() {
   const pillars = [
     {
       icon: Key,
-      title: "Dual-Token Authentication (JWT)",
-      desc: "15-minute cryptographically signed access tokens coupled with rotating refresh tokens and instant multi-session revocation.",
-      badge: "RFC 7519",
+      title: "Secure Staff Accounts",
+      desc: "Protected sign-in sessions with automatic timeout and multi-device access control for all team members.",
+      badge: "PROTECTED",
     },
     {
       icon: UserCheck,
-      title: "Multi-Tenant Scoped RBAC",
-      desc: "Strict database query boundaries prevent cross-tenant data access. Staff cannot access unauthorized branch records.",
-      badge: "ZERO TRUST",
+      title: "Role-Based Staff Permissions",
+      desc: "Each staff member only accesses what they need. Cashiers cannot view confidential owner reports or alter past records.",
+      badge: "RESTRICTED ACCESS",
     },
     {
       icon: History,
-      title: "Immutable Purchase Price Locking",
-      desc: "Historical purchase prices are locked at order creation (`price_at_purchase`). Future menu price adjustments never distort past tax or revenue reports.",
+      title: "Permanent Sales & Tax Accuracy",
+      desc: "Historical purchase prices are locked at checkout. Future menu price updates never distort past tax or revenue reports.",
       badge: "AUDIT PROOF",
     },
     {
       icon: Database,
-      title: "PostgreSQL ACID Reliability",
-      desc: "Prisma ORM transactions guarantee relational consistency, foreign key integrity, and zero phantom stock decrements.",
-      badge: "ACID SAFE",
+      title: "100% Reliable Cloud Storage",
+      desc: "Every order and inventory update is saved instantly with automated cloud backups and zero risk of data loss.",
+      badge: "ALWAYS SYNCED",
     },
     {
       icon: Lock,
-      title: "256-Bit Encrypted WebRTC & WSS",
-      desc: "LiveKit voice streams and KDS WebSocket connections are secured with end-to-end TLS 1.3 encryption.",
-      badge: "AES-256",
+      title: "Bank-Grade Data Encryption",
+      desc: "All customer orders, voice commands, and business transactions are protected by modern end-to-end encryption.",
+      badge: "ENCRYPTED",
     },
     {
       icon: FileCheck,
@@ -177,23 +179,6 @@ export default function LandingSecurity() {
       >
         {/* Section Header */}
         <div style={{ textAlign: "center", maxWidth: "840px", margin: "0 auto 56px auto" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "99px",
-              backgroundColor: "var(--accent-muted)",
-              color: "var(--accent)",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "16px",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <ShieldCheck size={14} /> ENTERPRISE SECURITY &amp; RBAC ARCHITECTURE
-          </div>
           <h2
             style={{
               fontSize: "clamp(28px, 4vw, 44px)",
@@ -203,7 +188,7 @@ export default function LandingSecurity() {
               marginBottom: "16px",
             }}
           >
-            Engineered for <span className="landing-gradient-text">Mission-Critical Integrity &amp; Security</span>
+            Built for <span className="landing-gradient-text">Rock-Solid Operations &amp; Security</span>
           </h2>
           <p
             style={{
@@ -212,8 +197,8 @@ export default function LandingSecurity() {
               lineHeight: 1.6,
             }}
           >
-            From strict multi-tenant role isolation to immutable financial purchase records, Haji Cafe protects your
-            cafe franchise with banking-grade compliance standards.
+            From staff permission controls to permanent sales &amp; tax records, Haji Cafe protects your
+            cafe franchise with bank-grade security standards.
           </p>
         </div>
 
@@ -319,8 +304,8 @@ export default function LandingSecurity() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Allowed Actions */}
               <div>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--success)", textTransform: "uppercase", marginBottom: "8px" }}>
-                  ✓ Permitted Operational Actions:
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--success)", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: 5 }}>
+                  <CheckCircle2 size={13} /> Permitted Operational Actions:
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   {currentRoleInfo.allowed.map((item, idx) => (
@@ -349,8 +334,8 @@ export default function LandingSecurity() {
               {/* Restricted Actions */}
               {currentRoleInfo.restricted.length > 0 && (
                 <div>
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--danger)", textTransform: "uppercase", marginBottom: "8px" }}>
-                    ✕ Enforced Boundary Protections:
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--danger)", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: 5 }}>
+                    <XCircle size={13} /> Enforced Boundary Protections:
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     {currentRoleInfo.restricted.map((item, idx) => (

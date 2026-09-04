@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users } from "lucide-react";
+import { Users, Coffee, Store, X } from "lucide-react";
 import { User } from "@/types/auth";
 import { TableSkeleton } from "@/components/LoadingSkeleton";
 import EmptyState from "@/components/EmptyState";
@@ -112,24 +112,40 @@ export default function UserTable({ users, loading, onRoleChange, onAssignScope,
                           {u.userScopes.map(s => (
                             <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{
-                                background: "var(--bg-surface)",
-                                border: "1px solid var(--border)",
-                                padding: "2px 8px",
-                                borderRadius: 6,
-                                fontSize: 12,
-                                color: "var(--text-muted)"
-                              }}>
-                                {s.cafe ? `☕ ${s.cafe.name}` : ""}
-                                {s.branch ? `🏪 ${s.branch.name}` : ""}
-                              </span>
-                              <button
-                                onClick={() => onRemoveScope(u.id, s.id)}
-                                style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 14, lineHeight: 1 }}
-                              >×</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  background: "var(--bg-surface)",
+                                  border: "1px solid var(--border)",
+                                  padding: "3px 8px",
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  color: "var(--text-muted)"
+                                }}>
+                                  {s.cafe && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                      <Coffee size={12} style={{ color: "var(--accent)" }} />
+                                      {s.cafe.name}
+                                    </span>
+                                  )}
+                                  {s.branch && (
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                      <Store size={12} style={{ color: "var(--accent)" }} />
+                                      {s.branch.name}
+                                    </span>
+                                  )}
+                                </span>
+                                <button
+                                  onClick={() => onRemoveScope(u.id, s.id)}
+                                  style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", display: "flex", alignItems: "center", padding: 2 }}
+                                  title="Remove scope"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                     </td>
                     <td>
                       <button className="btn btn-ghost btn-sm" onClick={() => onAssignScope(u.id)}>

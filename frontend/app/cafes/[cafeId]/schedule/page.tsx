@@ -17,7 +17,14 @@ import {
   Store,
   Building2,
   DollarSign,
-  FileText
+  FileText,
+  Sun,
+  CloudRain,
+  GraduationCap,
+  Zap,
+  BarChart3,
+  ShieldCheck,
+  Lightbulb,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
@@ -25,6 +32,7 @@ import toast from "react-hot-toast";
 import SplinePeakChart from "@/components/charts/SplinePeakChart";
 import WeeklyRushHeatmap from "@/components/charts/WeeklyRushHeatmap";
 import { exportScheduleToPDF } from "@/lib/schedulePdfExport";
+import CafeSubnav from "@/components/cafes/CafeSubnav";
 
 interface BranchOption {
   id: number;
@@ -234,7 +242,6 @@ export default function CafeOwnerSchedulePage() {
       });
       toast.success(res.data?.message || "Synced to Google Calendar successfully!", {
         duration: 5000,
-        icon: "📅",
       });
     } catch (err: any) {
       toast.error(err.message || "Failed to sync Google Calendar");
@@ -296,6 +303,7 @@ export default function CafeOwnerSchedulePage() {
 
   return (
     <div>
+      <CafeSubnav cafeId={cafeId} />
       {/* 1. Page Header */}
       <div className="page-header">
         <div>
@@ -328,7 +336,7 @@ export default function CafeOwnerSchedulePage() {
             </span>
           </div>
           <div className="page-subtitle">
-            Café #{cafeId} • Cross-branch Erlang-C staffing optimization and Google Calendar synchronization
+            Café #{cafeId} • Cross-branch smart staffing optimization and Google Calendar synchronization
           </div>
         </div>
 
@@ -434,7 +442,13 @@ export default function CafeOwnerSchedulePage() {
               border: "1px solid var(--border)",
             }}
           >
-            {demandMultiplier === 1.0 ? "🟢 Baseline Operations (1.0x)" : `🔥 +${Math.round((demandMultiplier - 1.0) * 100)}% Franchise Surge`}
+            {demandMultiplier === 1.0 ? (
+              <span>Baseline Operations (1.0x)</span>
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <Flame size={13} style={{ color: "var(--warning)" }} /> +{Math.round((demandMultiplier - 1.0) * 100)}% Franchise Surge
+              </span>
+            )}
           </span>
         </div>
 
@@ -445,11 +459,12 @@ export default function CafeOwnerSchedulePage() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
-              { label: "☀️ Normal Operations (1.0x)", val: 1.0 },
-              { label: "🌧️ Rainy Morning (+15%)", val: 1.15 },
-              { label: "🎓 Campus / Festival (+30%)", val: 1.30 },
-              { label: "🚀 Franchise Promo (+50%)", val: 1.50 },
+              { label: "Normal Operations (1.0x)", val: 1.0, icon: Sun },
+              { label: "Rainy Morning (+15%)", val: 1.15, icon: CloudRain },
+              { label: "Campus / Festival (+30%)", val: 1.30, icon: GraduationCap },
+              { label: "Franchise Promo (+50%)", val: 1.50, icon: Zap },
             ].map((sc) => {
+              const ScIcon = sc.icon;
               const isSelected = Math.abs(demandMultiplier - sc.val) < 0.03;
               return (
                 <button
@@ -465,9 +480,13 @@ export default function CafeOwnerSchedulePage() {
                     background: isSelected ? "var(--accent-glow)" : "var(--bg-card)",
                     color: isSelected ? "var(--accent)" : "var(--text-primary)",
                     transition: "all 0.2s ease",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  {sc.label}
+                  <ScIcon size={14} />
+                  <span>{sc.label}</span>
                 </button>
               );
             })}
@@ -477,9 +496,9 @@ export default function CafeOwnerSchedulePage() {
         {/* Slider control with Visual Milestone Ticks */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>
-            <span>🟢 1.0x Baseline</span>
-            <span>🟡 1.25x (+25% Spike)</span>
-            <span>🔥 1.50x (+50% Max Surge)</span>
+            <span>1.0x Baseline</span>
+            <span>1.25x (+25% Spike)</span>
+            <span>1.50x (+50% Max Surge)</span>
           </div>
           <input
             type="range"
@@ -513,9 +532,29 @@ export default function CafeOwnerSchedulePage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22 }}>
-              {demandMultiplier === 1.0 ? "☀️" : demandMultiplier <= 1.2 ? "🌧️" : demandMultiplier <= 1.35 ? "🎓" : "🚀"}
-            </span>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: "var(--accent-muted)",
+                color: "var(--accent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {demandMultiplier === 1.0 ? (
+                <Sun size={20} />
+              ) : demandMultiplier <= 1.2 ? (
+                <CloudRain size={20} />
+              ) : demandMultiplier <= 1.35 ? (
+                <GraduationCap size={20} />
+              ) : (
+                <Zap size={20} />
+              )}
+            </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                 {demandMultiplier === 1.0 ? "Franchise Standard Baseline" : `Surge Simulation: +${Math.round((demandMultiplier - 1.0) * 100)}% Customer Volume`}
@@ -523,7 +562,7 @@ export default function CafeOwnerSchedulePage() {
               <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                 {demandMultiplier === 1.0
                   ? "Standard schedule maintains steady sub-3.5m queue wait times across all franchise branches."
-                  : `Erlang-C dynamically scales barista headcount across branches to absorb extra volume without line bottlenecks.`}
+                  : `Smart staffing AI dynamically scales barista headcount across branches to absorb extra volume without line bottlenecks.`}
               </div>
             </div>
           </div>
@@ -531,8 +570,8 @@ export default function CafeOwnerSchedulePage() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Franchise SLA</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)" }}>
-                🛡️ Zero Walkouts (&lt; 2.5m Wait)
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)", display: "flex", alignItems: "center", gap: 5 }}>
+                <ShieldCheck size={14} /> Zero Walkouts (&lt; 2.5m Wait)
               </div>
             </div>
           </div>
@@ -586,7 +625,7 @@ export default function CafeOwnerSchedulePage() {
               <TrendingUp size={18} style={{ color: "var(--accent)" }} />
               {chartType === "HEATMAP"
                 ? "7×24 Day-of-Week Customer Traffic Heatmap Matrix"
-                : "24-Hour Order Volume & Erlang-C Headcount"}
+                : "24-Hour Order Volume & Recommended Headcount"}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
               {chartType === "HEATMAP"
@@ -601,16 +640,16 @@ export default function CafeOwnerSchedulePage() {
               <button
                 className={`btn btn-sm ${chartType === "SPLINE" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("SPLINE")}
-                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
+                style={{ padding: "4px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}
               >
-                📈 Spline Curve
+                <TrendingUp size={13} /> Spline Curve
               </button>
               <button
                 className={`btn btn-sm ${chartType === "HISTOGRAM" ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => setChartType("HISTOGRAM")}
-                style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}
+                style={{ padding: "4px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}
               >
-                📊 Columns
+                <BarChart3 size={13} /> Columns
               </button>
               <button
                 className={`btn btn-sm ${chartType === "HEATMAP" ? "btn-primary" : "btn-ghost"}`}
@@ -731,7 +770,7 @@ export default function CafeOwnerSchedulePage() {
                 return (
                   <div
                     key={h.hour}
-                    title={`${h.label}: ${h.total_orders} Total Orders\nErlang-C Staff Required: ${staffCount} servers\nEstimated Revenue: $${(h.estimated_hourly_revenue || h.hourly_revenue).toFixed(2)}\nProfit Margin: ${h.profit_margin_percent || 80}%`}
+                    title={`${h.label}: ${h.total_orders} Total Orders\nRecommended Staff: ${staffCount} baristas\nEstimated Revenue: $${(h.estimated_hourly_revenue || h.hourly_revenue).toFixed(2)}\nProfit Margin: ${h.profit_margin_percent || 80}%`}
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -801,7 +840,7 @@ export default function CafeOwnerSchedulePage() {
               AI Shift Schedule for {scheduleData?.branch_name || "Franchise"}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-              Dynamic staffing roster matching branch staff to Erlang-C queue requirements.
+              Dynamic staffing roster matching branch staff to peak rush demand.
             </div>
           </div>
 
@@ -904,9 +943,13 @@ export default function CafeOwnerSchedulePage() {
                     color: "var(--text-muted)",
                     marginBottom: 16,
                     lineHeight: 1.4,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
                   }}
                 >
-                  💡 {shift.focus_rationale}
+                  <Lightbulb size={14} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 2 }} />
+                  <span>{shift.focus_rationale}</span>
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
@@ -978,7 +1021,9 @@ export default function CafeOwnerSchedulePage() {
                 }}
               >
                 <span>Estimated Cost: ${(shift.duration_hours * shift.assigned_staff.length * 15).toFixed(2)}</span>
-                <span style={{ color: "var(--success)", fontWeight: 600 }}>Erlang-C Compliant ✓</span>
+                <span style={{ color: "var(--success)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <CheckCircle2 size={13} /> Rush-Hour Optimized
+                </span>
               </div>
             </div>
           ))}

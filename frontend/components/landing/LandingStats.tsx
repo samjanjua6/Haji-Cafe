@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Store, ShoppingBag, Zap, ShieldCheck, Server, Mic, Database, Lock, Activity } from "lucide-react";
+import { Store, ShoppingBag, Zap, ShieldCheck } from "lucide-react";
 
 export default function LandingStats() {
   const stats = [
@@ -27,16 +27,8 @@ export default function LandingStats() {
       icon: ShieldCheck,
       value: "99.99%",
       label: "Cloud POS Reliability",
-      desc: "Zero-latency real-time synchronization with encrypted audit logs",
+      desc: "Instant real-time synchronization with secure encrypted backups",
     },
-  ];
-
-  const telemetry = [
-    { label: "API Gateway", status: "< 38ms Latency", icon: Server, color: "var(--success)" },
-    { label: "LiveKit WebRTC Voice", status: "48kHz Full-Duplex", icon: Mic, color: "var(--accent)" },
-    { label: "PostgreSQL DB", status: "ACID Synced", icon: Database, color: "var(--info)" },
-    { label: "KDS WebSocket", status: "< 15ms Round-Trip", icon: Activity, color: "var(--success)" },
-    { label: "Security Encryption", status: "TLS 1.3 / 256-Bit", icon: Lock, color: "var(--warning)" },
   ];
 
   return (
@@ -58,7 +50,6 @@ export default function LandingStats() {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             gap: "20px",
-            marginBottom: "24px",
           }}
         >
           {stats.map((stat, i) => {
@@ -135,56 +126,6 @@ export default function LandingStats() {
               </div>
             );
           })}
-        </div>
-
-        {/* Live Cloud Telemetry & System Health Bar */}
-        <div
-          style={{
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "16px",
-            padding: "16px 20px",
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "16px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                backgroundColor: "var(--success)",
-                boxShadow: "0 0 8px var(--success)",
-              }}
-            />
-            <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              Live Cloud Telemetry:
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: "20px",
-            }}
-          >
-            {telemetry.map((t, idx) => {
-              const Icon = t.icon;
-              return (
-                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-                  <Icon size={14} color={t.color} />
-                  <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>{t.label}:</span>
-                  <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{t.status}</span>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </section>

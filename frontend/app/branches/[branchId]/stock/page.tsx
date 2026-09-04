@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { Card } from "@/components/Card";
 import { Table, TableHead, TableBody, TableRow, TableCell } from "@/components/Table";
+import BranchSubnav from "@/components/branches/BranchSubnav";
 
 export default function BranchStockPage() {
   const router = useRouter();
@@ -101,6 +102,7 @@ export default function BranchStockPage() {
 
   return (
     <div>
+      <BranchSubnav branchId={branchId} />
       <div className="page-header">
         <div>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 13 }}>
