@@ -11,6 +11,7 @@ import { useLayoutStore } from "@/lib/store";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  StartAudio,
   BarVisualizer,
   useVoiceAssistant,
   useRoomContext,
@@ -21,6 +22,35 @@ import "@livekit/components-styles";
 type Message = {
   role: "user" | "model";
   content: string;
+};
+
+function cleanMarkdownForSpeech(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]+`/g, "")
+    .replace(/\|[^\n]+\|/g, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
+    .replace(/_{1,3}([^_]+)_{1,3}/g, "$1")
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\n{2,}/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const unlockAudio = () => {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+    }
+  } catch {}
 };
 
 const btnBase: React.CSSProperties = {
@@ -272,6 +302,7 @@ export default function ChatbotWidget() {
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
+    unlockAudio();
     const newMsg: Message = { role: "user", content: input };
     const currentMsgs = [...messages, newMsg];
     setMessages(currentMsgs);
@@ -285,9 +316,36 @@ export default function ChatbotWidget() {
     }
   };
 
-  // --- TTS Playback ---
-  const playTTS = async (text: string) => {
+  // --- Browser Native Speech Fallback ---
+  const speakWithBrowser = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setIsSpeaking(false);
+      return;
+    }
     try {
+      window.speechSynthesis.cancel();
+      const clean = cleanMarkdownForSpeech(text);
+      if (!clean) {
+        setIsSpeaking(false);
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setIsSpeaking(false);
+    }
+  };
+
+  // --- TTS Playback (Backend Neural Deepgram/ElevenLabs -> Browser Fallback) ---
+  const playTTS = async (text: string) => {
+    if (!text || !text.trim()) return;
+    try {
+      stopTTS();
       setIsSpeaking(true);
       const token = auth.getAccess();
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -299,32 +357,59 @@ export default function ChatbotWidget() {
         },
         body: JSON.stringify({ text }),
       });
-      if (!resp.ok) { setIsSpeaking(false); return; }
+
+      if (!resp.ok) {
+        console.warn(`[TTS] Backend TTS status ${resp.status}, falling back to browser speech synthesis`);
+        speakWithBrowser(text);
+        return;
+      }
+
       const blob = await resp.blob();
+      if (!blob || blob.size === 0) {
+        speakWithBrowser(text);
+        return;
+      }
+
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       currentAudio.current = audio;
+
       audio.onended = () => {
         setIsSpeaking(false);
         URL.revokeObjectURL(url);
         currentAudio.current = null;
       };
+
       audio.onerror = () => {
-        setIsSpeaking(false);
+        console.warn("[TTS] HTMLAudioElement error, falling back to browser speech");
+        URL.revokeObjectURL(url);
         currentAudio.current = null;
+        speakWithBrowser(text);
       };
-      audio.play();
-    } catch {
-      setIsSpeaking(false);
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn("[TTS] audio.play() blocked, falling back to browser speech:", err);
+          speakWithBrowser(text);
+        });
+      }
+    } catch (err) {
+      console.warn("[TTS] Error requesting TTS:", err);
+      speakWithBrowser(text);
     }
   };
 
   const stopTTS = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     if (currentAudio.current) {
       currentAudio.current.pause();
+      currentAudio.current.currentTime = 0;
       currentAudio.current = null;
-      setIsSpeaking(false);
     }
+    setIsSpeaking(false);
   };
 
   // --- Microphone Recording ---
@@ -394,6 +479,7 @@ export default function ChatbotWidget() {
   };
 
   const handleMicClick = () => {
+    unlockAudio();
     if (isRecording) {
       stopRecording();
     } else {
@@ -521,25 +607,67 @@ export default function ChatbotWidget() {
                 }}
               >
                 {msg.role === "model" ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
-                      a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
-                      ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                      ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
-                      li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
-                      table: ({ node, ...props }) => (
-                        <div style={{ overflowX: "auto", width: "100%" }}>
-                          <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
-                        </div>
-                      ),
-                      th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
-                      td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
+                  <>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ node, ...props }) => <p style={{ margin: "4px 0" }} {...props} />,
+                        a: ({ node, ...props }) => <a style={{ color: "var(--accent)", textDecoration: "underline" }} target="_blank" {...props} />,
+                        ul: ({ node, ...props }) => <ul style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                        ol: ({ node, ...props }) => <ol style={{ margin: "4px 0", paddingLeft: "20px" }} {...props} />,
+                        li: ({ node, ...props }) => <li style={{ margin: "2px 0" }} {...props} />,
+                        table: ({ node, ...props }) => (
+                          <div style={{ overflowX: "auto", width: "100%" }}>
+                            <table style={{ borderCollapse: "collapse", width: "100%", margin: "8px 0" }} {...props} />
+                          </div>
+                        ),
+                        th: ({ node, ...props }) => <th style={{ border: "1px solid var(--border)", padding: "6px 8px", backgroundColor: "var(--bg-default)", textAlign: "left", whiteSpace: "nowrap" }} {...props} />,
+                        td: ({ node, ...props }) => <td style={{ border: "1px solid var(--border)", padding: "6px 8px", whiteSpace: "nowrap" }} {...props} />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                    {msg.content.trim() && !isLiveMode && (
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isSpeaking) {
+                              stopTTS();
+                            } else {
+                              unlockAudio();
+                              playTTS(msg.content);
+                            }
+                          }}
+                          title="Listen to this response"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            padding: "2px 6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "11px",
+                            borderRadius: "4px",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = "var(--accent)";
+                            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = "var(--text-muted)";
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }}
+                        >
+                          <Volume2 size={12} />
+                          <span>Listen</span>
+                        </button>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
                 )}
@@ -584,6 +712,7 @@ export default function ChatbotWidget() {
                 data-lk-theme="none"
               >
                 <RoomAudioRenderer />
+                <StartAudio label="Click to allow voice audio" />
                 <LiveChatSync setLiveMessages={setLiveMessages} />
                 <LiveModeUI onEndLive={deactivateLiveMode} />
               </LiveKitRoom>

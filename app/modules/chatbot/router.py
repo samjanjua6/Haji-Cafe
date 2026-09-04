@@ -108,36 +108,65 @@ async def text_to_speech_endpoint(
     body: TTSRequest,
     current_user=Depends(get_current_user),
 ):
-    """Convert text to speech audio (mp3) using ElevenLabs."""
+    """Convert text to speech audio (mp3) using ElevenLabs with Deepgram Aura fallback."""
     try:
+        if not body.text or not body.text.strip():
+            return Response(content=b"", media_type="audio/mpeg")
         audio_bytes = await voice_service.text_to_speech(body.text)
         return Response(content=audio_bytes, media_type="audio/mpeg")
     except Exception as e:
+        print(f"[TTS Endpoint Exception] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tts/test")
 async def test_tts(current_user=Depends(get_current_user)):
-    """Test ElevenLabs connectivity and return diagnostic info."""
+    """Test both Deepgram Aura and ElevenLabs connectivity and return diagnostic info."""
     from app.config import settings
     import httpx
-    voice_id = settings.ELEVENLABS_VOICE_ID
+    
+    results = {}
+    
+    # 1. Test Deepgram Aura TTS
+    deepgram_key = settings.DEEPGRAM_API_KEY
+    if deepgram_key:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                d_resp = await client.post(
+                    "https://api.deepgram.com/v1/speak?model=aura-asteria-en",
+                    json={"text": "Deepgram TTS is active and working!"},
+                    headers={"Authorization": f"Token {deepgram_key}", "Content-Type": "application/json"},
+                )
+            if d_resp.is_success:
+                results["deepgram"] = {"status": "ok", "message": "Deepgram Aura TTS working!", "audio_bytes": len(d_resp.content)}
+            else:
+                results["deepgram"] = {"status": "error", "http_status": d_resp.status_code, "detail": d_resp.text}
+        except Exception as e:
+            results["deepgram"] = {"status": "error", "message": str(e)}
+    else:
+        results["deepgram"] = {"status": "error", "message": "DEEPGRAM_API_KEY is missing"}
+
+    # 2. Test ElevenLabs
+    voice_id = settings.ELEVENLABS_VOICE_ID or "EXAVITQu4vr4xnSDxMaL"
     api_key = settings.ELEVENLABS_API_KEY
-    if not api_key:
-        return {"status": "error", "message": "ELEVENLABS_API_KEY is missing from .env"}
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream",
-                json={"text": "Hello!", "model_id": "eleven_turbo_v2_5"},
-                headers={"xi-api-key": api_key, "Content-Type": "application/json"},
-            )
-        if resp.is_success:
-            return {"status": "ok", "message": "ElevenLabs is working!", "voice_id": voice_id, "audio_bytes": len(resp.content)}
-        else:
-            return {"status": "error", "http_status": resp.status_code, "detail": resp.text, "voice_id": voice_id}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    if api_key:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                e_resp = await client.post(
+                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream",
+                    json={"text": "Hello!", "model_id": "eleven_turbo_v2_5"},
+                    headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+                )
+            if e_resp.is_success:
+                results["elevenlabs"] = {"status": "ok", "message": "ElevenLabs is working!", "audio_bytes": len(e_resp.content)}
+            else:
+                results["elevenlabs"] = {"status": "error", "http_status": e_resp.status_code, "detail": e_resp.text}
+        except Exception as e:
+            results["elevenlabs"] = {"status": "error", "message": str(e)}
+    else:
+        results["elevenlabs"] = {"status": "error", "message": "ELEVENLABS_API_KEY is missing"}
+
+    return results
 
 
 @router.post("/chat", response_model=ChatResponse)
